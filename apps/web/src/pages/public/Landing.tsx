@@ -124,10 +124,8 @@ export default function Landing() {
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
               Now open for placements
             </div>
-            <h1 className="text-3xl lg:text-4xl font-bold leading-tight mb-6 tracking-tight">
-            Connect students, institutions, and companies through meaningful opportunities, collaboration, and career growth.
-              <br />
-              
+            <h1 className="text-3xl lg:text-2xl font-bold leading-tight mb-6 tracking-tight">
+            Connect students, institutions, and companies through meaningful opportunities, collaboration and career growth.
             </h1>
             <p className="text-lg text-neutral-600 leading-relaxed mb-10 max-w-xl dark:text-neutral-400">
               The centralised platform connecting students, companies, and placement administrators —
@@ -136,7 +134,7 @@ export default function Landing() {
             <div className="flex flex-wrap gap-4">
               <Link
                 to="/register"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-neutral-900 text-white font-medium transition-colors no-underline dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-neutral-900 text-white font-medium hover:bg-neutral-700 transition-colors no-underline dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
               >
                 Get started free
                 <FiArrowRight className="w-4 h-4" />

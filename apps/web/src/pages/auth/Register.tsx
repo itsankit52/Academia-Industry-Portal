@@ -54,6 +54,20 @@ export default function Register() {
   const institutionOptions =
     institutions.data?.map((i) => ({ value: i.id, label: `${i.name} (${i.code})` })) ?? [];
 
+  /**
+   * A select holding nothing but its placeholder used to mean three different
+   * things — still loading, the request failed, or the catalogue is genuinely
+   * empty — and the form showed the same thing for all three. `institutions.
+   * isError` was never read, so an unreachable API read as "there are no
+   * institutions", and an empty catalogue read as nothing at all. Since
+   * `institutionId` is required for STUDENT and FACULTY, that left signup stuck
+   * on a field with no valid value and no explanation.
+   */
+  const institutionsEmpty = institutions.isSuccess && institutionOptions.length === 0;
+  const institutionNotice = institutions.isError
+    ? `Could not load the institution list: ${institutions.error.message} Reload the page to try again.`
+    : undefined;
+
   return (
     <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
@@ -110,7 +124,12 @@ export default function Register() {
                 label="Institution"
                 placeholder={institutions.isLoading ? 'Loading institutions…' : 'Select your institution'}
                 options={institutionOptions}
-                error={errors.institutionId?.message}
+                error={errors.institutionId?.message ?? institutionNotice}
+                helperText={
+                  institutionsEmpty
+                    ? 'No verified institutions are available yet. Ask an administrator to add and verify one before signing up.'
+                    : undefined
+                }
                 disabled={institutions.isLoading}
                 {...register('institutionId')}
               />
