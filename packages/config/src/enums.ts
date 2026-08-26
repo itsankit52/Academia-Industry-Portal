@@ -1,0 +1,169 @@
+export const ROLES = ['STUDENT', 'COMPANY', 'ADMIN', 'FACULTY', 'INSTITUTION'] as const;
+export type Role = typeof ROLES[number];
+
+export const PROFICIENCY_LEVELS = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'EXPERT'] as const;
+export type Proficiency = typeof PROFICIENCY_LEVELS[number];
+
+export const WORK_MODES = ['REMOTE', 'HYBRID', 'ONSITE'] as const;
+export type WorkMode = typeof WORK_MODES[number];
+
+export const EMPLOYMENT_TYPES = ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERNSHIP'] as const;
+export type EmploymentType = typeof EMPLOYMENT_TYPES[number];
+
+export const JOB_STATUSES = ['DRAFT', 'PUBLISHED', 'CLOSED', 'ARCHIVED'] as const;
+export type JobStatus = typeof JOB_STATUSES[number];
+
+export const INTERNSHIP_STATUSES = ['DRAFT', 'PUBLISHED', 'CLOSED', 'ARCHIVED'] as const;
+export type InternshipStatus = typeof INTERNSHIP_STATUSES[number];
+
+export const APPLICATION_STATUSES = [
+  'APPLIED',
+  'UNDER_REVIEW',
+  'SHORTLISTED',
+  'INTERVIEW_SCHEDULED',
+  'SELECTED',
+  'REJECTED',
+  'WITHDRAWN',
+] as const;
+export type ApplicationStatus = typeof APPLICATION_STATUSES[number];
+
+export const INTERVIEW_MODES = ['ONLINE', 'ONSITE', 'PHONE'] as const;
+export type InterviewMode = typeof INTERVIEW_MODES[number];
+
+export const INTERVIEW_STATUSES = ['SCHEDULED', 'COMPLETED', 'CANCELLED', 'RESCHEDULED'] as const;
+export type InterviewStatus = typeof INTERVIEW_STATUSES[number];
+
+export const NOTIFICATION_TYPES = [
+  'NEW_MATCHING_JOB',
+  'APPLICATION_STATUS_CHANGED',
+  'INTERVIEW_SCHEDULED',
+  'INTERVIEW_UPDATED',
+  'APPLICATION_SELECTED',
+  'APPLICATION_REJECTED',
+  'NEW_INTERNSHIP',
+  'ANNOUNCEMENT',
+] as const;
+export type NotificationType = typeof NOTIFICATION_TYPES[number];
+
+export const AUDIT_ACTIONS = [
+  'USER_REGISTERED',
+  'USER_LOGIN',
+  'USER_LOGOUT',
+  'USER_UPDATED',
+  'USER_DEACTIVATED',
+  'JOB_CREATED',
+  'JOB_UPDATED',
+  'JOB_CLOSED',
+  'JOB_DELETED',
+  'INTERNSHIP_CREATED',
+  'INTERNSHIP_UPDATED',
+  'INTERNSHIP_CLOSED',
+  'INTERNSHIP_DELETED',
+  'APPLICATION_CREATED',
+  'APPLICATION_STATUS_UPDATED',
+  'INTERVIEW_CREATED',
+  'INTERVIEW_UPDATED',
+  'SKILL_CREATED',
+  'SKILL_UPDATED',
+  'SKILL_DELETED',
+  'TRAINING_CREATED',
+  'TRAINING_UPDATED',
+  'TRAINING_DELETED',
+  'INSTITUTION_CREATED',
+  'INSTITUTION_UPDATED',
+  'INSTITUTION_VERIFIED',
+  'INSTITUTION_USER_INVITED',
+  'DOCUMENT_UPLOAD',
+  'DOCUMENT_DELETE',
+  'DOCUMENT_VERIFY',
+  'DOCUMENT_REJECT',
+  'PORTFOLIO_VIEW',
+  'FACULTY_OPP_CREATED',
+  'FACULTY_OPP_UPDATED',
+  'FACULTY_OPP_CLOSED',
+  'FACULTY_OPP_DELETED',
+  'MENTORSHIP_REQUEST_CREATE',
+  'MENTORSHIP_STATUS_UPDATE',
+  'INTERIM_REPORT_CREATE',
+  'INTERIM_REPORT_FEEDBACK',
+  'EVENT_CREATE',
+  'EVENT_PUBLISH',
+  'EVENT_CANCEL',
+  'EVENT_REGISTER',
+  'CERTIFICATE_GENERATE',
+  'APTITUDE_TEST_START',
+  'APTITUDE_TEST_SUBMIT',
+  'APTITUDE_QUESTION_CREATE',
+  'APTITUDE_QUESTION_UPDATE',
+  'APTITUDE_QUESTION_ARCHIVE',
+  'WEBHOOK_LMS_CERTIFICATE',
+  'WEBHOOK_ERP_SYNC',
+] as const;
+export type AuditAction = typeof AUDIT_ACTIONS[number];
+
+export const SKILL_CATEGORIES = [
+  'PROGRAMMING',
+  'FRONTEND',
+  'BACKEND',
+  'DATABASE',
+  'CLOUD',
+  'DEVOPS',
+  'DATA_SCIENCE',
+  'AI_ML',
+  'MOBILE',
+  'CYBERSECURITY',
+  'SOFT_SKILLS',
+  'OTHER',
+] as const;
+export type SkillCategory = typeof SKILL_CATEGORIES[number];
+
+export const MATCH_LEVELS = ['STRONG_MATCH', 'GOOD_MATCH', 'PARTIAL_MATCH', 'LOW_MATCH'] as const;
+export type MatchLevel = typeof MATCH_LEVELS[number];
+
+export const OPPORTUNITY_TYPES = [
+  'JOB',
+  'INTERNSHIP',
+  'PROJECT',
+  'APPRENTICESHIP',
+  'FACULTY_INTERNSHIP',
+  'FDP',
+  'CONSULTANCY',
+  'COLLABORATIVE_RESEARCH',
+] as const;
+export type OpportunityType = typeof OPPORTUNITY_TYPES[number];
+
+export const GENDERS = ['MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY'] as const;
+export type Gender = typeof GENDERS[number];
+
+export const ASSESSMENT_STATUSES = ['GENERATED', 'IN_PROGRESS', 'SUBMITTED', 'EVALUATED'] as const;
+export type AssessmentStatus = typeof ASSESSMENT_STATUSES[number];
+
+export const DOCUMENT_TYPES = ['RESUME', 'CERTIFICATE', 'INTERNSHIP_REPORT', 'ACADEMIC_RECORD'] as const;
+export type DocumentType = typeof DOCUMENT_TYPES[number];
+
+export const VERIFICATION_STATUSES = ['PENDING', 'VERIFIED', 'REJECTED'] as const;
+export type VerificationStatus = typeof VERIFICATION_STATUSES[number];
+
+export const APTITUDE_CATEGORIES = ['QUANT', 'LOGIC', 'VERBAL', 'ENGLISH'] as const;
+export type AptitudeCategory = typeof APTITUDE_CATEGORIES[number];
+
+export const MENTORSHIP_STATUSES = [
+  'REQUESTED',
+  'ACCEPTED',
+  'DECLINED',
+  'ACTIVE',
+  'COMPLETED',
+  'CANCELLED',
+] as const;
+export type MentorshipStatus = typeof MENTORSHIP_STATUSES[number];
+
+export const COLLAB_EVENT_TYPES = [
+  'WORKSHOP',
+  'GUEST_LECTURE',
+  'INNOVATION_CHALLENGE',
+  'LIVE_PROJECT',
+] as const;
+export type CollabEventType = typeof COLLAB_EVENT_TYPES[number];
+
+export const INSTITUTION_VERIFICATION_STATUSES = ['PENDING', 'VERIFIED', 'REJECTED'] as const;
+export type InstitutionVerificationStatus = typeof INSTITUTION_VERIFICATION_STATUSES[number];

@@ -1,0 +1,22 @@
+import PageHeader from '@/components/ui/PageHeader';
+import Card from '@/components/ui/Card';
+import ChangePasswordForm from '@/components/features/ChangePasswordForm';
+
+export default function InstitutionSettings() {
+  return (
+    <div className="container-page py-8 space-y-6">
+      <PageHeader title="Settings" subtitle="Manage your institution account preferences." />
+
+      <Card>
+        <Card.Header>
+          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+            Change Password
+          </h2>
+        </Card.Header>
+        <Card.Body className="max-w-md">
+          <ChangePasswordForm />
+        </Card.Body>
+      </Card>
+    </div>
+  );
+}

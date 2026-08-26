@@ -1,0 +1,317 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  install:
+    name: Install dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/api/node_modules
+            apps/web/node_modules
+            packages/config/node_modules
+            packages/types/node_modules
+            packages/validation/node_modules
+            packages/eslint-config/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+  lint:
+    name: Lint
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/api/node_modules
+            apps/web/node_modules
+            packages/config/node_modules
+            packages/types/node_modules
+            packages/validation/node_modules
+            packages/eslint-config/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Lint
+        run: pnpm lint
+
+  typecheck:
+    name: Type-check
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/api/node_modules
+            apps/web/node_modules
+            packages/config/node_modules
+            packages/types/node_modules
+            packages/validation/node_modules
+            packages/eslint-config/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Type-check
+        run: pnpm typecheck
+
+  test-api-unit:
+    name: API unit tests
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/api/node_modules
+            apps/web/node_modules
+            packages/config/node_modules
+            packages/types/node_modules
+            packages/validation/node_modules
+            packages/eslint-config/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Run API unit tests
+        run: pnpm --filter @aip/api test
+        # TEST_MONGO_URI is intentionally not set here.
+        # Integration suites auto-skip when the env var is absent.
+
+  test-web-unit:
+    name: Web unit tests
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/api/node_modules
+            apps/web/node_modules
+            packages/config/node_modules
+            packages/types/node_modules
+            packages/validation/node_modules
+            packages/eslint-config/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Run web unit tests
+        run: pnpm --filter @aip/web test
+
+  build:
+    name: Build
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/api/node_modules
+            apps/web/node_modules
+            packages/config/node_modules
+            packages/types/node_modules
+            packages/validation/node_modules
+            packages/eslint-config/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Build
+        run: pnpm build
+
+  test-api-integration:
+    name: API integration tests
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/api/node_modules
+            apps/web/node_modules
+            packages/config/node_modules
+            packages/types/node_modules
+            packages/validation/node_modules
+            packages/eslint-config/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Run API integration tests
+        env:
+          TEST_MONGO_URI: ${{ secrets.TEST_MONGO_URI }}
+        run: |
+          if [ -z "$TEST_MONGO_URI" ]; then
+            echo "TEST_MONGO_URI not set - integration suites will auto-skip"
+          fi
+          pnpm --filter @aip/api test
+
+  test-e2e:
+    name: E2E tests
+    needs: [build]
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'ready-for-e2e')
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/api/node_modules
+            apps/web/node_modules
+            packages/config/node_modules
+            packages/types/node_modules
+            packages/validation/node_modules
+            packages/eslint-config/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @aip/web exec playwright install --with-deps chromium
+
+      - name: Start API server
+        run: pnpm --filter @aip/api dev &
+        env:
+          NODE_ENV: development
+          PORT: 4000
+          FRONTEND_URL: http://localhost:5173
+          MONGODB_URI: ${{ secrets.TEST_MONGO_URI }}
+          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Start web dev server
+        run: pnpm --filter @aip/web dev &
+        env:
+          VITE_API_URL: http://localhost:4000/api/v1
+
+      - name: Wait for servers
+        run: |
+          npx wait-on http://localhost:4000/api/v1/health http://localhost:5173 --timeout 60000
+
+      - name: Seed database
+        run: pnpm seed
+        env:
+          NODE_ENV: development
+          MONGODB_URI: ${{ secrets.TEST_MONGO_URI }}
+          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+
+      - name: Run E2E tests
+        run: pnpm --filter @aip/web test:e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7

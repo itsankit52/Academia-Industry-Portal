@@ -1,0 +1,41 @@
+{
+  "name": "academia-industry-portal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Centralized Academia-Industry Collaboration Portal — students, companies, and placement admins on one platform.",
+  "license": "MIT",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./apps/*\" dev",
+    "dev:web": "pnpm --filter @aip/web dev",
+    "dev:api": "pnpm --filter @aip/api dev",
+    "build": "pnpm --filter \"./packages/*\" build && pnpm --filter \"./apps/*\" build",
+    "build:web": "pnpm --filter @aip/web build",
+    "build:api": "pnpm --filter @aip/api build",
+    "start:api": "pnpm --filter @aip/api start",
+    "lint": "pnpm --recursive --if-present lint",
+    "typecheck": "pnpm --recursive --if-present typecheck",
+    "test": "pnpm --recursive --if-present test",
+    "test:e2e": "pnpm --filter @aip/web test:e2e",
+    "seed": "pnpm --filter @aip/api seed",
+    "clean": "pnpm --recursive --if-present clean && rimraf node_modules",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
+    "prepare": "husky || true"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.9.0",
+    "@types/node": "^20.14.11",
+    "eslint": "^9.9.0",
+    "husky": "^9.1.4",
+    "lint-staged": "^15.2.7",
+    "prettier": "^3.3.3",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.4.5",
+    "typescript-eslint": "^8.0.0"
+  }
+}

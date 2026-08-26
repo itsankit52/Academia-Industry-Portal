@@ -1,0 +1,76 @@
+import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
+import {
+  generateAssessmentSchema,
+  idParamSchema,
+  paginationQuerySchema,
+  saveAnswerSchema,
+} from '@aip/validation';
+import { requireAuth } from '../../middleware/requireAuth';
+import { requireRole } from '../../middleware/requireRole';
+import { validate } from '../../middleware/validate';
+import * as ctrl from './assessments.controller';
+
+const generateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: {
+      code: 'RATE_LIMITED',
+      message: 'Too many assessment generations, try again in an hour',
+    },
+  },
+});
+
+const router = Router();
+
+router.get(
+  '/me',
+  requireAuth,
+  requireRole('STUDENT'),
+  validate(paginationQuerySchema, 'query'),
+  ctrl.listMyAssessments,
+);
+
+router.get('/me/latest', requireAuth, requireRole('STUDENT'), ctrl.getMyLatest);
+
+router.get('/me/summary', requireAuth, requireRole('STUDENT'), ctrl.getAssessmentSummary);
+
+router.post(
+  '/me/generate',
+  requireAuth,
+  requireRole('STUDENT'),
+  generateLimiter,
+  validate(generateAssessmentSchema),
+  ctrl.generateAssessment,
+);
+
+router.get(
+  '/:id',
+  requireAuth,
+  requireRole('STUDENT'),
+  validate(idParamSchema, 'params'),
+  ctrl.getById,
+);
+
+router.patch(
+  '/:id/answers',
+  requireAuth,
+  requireRole('STUDENT'),
+  validate(idParamSchema, 'params'),
+  validate(saveAnswerSchema),
+  ctrl.saveAnswer,
+);
+
+router.post(
+  '/:id/submit',
+  requireAuth,
+  requireRole('STUDENT'),
+  validate(idParamSchema, 'params'),
+  ctrl.submitAssessment,
+);
+
+export default router;

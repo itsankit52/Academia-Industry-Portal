@@ -1,0 +1,37 @@
+import {
+  FiGrid,
+  FiUsers,
+  FiBriefcase,
+  FiBookOpen,
+  FiCheckCircle,
+  FiClipboard,
+  FiStar,
+  FiAward,
+  FiBarChart2,
+  FiTrendingUp,
+  FiShield,
+  FiSettings,
+  FiHelpCircle,
+  FiCalendar,
+  FiUserCheck,
+} from 'react-icons/fi';
+import type { NavItem } from './StudentNavItems';
+
+export const adminNavItems: NavItem[] = [
+  { to: '/admin/dashboard', label: 'Dashboard', icon: FiGrid },
+  { to: '/admin/students', label: 'Students', icon: FiUsers },
+  { to: '/admin/companies', label: 'Companies', icon: FiBriefcase },
+  { to: '/admin/jobs', label: 'Jobs', icon: FiBriefcase },
+  { to: '/admin/internships', label: 'Internships', icon: FiBookOpen },
+  { to: '/admin/applications', label: 'Applications', icon: FiClipboard },
+  { to: '/admin/skills', label: 'Skills', icon: FiStar },
+  { to: '/admin/aptitude-questions', label: 'Aptitude Bank', icon: FiHelpCircle },
+  { to: '/admin/training', label: 'Training', icon: FiAward },
+  { to: '/admin/analytics', label: 'Analytics', icon: FiBarChart2 },
+  { to: '/admin/industry-skill-demand', label: 'Skill Demand', icon: FiTrendingUp },
+  { to: '/admin/events', label: 'Events', icon: FiCalendar },
+  { to: '/admin/mentorship', label: 'Mentorship', icon: FiUserCheck },
+  { to: '/admin/verification-queue', label: 'Verifications', icon: FiCheckCircle },
+  { to: '/admin/audit-logs', label: 'Audit Logs', icon: FiShield },
+  { to: '/admin/settings', label: 'Settings', icon: FiSettings },
+];

@@ -1,0 +1,24 @@
+import {
+  FiGrid,
+  FiUsers,
+  FiUser,
+  FiTrendingDown,
+  FiAward,
+  FiBookOpen,
+  FiCalendar,
+  FiSettings,
+  FiCheckCircle,
+} from 'react-icons/fi';
+import type { NavItem } from './StudentNavItems';
+
+export const institutionNavItems: NavItem[] = [
+  { to: '/institution/dashboard', label: 'Dashboard', icon: FiGrid },
+  { to: '/institution/students', label: 'Students', icon: FiUsers },
+  { to: '/institution/faculty', label: 'Faculty', icon: FiUser },
+  { to: '/institution/skill-gaps', label: 'Skill Gaps', icon: FiTrendingDown },
+  { to: '/institution/placements', label: 'Placements', icon: FiAward },
+  { to: '/institution/fdps', label: 'Faculty FDPs', icon: FiBookOpen },
+  { to: '/institution/events', label: 'Events', icon: FiCalendar },
+  { to: '/institution/verifications', label: 'Verifications', icon: FiCheckCircle },
+  { to: '/institution/settings', label: 'Settings', icon: FiSettings },
+];
