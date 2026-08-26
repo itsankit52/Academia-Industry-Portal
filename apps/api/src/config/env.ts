@@ -18,11 +18,29 @@ const envSchema = z.object({
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
 
-  COOKIE_DOMAIN: z.string().default('localhost'),
+  // Blank means "send a host-only cookie" — see the comment in utils/cookies.ts.
+  // It is not defaulted to `localhost` any more: that value is only ever correct
+  // on a developer machine, and a deployed API that inherited it would emit a
+  // cookie the browser rejects outright.
+  COOKIE_DOMAIN: z.string().default(''),
   COOKIE_SECURE: z
     .union([z.string(), z.boolean()])
     .transform((v) => (typeof v === 'boolean' ? v : v.toLowerCase() === 'true'))
     .default(false),
+  // `lax` is right whenever the SPA and the API share a registrable domain, and
+  // it stays the default so local development is untouched. It is wrong when
+  // they do not — two different *.onrender.com hosts are cross-site, because
+  // onrender.com is a public suffix — and a Lax cookie is then simply never
+  // attached to the SPA's requests, so every call after login returns 401.
+  // Blank is treated as unset rather than as an error, matching resolveGeminiModel.
+  COOKIE_SAMESITE: z
+    .string()
+    .transform((v) => {
+      const normalized = v.trim().toLowerCase();
+      return normalized.length > 0 ? normalized : 'lax';
+    })
+    .pipe(z.enum(['lax', 'strict', 'none']))
+    .default('lax'),
 
   CLOUDINARY_CLOUD_NAME: z.string().optional().default(''),
   CLOUDINARY_API_KEY: z.string().optional().default(''),
