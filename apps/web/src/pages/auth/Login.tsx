@@ -19,19 +19,28 @@ export default function Login() {
     <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link to="/" className="inline-block text-2xl font-bold text-indigo-600 no-underline mb-3">
+          <Link
+            to="/"
+            className="inline-block text-2xl font-bold text-indigo-600 no-underline mb-3"
+          >
             AIP
           </Link>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Welcome back</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Sign in to your account to continue.</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
+            Sign in to your account to continue.
+          </p>
         </div>
 
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-8">
-          <form onSubmit={handleSubmit((data) => login.mutate(data))} noValidate className="space-y-5">
+          <form
+            onSubmit={handleSubmit((data) => login.mutate(data))}
+            noValidate
+            className="space-y-5"
+          >
             <Input
               label="Email address"
               type="email"
-              placeholder="you@university.edu"
+              placeholder="admin@aip.demo"
               autoComplete="email"
               error={errors.email?.message}
               {...register('email')}
@@ -48,7 +57,10 @@ export default function Login() {
             </div>
 
             {login.error && (
-              <p className="text-sm text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-lg px-3 py-2" role="alert">
+              <p
+                className="text-sm text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-lg px-3 py-2"
+                role="alert"
+              >
                 {login.error.message}
               </p>
             )}

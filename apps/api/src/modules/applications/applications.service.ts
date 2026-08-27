@@ -1,7 +1,4 @@
-import type {
-  CreateApplicationInput,
-  UpdateApplicationStatusInput,
-} from '@aip/validation';
+import type { CreateApplicationInput, UpdateApplicationStatusInput } from '@aip/validation';
 import type { ApplicationStatus, OpportunityType, Role } from '@aip/config';
 import { AppError } from '../../utils/AppError';
 import {
@@ -23,7 +20,12 @@ import { applyPagination, buildPaginated, type PaginationInput } from '../../uti
 import { computeMatch } from '../matching/algorithm';
 import { createNotification } from '../notifications/notifications.service';
 
-const STUDENT_OPP_TYPES = new Set<OpportunityType>(['JOB', 'INTERNSHIP', 'PROJECT', 'APPRENTICESHIP']);
+const STUDENT_OPP_TYPES = new Set<OpportunityType>([
+  'JOB',
+  'INTERNSHIP',
+  'PROJECT',
+  'APPRENTICESHIP',
+]);
 const FACULTY_OPP_TYPES = new Set<OpportunityType>([
   'FACULTY_INTERNSHIP',
   'FDP',
@@ -171,11 +173,7 @@ async function resolveResumeId(
   return latest?._id;
 }
 
-export async function createApplication(
-  userId: string,
-  role: Role,
-  input: CreateApplicationInput,
-) {
+export async function createApplication(userId: string, role: Role, input: CreateApplicationInput) {
   const type = input.opportunityType;
 
   if (role === 'STUDENT' && !STUDENT_OPP_TYPES.has(type)) {
@@ -316,7 +314,9 @@ export async function listApplications(
     const [jobs, internships, facultyOpps] = await Promise.all([
       Job.find({ company: company._id }).select('_id'),
       Internship.find({ company: company._id }).select('_id'),
-      FacultyOpportunity.find({ hostType: 'COMPANY', host: company._id }).select('_id opportunityType'),
+      FacultyOpportunity.find({ hostType: 'COMPANY', host: company._id }).select(
+        '_id opportunityType',
+      ),
     ]);
     const jobIds = jobs.map((j) => j._id);
     const internshipIds = internships.map((i) => i._id);
@@ -336,14 +336,88 @@ export async function listApplications(
   return buildPaginated(items, total, page, pageSize);
 }
 
+/**
+ * The flat applicant shape `@aip/types` declares for `Application.student` /
+ * `Application.faculty`, and the one `getStudentName()`/`getStudentEmail()` read.
+ */
+export interface ApplicantRef {
+  id: string;
+  fullName: string;
+  email: string;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
+}
+
+/**
+ * An applicant reference reaches serialization in one of two states, and neither
+ * is the one the client reads.
+ *
+ * `listApplications` does not populate, so `student` serializes to a bare id;
+ * `getStudentName()` then has no name to show, which is why every company-side
+ * list rendered its candidates as "—". `getApplicationById` does populate, but a
+ * profile keeps its email on the nested `user` row, so `getStudentEmail()` misses
+ * it there. Flatten both into the declared `{ id, fullName, email }`.
+ */
+async function resolveApplicantRef(
+  ref: unknown,
+  kind: 'student' | 'faculty',
+): Promise<ApplicantRef | undefined> {
+  if (ref === null || ref === undefined) return undefined;
+
+  // The slot holds either the profile itself, populated, or a bare reference to
+  // it — an ObjectId from `.lean()`, a hex string once `toJSON` has run. An
+  // ObjectId is an object too, and its `id` is the raw 12-byte buffer rather than
+  // the hex string, so "is this a record?" cannot tell the two apart; carrying a
+  // `fullName` can.
+  const populated = asRecord(ref);
+  const populatedName = typeof populated?.fullName === 'string' ? populated.fullName : null;
+  const profileId =
+    populatedName !== null ? String(populated?._id ?? populated?.id ?? '') : String(ref);
+  if (!profileId) return undefined;
+
+  // Already populated alongside its user row — no further reads needed.
+  const populatedUser = asRecord(populated?.user);
+  if (populatedName !== null && typeof populatedUser?.email === 'string') {
+    return { id: profileId, fullName: populatedName, email: populatedUser.email };
+  }
+
+  const profile =
+    kind === 'faculty'
+      ? await FacultyProfile.findById(profileId).select('fullName user').lean()
+      : await StudentProfile.findById(profileId).select('fullName user').lean();
+  if (!profile) return undefined;
+  const userRow = await User.findById(profile.user).select('email').lean();
+  return {
+    id: String(profile._id),
+    fullName: String(profile.fullName),
+    email: userRow?.email ?? '',
+  };
+}
+
 async function enrichApplication(app: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const [student, faculty] = await Promise.all([
+    resolveApplicantRef(app.student, 'student'),
+    resolveApplicantRef(app.faculty, 'faculty'),
+  ]);
+  // An application has exactly one applicant, so only the slot that is filled is
+  // rewritten; the other keeps whatever the document held.
+  const withApplicant: Record<string, unknown> = {
+    ...app,
+    ...(student ? { student } : {}),
+    ...(faculty ? { faculty } : {}),
+  };
+
   const type = app.opportunityType as OpportunityType;
   const oppId = app.opportunity;
-  if (!oppId) return app;
+  if (!oppId) return withApplicant;
 
   if (usesFacultyModel(type)) {
-    const opp = await FacultyOpportunity.findById(String(oppId)).select('title hostType host').lean();
-    if (!opp) return app;
+    const opp = await FacultyOpportunity.findById(String(oppId))
+      .select('title hostType host')
+      .lean();
+    if (!opp) return withApplicant;
     let hostRef: { id: string; name: string } | null = null;
     if (opp.hostType === 'COMPANY') {
       const c = await CompanyProfile.findById(opp.host).select('companyName').lean();
@@ -353,7 +427,7 @@ async function enrichApplication(app: Record<string, unknown>): Promise<Record<s
       hostRef = i ? { id: String(i._id), name: i.name } : null;
     }
     return {
-      ...app,
+      ...withApplicant,
       opportunity: {
         id: String(opp._id),
         title: opp.title,
@@ -367,15 +441,50 @@ async function enrichApplication(app: Record<string, unknown>): Promise<Record<s
     .select('title company')
     .populate({ path: 'company', select: 'companyName' })
     .lean();
-  if (!opp) return app;
+  if (!opp) return withApplicant;
   const company = opp.company as unknown as { _id: unknown; companyName: string } | null;
   return {
-    ...app,
+    ...withApplicant,
     opportunity: {
       id: String(opp._id),
       title: opp.title,
       ...(company ? { company: { id: String(company._id), name: company.companyName } } : {}),
     },
+  };
+}
+
+export interface ApplicationSummary {
+  applicationId: string;
+  candidateName: string;
+  opportunityTitle: string;
+  companyName: string;
+}
+
+/**
+ * The applicant and posting names another module needs when it holds only an
+ * application id — the interview list, which `@aip/types` declares as carrying a
+ * `candidateName`, `opportunityTitle` and `companyName`. Routed through
+ * `enrichApplication` so an interview and the applicants table never disagree
+ * about who a candidate is.
+ */
+export async function summarizeApplication(
+  applicationId: string,
+): Promise<ApplicationSummary | null> {
+  const app = await Application.findById(applicationId)
+    .select('student faculty opportunity opportunityType')
+    .lean();
+  if (!app) return null;
+
+  const enriched = await enrichApplication(app as unknown as Record<string, unknown>);
+  const applicant = asRecord(enriched.student) ?? asRecord(enriched.faculty);
+  const opportunity = asRecord(enriched.opportunity);
+  const company = asRecord(opportunity?.company);
+
+  return {
+    applicationId: String(app._id),
+    candidateName: typeof applicant?.fullName === 'string' ? applicant.fullName : '',
+    opportunityTitle: typeof opportunity?.title === 'string' ? opportunity.title : '',
+    companyName: typeof company?.name === 'string' ? company.name : '',
   };
 }
 
@@ -403,9 +512,10 @@ export async function getApplicationById(userId: string, role: Role, id: string)
   } else if (role === 'COMPANY') {
     const company = await getMyCompanyProfile(userId);
     if (usesFacultyModel(type)) {
-      const opp = await FacultyOpportunity.findById(app.opportunity).select('hostType host postedBy');
-      const isHost =
-        opp?.hostType === 'COMPANY' && String(opp.host) === String(company._id);
+      const opp = await FacultyOpportunity.findById(app.opportunity).select(
+        'hostType host postedBy',
+      );
+      const isHost = opp?.hostType === 'COMPANY' && String(opp.host) === String(company._id);
       const isPoster = opp && String(opp.postedBy) === userId;
       if (!isHost && !isPoster) throw AppError.forbidden('Not your application');
     } else {
@@ -445,7 +555,9 @@ export async function updateStatus(
   if (role === 'COMPANY') {
     const company = await getMyCompanyProfile(userId);
     if (usesFacultyModel(type)) {
-      const opp = await FacultyOpportunity.findById(app.opportunity).select('hostType host postedBy');
+      const opp = await FacultyOpportunity.findById(app.opportunity).select(
+        'hostType host postedBy',
+      );
       const isHost = opp?.hostType === 'COMPANY' && String(opp.host) === String(company._id);
       const isPoster = opp && String(opp.postedBy) === userId;
       if (!isHost && !isPoster) throw AppError.forbidden('Not your application');

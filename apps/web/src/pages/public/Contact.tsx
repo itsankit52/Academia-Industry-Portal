@@ -38,9 +38,12 @@ export default function Contact() {
     <div className="container-page py-16">
       <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-12">
         <div className="lg:col-span-2">
-          <h1 className="text-3xl font-bold text-slate-900 mb-4 dark:text-slate-100">Get in touch</h1>
+          <h1 className="text-3xl font-bold text-slate-900 mb-4 dark:text-slate-100">
+            Get in touch
+          </h1>
           <p className="text-slate-500 leading-relaxed mb-8 dark:text-slate-400">
-            Have a question about the platform or want to explore a partnership? We'd love to hear from you.
+            Have a question about the platform or want to explore a partnership? We'd love to hear
+            from you.
           </p>
 
           <div className="space-y-5">
@@ -50,7 +53,7 @@ export default function Contact() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Email</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">support@aip.edu</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">academia@gmail.com</p>
               </div>
             </div>
             <div className="flex items-start gap-4">
@@ -59,7 +62,9 @@ export default function Contact() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Office</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Placement Cell, Main Campus</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Placement Cell, Main Campus
+                </p>
               </div>
             </div>
           </div>
@@ -70,14 +75,14 @@ export default function Contact() {
             <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
               <Input
                 label="Full name"
-                placeholder="Jane Smith"
+                placeholder="Enter your name"
                 error={errors.name?.message}
                 {...register('name')}
               />
               <Input
                 label="Email address"
                 type="email"
-                placeholder="jane@university.edu"
+                placeholder="Enter your email"
                 error={errors.email?.message}
                 {...register('email')}
               />

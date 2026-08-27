@@ -10,6 +10,7 @@ import {
   StudentProfile,
 } from '../../models';
 import { applyPagination, buildPaginated, type PaginationInput } from '../../utils/pagination';
+import { summarizeApplication } from '../applications/applications.service';
 import { createNotification } from '../notifications/notifications.service';
 
 function opportunityModel(type: OpportunityType): typeof Job {
@@ -39,11 +40,7 @@ async function assertCompanyOwnsApplication(userId: string, appId: string) {
   return app;
 }
 
-export async function createInterview(
-  userId: string,
-  role: Role,
-  input: CreateInterviewInput,
-) {
+export async function createInterview(userId: string, role: Role, input: CreateInterviewInput) {
   const app =
     role === 'COMPANY'
       ? await assertCompanyOwnsApplication(userId, input.applicationId)
@@ -86,6 +83,23 @@ export interface InterviewListFilters {
   status?: string;
   from?: string;
   to?: string;
+}
+
+/**
+ * `@aip/types` declares an `Interview` as carrying an `applicationId`,
+ * `candidateName`, `opportunityTitle` and `companyName`; the schema stores none of
+ * them, only the `application` ref. Those four are exactly what the interview
+ * cards and the cancel dialog render, so they showed empty headers and asked
+ * "Cancel the interview with undefined?". Resolve them from the application the
+ * interview already points at, through the applications service, so an interview
+ * and the applicants table can never disagree about who a candidate is.
+ */
+async function withApplicationSummary(
+  iv: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  if (!iv.application) return iv;
+  const summary = await summarizeApplication(String(iv.application));
+  return summary ? { ...iv, ...summary } : iv;
 }
 
 export async function listInterviews(
@@ -131,7 +145,8 @@ export async function listInterviews(
     Interview.find(where).sort(sort).skip(skip).limit(limit),
     Interview.countDocuments(where),
   ]);
-  return buildPaginated(rows.map((r) => r.toJSON()), total, page, pageSize);
+  const items = await Promise.all(rows.map((r) => withApplicationSummary(r.toJSON())));
+  return buildPaginated(items, total, page, pageSize);
 }
 
 async function assertInterviewAccess(userId: string, role: Role, iv: { application?: unknown }) {
@@ -157,7 +172,7 @@ export async function getInterviewById(userId: string, role: Role, id: string) {
   const iv = await Interview.findById(id);
   if (!iv) throw AppError.notFound('Interview not found');
   await assertInterviewAccess(userId, role, iv);
-  return iv.toJSON();
+  return withApplicationSummary(iv.toJSON());
 }
 
 export async function updateInterview(

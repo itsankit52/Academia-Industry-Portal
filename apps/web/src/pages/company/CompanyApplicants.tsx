@@ -11,7 +11,10 @@ import Input from '@/components/ui/Input';
 import EmptyState from '@/components/ui/EmptyState';
 import ErrorState from '@/components/ui/ErrorState';
 import { SkeletonTableRows } from '@/components/ui/Skeleton';
-import { useCompanyApplicants, useUpdateApplicationStatus } from '@/hooks/queries/useCompanyApplicants';
+import {
+  useCompanyApplicants,
+  useUpdateApplicationStatus,
+} from '@/hooks/queries/useCompanyApplicants';
 import { APPLICATION_STATUSES } from '@aip/config';
 import type { ApplicationStatus } from '@aip/config';
 import { getStudentName, getStudentEmail, getOpportunityTitle } from '@aip/types';
@@ -52,11 +55,24 @@ export default function CompanyApplicants() {
 
   return (
     <div className="container-page py-8 space-y-6">
-      <PageHeader title="Applicants" subtitle="All candidates who have applied to your listings." />
+      <PageHeader title="Applicants" subtitle="All caught up." />
 
       <Filters>
-        <Select label="Status" options={statusOptions} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} />
-        <Input label="Min Match Score" type="number" min={0} max={100} placeholder="e.g. 60" value={minScore} onChange={(e) => setMinScore(e.target.value)} />
+        <Select
+          label="Status"
+          options={statusOptions}
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        />
+        <Input
+          label="Min Match Score"
+          type="number"
+          min={0}
+          max={100}
+          placeholder="e.g. 60"
+          value={minScore}
+          onChange={(e) => setMinScore(e.target.value)}
+        />
       </Filters>
 
       <Table>
@@ -74,27 +90,51 @@ export default function CompanyApplicants() {
           {isLoading ? (
             <SkeletonTableRows rows={6} cols={6} />
           ) : applications.length === 0 ? (
-            <tr><td colSpan={6}><EmptyState icon={<FiUsers />} title="No applicants found" /></td></tr>
+            <tr>
+              <td colSpan={6}>
+                <EmptyState icon={<FiUsers />} title="No applicants found" />
+              </td>
+            </tr>
           ) : (
             applications.map((app) => {
               const cfg = statusConfig[app.status];
               return (
-                <tr key={app.id} className="cursor-pointer" onClick={() => navigate(`/company/applicants/${app.id}`)}>
+                <tr
+                  key={app.id}
+                  className="cursor-pointer"
+                  onClick={() => navigate(`/company/applicants/${app.id}`)}
+                >
                   <Table.Td>
                     <div>
-                      <p className="font-medium text-slate-900 dark:text-slate-100">{getStudentName(app)}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{getStudentEmail(app)}</p>
+                      <p className="font-medium text-slate-900 dark:text-slate-100">
+                        {getStudentName(app)}
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {getStudentEmail(app)}
+                      </p>
                     </div>
                   </Table.Td>
                   <Table.Td>
-                    <p className="text-sm text-slate-700 dark:text-slate-300">{getOpportunityTitle(app)}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{app.opportunityType}</p>
+                    <p className="text-sm text-slate-700 dark:text-slate-300">
+                      {getOpportunityTitle(app)}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {app.opportunityType}
+                    </p>
                   </Table.Td>
                   <Table.Td>
-                    {app.matchScore != null ? <MatchBadge score={app.matchScore} /> : '—'}
+                    {app.matchScore !== null && app.matchScore !== undefined ? (
+                      <MatchBadge score={app.matchScore} />
+                    ) : (
+                      '—'
+                    )}
                   </Table.Td>
                   <Table.Td>{format(new Date(app.createdAt), 'MMM d, yyyy')}</Table.Td>
-                  <Table.Td><Badge variant={cfg.variant} size="sm">{cfg.label}</Badge></Table.Td>
+                  <Table.Td>
+                    <Badge variant={cfg.variant} size="sm">
+                      {cfg.label}
+                    </Badge>
+                  </Table.Td>
                   <Table.Td>
                     <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
                       {app.status !== 'SHORTLISTED' && (

@@ -15,21 +15,36 @@ interface Props {
   applicationId: string;
 }
 
-const modeOptions = INTERVIEW_MODES.map((m) => ({ value: m, label: m.charAt(0) + m.slice(1).toLowerCase() }));
+const modeOptions = INTERVIEW_MODES.map((m) => ({
+  value: m,
+  label: m.charAt(0) + m.slice(1).toLowerCase(),
+}));
 
 export default function ScheduleInterviewModal({ open, onClose, applicationId }: Props) {
   const createInterview = useCreateInterview();
 
-  const { register, handleSubmit, watch, reset, formState: { errors } } = useForm<CreateInterviewInput>({
+  const {
+    register,
+    handleSubmit,
+    watch,
+    reset,
+    formState: { errors },
+  } = useForm<CreateInterviewInput>({
     resolver: zodResolver(createInterviewSchema),
-    defaultValues: { applicationId, durationMinutes: 60 },
+    defaultValues: {
+      applicationId,
+      durationMinutes: 60,
+    },
   });
 
   const mode = watch('mode');
 
   function onSubmit(data: CreateInterviewInput) {
     createInterview.mutate(data, {
-      onSuccess: () => { reset(); onClose(); },
+      onSuccess: () => {
+        reset();
+        onClose();
+      },
     });
   }
 
@@ -50,7 +65,15 @@ export default function ScheduleInterviewModal({ open, onClose, applicationId }:
           label="Scheduled At"
           type="datetime-local"
           error={errors.scheduledAt?.message}
-          {...register('scheduledAt')}
+          {...register('scheduledAt', {
+            setValueAs: (value: string) => {
+              if (!value) return value;
+
+              const date = new Date(value);
+
+              return Number.isNaN(date.getTime()) ? value : date.toISOString();
+            },
+          })}
         />
 
         <Input

@@ -6,9 +6,22 @@ export interface TimelineEntry {
   note?: string;
 }
 
+export interface ApplicantRef {
+  id: string;
+  fullName: string;
+  email: string;
+}
+
 export interface Application {
   id: string;
-  student: string | { id: string; fullName: string; email: string };
+  /**
+   * The applicant. Students apply to company postings; faculty-facing
+   * opportunities (FDPs, consultancy, collaborative research) put a faculty
+   * profile in the applicant slot instead, so exactly one of the two is set.
+   * Either arrives as a bare id or, once the API has resolved it, as a ref.
+   */
+  student?: string | ApplicantRef;
+  faculty?: string | ApplicantRef;
   opportunityType: OpportunityType;
   opportunity: string | { id: string; title: string; company?: { id: string; name: string } };
   status: ApplicationStatus;
@@ -40,17 +53,27 @@ export function getOpportunityId(app: Application): string {
   return '';
 }
 
+/**
+ * The resolved applicant, whichever slot it arrived in. Both company- and
+ * institution-side views show a single "candidate" column, so they read this
+ * rather than caring which kind of profile applied.
+ */
+function getApplicant(app: Application): ApplicantRef | null {
+  for (const ref of [app.student, app.faculty]) {
+    if (typeof ref === 'object' && ref !== null) return ref;
+  }
+  return null;
+}
+
 export function getStudentName(app: Application): string {
-  if (typeof app.student === 'object' && app.student !== null) return app.student.fullName;
-  return '—';
+  return getApplicant(app)?.fullName || '—';
 }
 
 export function getStudentEmail(app: Application): string {
-  if (typeof app.student === 'object' && app.student !== null) return app.student.email;
-  return '—';
+  return getApplicant(app)?.email || '—';
 }
 
 export function getResumeUrl(app: Application): string | undefined {
-  if (app.resume != null && typeof app.resume === 'object') return app.resume.url;
+  if (app.resume !== null && typeof app.resume === 'object') return app.resume.url;
   return undefined;
 }

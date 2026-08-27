@@ -2,8 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { apiGet, apiPatch } from '@/lib/api';
 import { queryKeys } from './queryKeys';
-import type { Application, Paginated } from '@aip/types';
-import type { ApplicationStatus } from '@aip/config';
+import type { Application, Paginated, TimelineEntry } from '@aip/types';
+import type { ApplicationStatus, OpportunityType } from '@aip/config';
 
 export interface ApplicantsFilters {
   status?: string;
@@ -18,30 +18,74 @@ export function useCompanyApplicants(filters?: ApplicantsFilters) {
       const params = new URLSearchParams({ scope: 'company' });
       if (filters?.status) params.set('status', filters.status);
       if (filters?.opportunityId) params.set('opportunityId', filters.opportunityId);
-      if (filters?.minMatchScore != null) params.set('minMatchScore', String(filters.minMatchScore));
+      if (typeof filters?.minMatchScore === 'number') {
+        params.set('minMatchScore', String(filters.minMatchScore));
+      }
       return apiGet<Paginated<Application>>(`/applications?${params}`);
     },
   });
 }
 
+/**
+ * `GET /applications/:id/candidate` — mirrors `CandidateDetailsView` in
+ * `apps/api/src/modules/applications/applications.service.ts`, which is what
+ * `apps/api/src/__tests__/candidate-details.spec.ts` pins down. The candidate sits
+ * under `student`, the skills are top level, and the match breakdown and resume
+ * belong to `application`.
+ */
+export interface CandidateSkill {
+  id: string;
+  name: string;
+  category: string;
+  proficiency: string;
+  yearsExperience?: number;
+}
+
 export interface CandidateDetails {
-  application: Application;
-  studentProfile: {
+  id: string;
+  student: {
+    id: string;
     fullName: string;
     email: string;
+    phone?: string;
     college?: string;
+    degree?: string;
     branch?: string;
     cgpa?: number;
+    gradYear?: number;
     bio?: string;
-    skills: { id: string; name: string; category: string; proficiency: string }[];
-    projects: { title: string; description: string; techStack: string[]; link?: string }[];
-    certifications: { title: string; issuer: string; issuedAt: string; credentialUrl?: string }[];
-    experience: { title: string; organization: string; startDate: string; endDate?: string; description?: string }[];
+    projects: { title: string; description?: string; techStack: string[]; link?: string }[];
+    certifications: { title: string; issuer: string; issuedAt?: string; credentialUrl?: string }[];
+    experience: {
+      title: string;
+      organization: string;
+      startDate: string;
+      endDate?: string;
+      description?: string;
+    }[];
     achievements: { title: string; description?: string; date?: string }[];
-    resumeUrl?: string;
+    preferredRoles: string[];
+    preferredLocations: string[];
   };
-  matchedSkills: string[];
-  missingSkills: string[];
+  skills: CandidateSkill[];
+  opportunity: {
+    id: string;
+    title: string;
+    type: OpportunityType;
+    company: { id: string; name: string };
+  };
+  application: {
+    id: string;
+    status: ApplicationStatus;
+    coverLetter?: string;
+    matchScore?: number;
+    matchedSkills: string[];
+    missingSkills: string[];
+    resume?: { url: string; mimeType: string };
+    timeline: TimelineEntry[];
+    createdAt: string;
+  };
+  aiNarrative?: string;
 }
 
 export function useCandidateDetails(applicationId: string) {
