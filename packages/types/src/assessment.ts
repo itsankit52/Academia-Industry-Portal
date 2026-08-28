@@ -1,4 +1,4 @@
-import type { AssessmentStatus } from '@aip/config';
+import type { AssessmentStatus, SkillCategory } from '@aip/config';
 
 export interface AssessmentQuestion {
   id: string;
@@ -20,8 +20,19 @@ export interface AssessmentEvaluationPerQuestion {
   feedback: string;
 }
 
+export interface SkillBreakdown {
+  skillId: string;
+  skillName: string;
+  category: SkillCategory;
+  score: number;
+  maxScore: number;
+  questionCount: number;
+  answeredCount: number;
+}
+
 export interface AssessmentEvaluation {
   perQuestion: AssessmentEvaluationPerQuestion[];
+  skillBreakdown: SkillBreakdown[];
   totalScore: number;
   rawScore: number;
   maxScore: number;
@@ -58,4 +69,5 @@ export interface AssessmentSummary {
   latestDate?: string;
   totalCount: number;
   averageScore?: number;
+  skillScores?: SkillBreakdown[];
 }

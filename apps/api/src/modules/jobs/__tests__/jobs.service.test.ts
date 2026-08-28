@@ -19,13 +19,7 @@ vi.mock('../../../models', () => ({
 
 import { CompanyProfile, Job, StudentProfile, StudentSkill } from '../../../models';
 import { computeMatch } from '../../matching/algorithm';
-import {
-  createJob,
-  getJobById,
-  listJobs,
-  listMyJobs,
-  patchJob,
-} from '../jobs.service';
+import { createJob, getJobById, listJobs, listMyJobs, patchJob } from '../jobs.service';
 
 /**
  * Ownership and visibility for the job module, with the models mocked.
@@ -104,10 +98,10 @@ function idOf(row: unknown): unknown {
   return (row as { id?: unknown }).id;
 }
 
-/** Mirrors `StudentSkill.find(...).select('skill').lean()`. */
+/** Mirrors `StudentSkill.find(...).select('skill').populate().lean()`. */
 function studentSkillChain(rows: unknown[]) {
   const chain: Record<string, unknown> = {};
-  for (const method of ['select', 'lean']) {
+  for (const method of ['select', 'populate', 'lean']) {
     chain[method] = vi.fn(() => chain);
   }
   chain.then = (resolve: (v: unknown) => unknown) => Promise.resolve(rows).then(resolve);
@@ -134,9 +128,9 @@ function listRow(required: Types.ObjectId[], preferred: Types.ObjectId[] = []) {
 /** Points the student lookups at a profile owning `skillIds`. */
 function studentWithSkills(skillIds: Types.ObjectId[]) {
   const profileId = new Types.ObjectId();
-  vi.mocked(StudentProfile.findOne).mockReturnValue(
-    { select: () => Promise.resolve({ _id: profileId }) } as never,
-  );
+  vi.mocked(StudentProfile.findOne).mockReturnValue({
+    select: () => Promise.resolve({ _id: profileId }),
+  } as never);
   vi.mocked(StudentSkill.find).mockReturnValue(
     studentSkillChain(skillIds.map((id) => ({ skill: id }))) as never,
   );
@@ -152,9 +146,9 @@ beforeEach(() => {
   vi.mocked(Job.countDocuments).mockResolvedValue(0 as never);
   vi.mocked(Job.find).mockImplementation((() => findChain([])) as never);
   // No student profile unless a test opts in, so the default viewer is scoreless.
-  vi.mocked(StudentProfile.findOne).mockReturnValue(
-    { select: () => Promise.resolve(null) } as never,
-  );
+  vi.mocked(StudentProfile.findOne).mockReturnValue({
+    select: () => Promise.resolve(null),
+  } as never);
   vi.mocked(StudentSkill.find).mockReturnValue(studentSkillChain([]) as never);
 });
 
@@ -403,8 +397,7 @@ describe('listJobs — matchScore', () => {
   });
 
   it('omits the score for an anonymous visitor, without touching the student collections', async () => {
-    vi.mocked(Job.find).mockImplementation((() =>
-      findChain([listRow([SKILL_A])])) as never);
+    vi.mocked(Job.find).mockImplementation((() => findChain([listRow([SKILL_A])])) as never);
 
     const { items } = await listJobs({}, {});
 
@@ -414,8 +407,7 @@ describe('listJobs — matchScore', () => {
   });
 
   it('omits the score for a company viewer', async () => {
-    vi.mocked(Job.find).mockImplementation((() =>
-      findChain([listRow([SKILL_A])])) as never);
+    vi.mocked(Job.find).mockImplementation((() => findChain([listRow([SKILL_A])])) as never);
 
     const { items } = await listJobs({}, {}, { role: 'COMPANY', userId: OWNER_USER });
 
@@ -425,8 +417,7 @@ describe('listJobs — matchScore', () => {
 
   it('omits the score when the student has recorded no skills', async () => {
     studentWithSkills([]);
-    vi.mocked(Job.find).mockImplementation((() =>
-      findChain([listRow([SKILL_A])])) as never);
+    vi.mocked(Job.find).mockImplementation((() => findChain([listRow([SKILL_A])])) as never);
 
     const { items } = await listJobs({}, {}, studentViewer);
 
@@ -437,8 +428,7 @@ describe('listJobs — matchScore', () => {
   it('still lists jobs for a STUDENT account that has no profile', async () => {
     // `loadStudentSkillIds` 404s here, which is right for the profile-specific
     // endpoints that own it but must not take down a public browse page.
-    vi.mocked(Job.find).mockImplementation((() =>
-      findChain([listRow([SKILL_A])])) as never);
+    vi.mocked(Job.find).mockImplementation((() => findChain([listRow([SKILL_A])])) as never);
 
     const { items } = await listJobs({}, {}, studentViewer);
 

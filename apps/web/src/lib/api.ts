@@ -57,7 +57,7 @@ api.interceptors.response.use(
 
 async function unwrap<T>(promise: Promise<{ data: unknown; status: number }>): Promise<T> {
   const { data, status } = await promise;
-  if (status === 204 || data == null || data === '') {
+  if (status === 204 || data === null || data === undefined || data === '') {
     return undefined as unknown as T;
   }
   const envelope = data as ApiSuccess<T>;

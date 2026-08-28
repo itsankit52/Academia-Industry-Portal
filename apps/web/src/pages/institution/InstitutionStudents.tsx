@@ -17,7 +17,13 @@ export default function InstitutionStudents() {
   const [graduationYear, setGraduationYear] = useState('');
   const [page, setPage] = useState(1);
 
-  const filters = { q: q || undefined, branch: branch || undefined, graduationYear: graduationYear || undefined, page, pageSize: 20 };
+  const filters = {
+    q: q || undefined,
+    branch: branch || undefined,
+    graduationYear: graduationYear || undefined,
+    page,
+    pageSize: 20,
+  };
   const { data, isLoading, isError, refetch } = useInstitutionStudents(filters);
   const students = data?.items ?? [];
 
@@ -27,7 +33,11 @@ export default function InstitutionStudents() {
     <div className="container-page py-8 space-y-6">
       <PageHeader
         title="Students"
-        subtitle={data ? `${data.total} student${data.total !== 1 ? 's' : ''} enrolled.` : 'Student directory.'}
+        subtitle={
+          data
+            ? `${data.total} student${data.total !== 1 ? 's' : ''} enrolled.`
+            : 'Student directory.'
+        }
       />
 
       <Filters>
@@ -35,20 +45,29 @@ export default function InstitutionStudents() {
           label="Search"
           placeholder="Search by name…"
           value={q}
-          onChange={(e) => { setQ(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setPage(1);
+          }}
         />
         <Input
           label="Branch"
           placeholder="e.g. CSE"
           value={branch}
-          onChange={(e) => { setBranch(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setBranch(e.target.value);
+            setPage(1);
+          }}
         />
         <Input
           label="Graduation Year"
           type="number"
           placeholder="2026"
           value={graduationYear}
-          onChange={(e) => { setGraduationYear(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setGraduationYear(e.target.value);
+            setPage(1);
+          }}
         />
       </Filters>
 
@@ -70,18 +89,26 @@ export default function InstitutionStudents() {
           ) : students.length === 0 ? (
             <tr>
               <td colSpan={7}>
-                <EmptyState icon={<FiUsers />} title="No students found" description="Try adjusting your filters." />
+                <EmptyState
+                  icon={<FiUsers />}
+                  title="No students found"
+                  description="Try adjusting your filters."
+                />
               </td>
             </tr>
           ) : (
             students.map((s) => (
               <tr key={s.id}>
-                <Table.Td className="font-medium text-slate-900 dark:text-slate-100">{s.fullName}</Table.Td>
+                <Table.Td className="font-medium text-slate-900 dark:text-slate-100">
+                  {s.fullName}
+                </Table.Td>
                 <Table.Td>{s.email}</Table.Td>
                 <Table.Td>{s.branch ?? '—'}</Table.Td>
                 <Table.Td>{s.semester ?? '—'}</Table.Td>
                 <Table.Td>{s.graduationYear ?? '—'}</Table.Td>
-                <Table.Td>{s.cgpa != null ? s.cgpa.toFixed(2) : '—'}</Table.Td>
+                <Table.Td>
+                  {s.cgpa !== null && s.cgpa !== undefined ? s.cgpa.toFixed(2) : '—'}
+                </Table.Td>
                 <Table.Td>
                   <Link
                     to={`/institution/students/${s.id}`}

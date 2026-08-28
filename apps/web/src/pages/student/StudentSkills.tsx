@@ -3,7 +3,6 @@ import { FiCode } from 'react-icons/fi';
 import PageHeader from '@/components/ui/PageHeader';
 import Card from '@/components/ui/Card';
 import SkillChip from '@/components/ui/SkillChip';
-import Button from '@/components/ui/Button';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import EmptyState from '@/components/ui/EmptyState';
 import ErrorState from '@/components/ui/ErrorState';
@@ -24,7 +23,9 @@ export default function StudentSkills() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
         <Card>
           <Card.Header>
-            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">My Skills</h2>
+            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+              My Skills
+            </h2>
           </Card.Header>
           <Card.Body>
             {isError && <ErrorState onRetry={() => void refetch()} />}
@@ -57,7 +58,9 @@ export default function StudentSkills() {
 
         <Card>
           <Card.Header>
-            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Add Skill</h2>
+            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+              Add Skill
+            </h2>
           </Card.Header>
           <Card.Body>
             <AddSkillForm />

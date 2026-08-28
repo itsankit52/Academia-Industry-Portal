@@ -62,9 +62,7 @@ const envSchema = z.object({
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900_000),
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(100),
 
-  LOG_LEVEL: z
-    .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
-    .default('info'),
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -73,7 +71,6 @@ if (!parsed.success) {
   const issues = parsed.error.issues
     .map((i) => `  - ${i.path.join('.') || '<root>'}: ${i.message}`)
     .join('\n');
-  // eslint-disable-next-line no-console
   console.error(`[env] Invalid environment configuration:\n${issues}`);
   process.exit(1);
 }
@@ -84,7 +81,6 @@ export type Env = typeof env;
 // Only worth saying when a key is actually present — with no key the AI paths are
 // skipped deliberately and the model id is irrelevant.
 if (env.GEMINI_API_KEY && isRetiredGeminiModel(env.GEMINI_MODEL)) {
-  // eslint-disable-next-line no-console
   console.warn(
     `[env] GEMINI_MODEL="${env.GEMINI_MODEL}" has been retired by Google. ` +
       `Gemini requests will fail and every AI feature will silently serve its ` +

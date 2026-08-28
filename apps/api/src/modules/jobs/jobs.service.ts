@@ -8,6 +8,7 @@ import { applyPagination, buildPaginated, type PaginationInput } from '../../uti
 import { normalizeCompanyOn } from '../../utils/normalizeCompany';
 import { computeMatch } from '../matching/algorithm';
 import { idOf, loadStudentSkillIds } from '../matching/skillGap';
+import { analyzeFullMatch } from '../matching/fullMatch.service';
 
 export interface JobListFilters {
   search?: string;
@@ -71,7 +72,10 @@ function parseStatus(value: string | undefined): JobStatus | undefined {
  * ownership-scoped. Returning `undefined` means "no status predicate", i.e.
  * every status, which is what the admin console wants by default.
  */
-function resolveListStatus(requested: string | undefined, viewer: JobViewer): JobStatus | undefined {
+function resolveListStatus(
+  requested: string | undefined,
+  viewer: JobViewer,
+): JobStatus | undefined {
   const status = parseStatus(requested);
   if (viewer.role === 'ADMIN') return status;
   if (status && status !== 'PUBLISHED') {
@@ -151,6 +155,28 @@ function skillIdsOf(value: unknown): string[] {
   return Array.isArray(value) ? value.map(idOf) : [];
 }
 
+/**
+ * Computes the full multi-dimensional match for a single job against a student
+ * viewer.  Returns `null` (and never throws) when the viewer has no profile or
+ * the match is otherwise uncomputable, so the list endpoint can keep working
+ * even for students who have not yet filled in their profile.
+ */
+async function safeFullMatch(
+  viewer: JobViewer,
+  jobId: string,
+): Promise<Awaited<ReturnType<typeof analyzeFullMatch>> | null> {
+  if (viewer.role !== 'STUDENT' || !viewer.userId) return null;
+  try {
+    return await analyzeFullMatch(viewer.userId, 'JOB', jobId);
+  } catch (err) {
+    if (err instanceof AppError) {
+      // No profile / no opportunity → no score to attach
+      if (err.statusCode === 404) return null;
+    }
+    throw err;
+  }
+}
+
 export async function listJobs(
   pag: PaginationInput,
   filters: JobListFilters,
@@ -172,15 +198,48 @@ export async function listJobs(
   if (filters.search) where.$text = { $search: filters.search };
 
   const [rows, total] = await Promise.all([
-    Job.find(where).sort(sort).skip(skip).limit(limit).populate(populateJob as never),
+    Job.find(where)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .populate(populateJob as never),
     Job.countDocuments(where),
   ]);
 
   const scoringSkills = await scoringSkillsFor(viewer);
+  const isStudentViewer = viewer.role === 'STUDENT' && !!viewer.userId;
+
+  // Compute the multi-dimensional match for each job in parallel for student
+  // viewers.  Non-student viewers and missing profiles are left out — the
+  // client gates the badge on `matchScore !== undefined`.
+  const matchDetails = isStudentViewer
+    ? await Promise.all(rows.map((r) => safeFullMatch(viewer, String(r._id))))
+    : rows.map(() => null);
 
   return buildPaginated(
-    rows.map((r) => {
+    rows.map((r, i) => {
       const row = normalizeCompanyOn(r.toJSON());
+      const match = matchDetails[i];
+      if (match) {
+        // Surface both the legacy numeric `matchScore` (so existing
+        // MatchBadge / sort logic keep working) and the full breakdown.
+        return {
+          ...row,
+          matchScore: match.score,
+          matchDetails: {
+            score: match.score,
+            matchPercentage: match.matchPercentage,
+            level: match.level,
+            recommendation: match.recommendation,
+            eligibility: match.eligibility,
+            matchedSkills: match.matchedSkills,
+            missingSkills: match.missingSkills,
+            preferredMatched: match.preferredMatched,
+            careerInterestsMatch: match.careerInterestsMatch,
+            breakdown: match.breakdown,
+          },
+        };
+      }
       // Left absent, not zeroed, when there is nothing to score against — the
       // client gates the badge on `matchScore !== undefined`.
       if (!scoringSkills) return row;
@@ -201,7 +260,25 @@ export async function getJobById(id: string, viewer: JobViewer = {}) {
   const job = await Job.findById(id).populate(populateJob as never);
   if (!job) throw AppError.notFound('Job not found');
   await assertCanViewJob(job, viewer);
-  return normalizeCompanyOn(job.toJSON());
+  const row = normalizeCompanyOn(job.toJSON());
+  const match = await safeFullMatch(viewer, String(job._id));
+  if (!match) return row;
+  return {
+    ...row,
+    matchScore: match.score,
+    matchDetails: {
+      score: match.score,
+      matchPercentage: match.matchPercentage,
+      level: match.level,
+      recommendation: match.recommendation,
+      eligibility: match.eligibility,
+      matchedSkills: match.matchedSkills,
+      missingSkills: match.missingSkills,
+      preferredMatched: match.preferredMatched,
+      careerInterestsMatch: match.careerInterestsMatch,
+      breakdown: match.breakdown,
+    },
+  };
 }
 
 export async function createJob(userId: string, input: CreateJobInput) {
@@ -241,12 +318,7 @@ export async function deleteJob(userId: string, role: Role, id: string) {
   await job.deleteOne();
 }
 
-export async function patchJob(
-  userId: string,
-  role: Role,
-  id: string,
-  patch: UpdateJobInput,
-) {
+export async function patchJob(userId: string, role: Role, id: string, patch: UpdateJobInput) {
   const job = await Job.findById(id);
   if (!job) throw AppError.notFound('Job not found');
   if (role !== 'ADMIN') {
@@ -278,5 +350,10 @@ export async function listMyJobs(
       .populate({ path: 'preferredSkills', select: 'name category' }),
     Job.countDocuments(where),
   ]);
-  return buildPaginated(rows.map((r) => r.toJSON()), total, page, pageSize);
+  return buildPaginated(
+    rows.map((r) => r.toJSON()),
+    total,
+    page,
+    pageSize,
+  );
 }

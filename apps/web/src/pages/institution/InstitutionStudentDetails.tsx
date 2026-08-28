@@ -14,7 +14,9 @@ export default function InstitutionStudentDetails() {
   if (isLoading) {
     return (
       <div className="container-page py-8 space-y-4">
-        {Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)}
+        {Array.from({ length: 3 }).map((_, i) => (
+          <SkeletonCard key={i} />
+        ))}
       </div>
     );
   }
@@ -62,7 +64,13 @@ export default function InstitutionStudentDetails() {
                   { label: 'Branch', value: student.branch },
                   { label: 'Semester', value: student.semester },
                   { label: 'Graduation Year', value: student.graduationYear },
-                  { label: 'CGPA', value: student.cgpa != null ? student.cgpa.toFixed(2) : undefined },
+                  {
+                    label: 'CGPA',
+                    value:
+                      student.cgpa !== null && student.cgpa !== undefined
+                        ? student.cgpa.toFixed(2)
+                        : undefined,
+                  },
                 ].map(({ label, value }) => (
                   <div key={label}>
                     <dt className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-0.5">
@@ -83,7 +91,9 @@ export default function InstitutionStudentDetails() {
                 </h2>
               </Card.Header>
               <Card.Body>
-                <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{student.bio}</p>
+                <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                  {student.bio}
+                </p>
               </Card.Body>
             </Card>
           )}
@@ -97,15 +107,24 @@ export default function InstitutionStudentDetails() {
               </Card.Header>
               <Card.Body className="space-y-4">
                 {student.projects.map((p, i) => (
-                  <div key={i} className="border-b border-slate-100 dark:border-slate-800 last:border-0 pb-4 last:pb-0">
-                    <p className="font-medium text-sm text-slate-900 dark:text-slate-100">{p.title}</p>
+                  <div
+                    key={i}
+                    className="border-b border-slate-100 dark:border-slate-800 last:border-0 pb-4 last:pb-0"
+                  >
+                    <p className="font-medium text-sm text-slate-900 dark:text-slate-100">
+                      {p.title}
+                    </p>
                     {p.description && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{p.description}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        {p.description}
+                      </p>
                     )}
                     {p.techStack.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {p.techStack.map((t) => (
-                          <Badge key={t} size="sm">{t}</Badge>
+                          <Badge key={t} size="sm">
+                            {t}
+                          </Badge>
                         ))}
                       </div>
                     )}
@@ -126,7 +145,9 @@ export default function InstitutionStudentDetails() {
                 {student.certifications.map((c, i) => (
                   <div key={i} className="flex items-start justify-between">
                     <div>
-                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{c.title}</p>
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                        {c.title}
+                      </p>
                       <p className="text-xs text-slate-500 dark:text-slate-400">{c.issuer}</p>
                     </div>
                     {c.issuedAt && (
@@ -158,7 +179,9 @@ export default function InstitutionStudentDetails() {
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between">
                   <span className="text-slate-500 dark:text-slate-400">{label}</span>
-                  <span className="text-slate-900 dark:text-slate-100 font-medium">{value ?? '—'}</span>
+                  <span className="text-slate-900 dark:text-slate-100 font-medium">
+                    {value ?? '—'}
+                  </span>
                 </div>
               ))}
             </Card.Body>
@@ -174,17 +197,29 @@ export default function InstitutionStudentDetails() {
               <Card.Body className="space-y-3">
                 {student.preferredRoles.length > 0 && (
                   <div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Preferred Roles</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                      Preferred Roles
+                    </p>
                     <div className="flex flex-wrap gap-1">
-                      {student.preferredRoles.map((r) => <Badge key={r} size="sm">{r}</Badge>)}
+                      {student.preferredRoles.map((r) => (
+                        <Badge key={r} size="sm">
+                          {r}
+                        </Badge>
+                      ))}
                     </div>
                   </div>
                 )}
                 {student.preferredLocations.length > 0 && (
                   <div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Preferred Locations</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                      Preferred Locations
+                    </p>
                     <div className="flex flex-wrap gap-1">
-                      {student.preferredLocations.map((l) => <Badge key={l} size="sm">{l}</Badge>)}
+                      {student.preferredLocations.map((l) => (
+                        <Badge key={l} size="sm">
+                          {l}
+                        </Badge>
+                      ))}
                     </div>
                   </div>
                 )}

@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { apiPost } from '@/lib/api';
 import type { Application } from '@aip/types';
 import type { OpportunityType } from '@aip/config';
-import { queryKeys } from './queryKeys';
+import { queryKeys as _queryKeys } from './queryKeys';
 
 /**
  * Mirrors `createApplicationSchema`, which is `.strict()` — any extra key makes

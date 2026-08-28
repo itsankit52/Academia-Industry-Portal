@@ -1,4 +1,4 @@
-import { useState, KeyboardEvent } from 'react';
+import { useState, type KeyboardEvent } from 'react';
 import { FiX } from 'react-icons/fi';
 import { cn } from '@/lib/cn';
 
@@ -43,7 +43,9 @@ export default function BranchPicker({
   return (
     <div className="w-full">
       {label && (
-        <p className="block text-sm font-medium text-slate-700 mb-1.5 dark:text-slate-300">{label}</p>
+        <p className="block text-sm font-medium text-slate-700 mb-1.5 dark:text-slate-300">
+          {label}
+        </p>
       )}
       <div
         className={cn(
@@ -80,9 +82,13 @@ export default function BranchPicker({
         />
       </div>
       {error && (
-        <p className="mt-1.5 text-xs text-rose-600 dark:text-rose-400" role="alert">{error}</p>
+        <p className="mt-1.5 text-xs text-rose-600 dark:text-rose-400" role="alert">
+          {error}
+        </p>
       )}
-      <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Press Enter or comma to add each branch.</p>
+      <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+        Press Enter or comma to add each branch.
+      </p>
     </div>
   );
 }

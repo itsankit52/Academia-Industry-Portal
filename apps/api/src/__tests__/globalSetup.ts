@@ -17,6 +17,5 @@ export function setup(): void {
   const width = Math.max(...lines.map((l) => l.length));
   const rule = '='.repeat(width);
 
-  // eslint-disable-next-line no-console
   console.warn(`\n${rule}\n${lines.join('\n')}\n${rule}\n`);
 }

@@ -24,7 +24,38 @@ export interface PortfolioStudent {
   degree?: string;
   branch?: string;
   graduationYear?: number;
+  cgpa?: number;
   bio?: string;
+  city?: string;
+  state?: string;
+  college?: string;
+  university?: string;
+  email?: string;
+  linkedinUrl?: string;
+  githubUrl?: string;
+  portfolioUrl?: string;
+  twitterUrl?: string;
+  careerInterests?: string;
+  preferredRoles: string[];
+  preferredLocations: string[];
+  softSkills: string[];
+  education: {
+    institution: string;
+    degree: string;
+    field?: string;
+    startYear?: number;
+    endYear?: number;
+    grade?: string;
+    description?: string;
+  }[];
+  languages: { name: string; proficiency?: string }[];
+  experience: {
+    title: string;
+    organization: string;
+    startDate?: string;
+    endDate?: string;
+    description?: string;
+  }[];
 }
 
 export interface PortfolioSkill {
@@ -66,4 +97,11 @@ export interface PublicPortfolio {
   certifications: PortfolioCertification[];
   achievements: PortfolioAchievement[];
   verifiedDocuments: PortfolioDocument[];
+  experience: {
+    title: string;
+    organization: string;
+    startDate?: string;
+    endDate?: string;
+    description?: string;
+  }[];
 }

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { apiGet, apiPost, apiPatch, apiDelete } from '@/lib/api';
+import { apiGet, apiPost, apiPatch } from '@/lib/api';
 import { queryKeys } from './queryKeys';
 import type { Interview, Paginated } from '@aip/types';
 import type { CreateInterviewInput, UpdateInterviewInput } from '@aip/validation';

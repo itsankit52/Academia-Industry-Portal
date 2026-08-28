@@ -30,9 +30,23 @@ const evaluationPerQuestionSchema = new Schema(
   { _id: false },
 );
 
+const skillBreakdownSchema = new Schema(
+  {
+    skillId: { type: String, required: true },
+    skillName: { type: String, required: true },
+    category: { type: String, required: true },
+    score: { type: Number, required: true, min: 0 },
+    maxScore: { type: Number, required: true, min: 0 },
+    questionCount: { type: Number, required: true, min: 0 },
+    answeredCount: { type: Number, required: true, min: 0 },
+  },
+  { _id: false },
+);
+
 const evaluationSchema = new Schema(
   {
     perQuestion: { type: [evaluationPerQuestionSchema], default: [] },
+    skillBreakdown: { type: [skillBreakdownSchema], default: [] },
     totalScore: { type: Number, required: true, min: 0, max: 100 },
     rawScore: { type: Number, required: true, min: 0 },
     maxScore: { type: Number, required: true, min: 0 },

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { WORK_MODES, EMPLOYMENT_TYPES, JOB_STATUSES } from '@aip/config';
+import { WORK_MODES, EMPLOYMENT_TYPES } from '@aip/config';
 import type { JobStatus, WorkMode, EmploymentType } from '@aip/config';
 import { objectIdSchema, type CreateJobInput } from '@aip/validation';
 import PageHeader from '@/components/ui/PageHeader';
@@ -43,7 +43,10 @@ const formSchema = z
     minCgpa: z.number().min(0).max(10).optional(),
     applicationDeadline: z.string().optional(),
     openings: z
-      .number({ required_error: 'Openings is required.', invalid_type_error: 'Openings is required.' })
+      .number({
+        required_error: 'Openings is required.',
+        invalid_type_error: 'Openings is required.',
+      })
       .int()
       .min(1),
     requiredSkills: z.array(objectIdSchema).min(1, 'Select at least one required skill.'),
@@ -69,7 +72,11 @@ const formSchema = z
       }
     }
 
-    if (data.salaryMin !== undefined && data.salaryMax !== undefined && data.salaryMax < data.salaryMin) {
+    if (
+      data.salaryMin !== undefined &&
+      data.salaryMax !== undefined &&
+      data.salaryMax < data.salaryMin
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['salaryMax'],
@@ -80,7 +87,10 @@ const formSchema = z
 
 type FormData = z.infer<typeof formSchema>;
 
-const workModeOptions = WORK_MODES.map((m) => ({ value: m, label: m.charAt(0) + m.slice(1).toLowerCase() }));
+const workModeOptions = WORK_MODES.map((m) => ({
+  value: m,
+  label: m.charAt(0) + m.slice(1).toLowerCase(),
+}));
 const empTypeOptions = EMPLOYMENT_TYPES.map((t) => ({ value: t, label: t.replace(/_/g, ' ') }));
 
 export default function CompanyJobCreate() {
@@ -91,7 +101,13 @@ export default function CompanyJobCreate() {
   const [gradYearInput, setGradYearInput] = useState('');
   const [eligibleGradYears, setEligibleGradYears] = useState<number[]>([]);
 
-  const { register, control, trigger, getValues, formState: { errors } } = useForm<FormData>({
+  const {
+    register,
+    control,
+    trigger,
+    getValues,
+    formState: { errors },
+  } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: { openings: 1, requiredSkills: [] },
   });
@@ -112,7 +128,9 @@ export default function CompanyJobCreate() {
       workMode: data.workMode,
       employmentType: data.employmentType,
       salary:
-        data.salaryMin !== undefined && data.salaryMax !== undefined && data.salaryCurrency !== undefined
+        data.salaryMin !== undefined &&
+        data.salaryMax !== undefined &&
+        data.salaryCurrency !== undefined
           ? { min: data.salaryMin, max: data.salaryMax, currency: data.salaryCurrency }
           : undefined,
       experienceMin: data.experienceMin,
@@ -145,50 +163,137 @@ export default function CompanyJobCreate() {
 
       <form className="space-y-6 max-w-3xl" onSubmit={(e) => e.preventDefault()}>
         <Card>
-          <Card.Header><h3 className="font-semibold text-slate-900 dark:text-slate-100">Basic Details</h3></Card.Header>
+          <Card.Header>
+            <h3 className="font-semibold text-slate-900 dark:text-slate-100">Basic Details</h3>
+          </Card.Header>
           <Card.Body className="space-y-4">
-            <Input label="Job Title" placeholder="e.g. Software Engineer" error={errors.title?.message} {...register('title')} />
-            <Textarea label="Description" rows={6} placeholder="Describe the role, responsibilities, and requirements…" error={errors.description?.message} {...register('description')} />
+            <Input
+              label="Job Title"
+              placeholder="e.g. Software Engineer"
+              error={errors.title?.message}
+              {...register('title')}
+            />
+            <Textarea
+              label="Description"
+              rows={6}
+              placeholder="Describe the role, responsibilities, and requirements…"
+              error={errors.description?.message}
+              {...register('description')}
+            />
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Input label="Location" placeholder="Bangalore" error={errors.location?.message} {...register('location')} />
-              <Select label="Work Mode" options={workModeOptions} placeholder="Select" error={errors.workMode?.message} {...register('workMode')} />
-              <Select label="Employment Type" options={empTypeOptions} placeholder="Select" error={errors.employmentType?.message} {...register('employmentType')} />
+              <Input
+                label="Location"
+                placeholder="Bangalore"
+                error={errors.location?.message}
+                {...register('location')}
+              />
+              <Select
+                label="Work Mode"
+                options={workModeOptions}
+                placeholder="Select"
+                error={errors.workMode?.message}
+                {...register('workMode')}
+              />
+              <Select
+                label="Employment Type"
+                options={empTypeOptions}
+                placeholder="Select"
+                error={errors.employmentType?.message}
+                {...register('employmentType')}
+              />
             </div>
           </Card.Body>
         </Card>
 
         <Card>
-          <Card.Header><h3 className="font-semibold text-slate-900 dark:text-slate-100">Eligibility</h3></Card.Header>
+          <Card.Header>
+            <h3 className="font-semibold text-slate-900 dark:text-slate-100">Eligibility</h3>
+          </Card.Header>
           <Card.Body className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <Input label="Min CGPA (optional)" type="number" step="0.1" min={0} max={10} error={errors.minCgpa?.message} {...register('minCgpa', { setValueAs: numberFromInput })} />
-              <Input label="Openings" type="number" min={1} error={errors.openings?.message} {...register('openings', { setValueAs: numberFromInput })} />
+              <Input
+                label="Min CGPA (optional)"
+                type="number"
+                step="0.1"
+                min={0}
+                max={10}
+                error={errors.minCgpa?.message}
+                {...register('minCgpa', { setValueAs: numberFromInput })}
+              />
+              <Input
+                label="Openings"
+                type="number"
+                min={1}
+                error={errors.openings?.message}
+                {...register('openings', { setValueAs: numberFromInput })}
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <Input label="Min Experience (yrs)" type="number" min={0} error={errors.experienceMin?.message} {...register('experienceMin', { setValueAs: numberFromInput })} />
-              <Input label="Max Experience (yrs)" type="number" min={0} error={errors.experienceMax?.message} {...register('experienceMax', { setValueAs: numberFromInput })} />
+              <Input
+                label="Min Experience (yrs)"
+                type="number"
+                min={0}
+                error={errors.experienceMin?.message}
+                {...register('experienceMin', { setValueAs: numberFromInput })}
+              />
+              <Input
+                label="Max Experience (yrs)"
+                type="number"
+                min={0}
+                error={errors.experienceMax?.message}
+                {...register('experienceMax', { setValueAs: numberFromInput })}
+              />
             </div>
-            <BranchPicker label="Eligible Branches" value={eligibleBranches} onChange={setEligibleBranches} />
+            <BranchPicker
+              label="Eligible Branches"
+              value={eligibleBranches}
+              onChange={setEligibleBranches}
+            />
             <div>
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Eligible Graduation Years</p>
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                Eligible Graduation Years
+              </p>
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {eligibleGradYears.map((y) => (
-                   <span key={y} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs font-medium border border-emerald-200 dark:border-emerald-800">
+                  <span
+                    key={y}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs font-medium border border-emerald-200 dark:border-emerald-800"
+                  >
                     {y}
-                    <button type="button" onClick={() => setEligibleGradYears((p) => p.filter((v) => v !== y))} className="hover:text-rose-600">×</button>
+                    <button
+                      type="button"
+                      onClick={() => setEligibleGradYears((p) => p.filter((v) => v !== y))}
+                      className="hover:text-rose-600"
+                    >
+                      ×
+                    </button>
                   </span>
                 ))}
               </div>
               <div className="flex gap-2">
-                <Input placeholder="e.g. 2025" value={gradYearInput} onChange={(e) => setGradYearInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addGradYear(); } }} />
-                <Button type="button" variant="outline" size="sm" onClick={addGradYear}>Add</Button>
+                <Input
+                  placeholder="e.g. 2025"
+                  value={gradYearInput}
+                  onChange={(e) => setGradYearInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addGradYear();
+                    }
+                  }}
+                />
+                <Button type="button" variant="outline" size="sm" onClick={addGradYear}>
+                  Add
+                </Button>
               </div>
             </div>
           </Card.Body>
         </Card>
 
         <Card>
-          <Card.Header><h3 className="font-semibold text-slate-900 dark:text-slate-100">Skills</h3></Card.Header>
+          <Card.Header>
+            <h3 className="font-semibold text-slate-900 dark:text-slate-100">Skills</h3>
+          </Card.Header>
           <Card.Body className="space-y-4">
             <Controller
               name="requiredSkills"
@@ -202,26 +307,66 @@ export default function CompanyJobCreate() {
                 />
               )}
             />
-            <SkillPicker label="Preferred Skills" value={preferredSkills} onChange={setPreferredSkills} />
+            <SkillPicker
+              label="Preferred Skills"
+              value={preferredSkills}
+              onChange={setPreferredSkills}
+            />
           </Card.Body>
         </Card>
 
         <Card>
-          <Card.Header><h3 className="font-semibold text-slate-900 dark:text-slate-100">Salary & Deadline</h3></Card.Header>
+          <Card.Header>
+            <h3 className="font-semibold text-slate-900 dark:text-slate-100">Salary & Deadline</h3>
+          </Card.Header>
           <Card.Body className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
-              <Input label="Min Salary" type="number" min={0} error={errors.salaryMin?.message} {...register('salaryMin', { setValueAs: numberFromInput })} />
-              <Input label="Max Salary" type="number" min={0} error={errors.salaryMax?.message} {...register('salaryMax', { setValueAs: numberFromInput })} />
-              <Input label="Currency (3-letter)" placeholder="INR" maxLength={3} error={errors.salaryCurrency?.message} {...register('salaryCurrency', { setValueAs: textFromInput })} />
+              <Input
+                label="Min Salary"
+                type="number"
+                min={0}
+                error={errors.salaryMin?.message}
+                {...register('salaryMin', { setValueAs: numberFromInput })}
+              />
+              <Input
+                label="Max Salary"
+                type="number"
+                min={0}
+                error={errors.salaryMax?.message}
+                {...register('salaryMax', { setValueAs: numberFromInput })}
+              />
+              <Input
+                label="Currency (3-letter)"
+                placeholder="INR"
+                maxLength={3}
+                error={errors.salaryCurrency?.message}
+                {...register('salaryCurrency', { setValueAs: textFromInput })}
+              />
             </div>
-            <Input label="Application Deadline (optional)" type="date" error={errors.applicationDeadline?.message} {...register('applicationDeadline')} />
+            <Input
+              label="Application Deadline (optional)"
+              type="date"
+              error={errors.applicationDeadline?.message}
+              {...register('applicationDeadline')}
+            />
           </Card.Body>
         </Card>
 
         <div className="flex justify-end gap-3">
-          <Button type="button" variant="outline" onClick={() => navigate('/company/jobs')}>Cancel</Button>
-          <Button type="button" variant="secondary" loading={createJob.isPending} onClick={() => submit('DRAFT')}>Save Draft</Button>
-          <Button type="button" loading={createJob.isPending} onClick={() => submit('PUBLISHED')}>Publish</Button>
+          <Button type="button" variant="outline" onClick={() => navigate('/company/jobs')}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            loading={createJob.isPending}
+            onClick={() => submit('DRAFT')}
+          >
+            Save Draft
+          </Button>
+          <Button type="button" loading={createJob.isPending} onClick={() => submit('PUBLISHED')}>
+            Publish
+          </Button>
         </div>
       </form>
     </div>

@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
-import { FiArrowLeft, FiCpu } from 'react-icons/fi';
+import { FiArrowLeft, FiCpu, FiTrendingUp, FiTrendingDown } from 'react-icons/fi';
 import { format } from 'date-fns';
 import { cn } from '@/lib/cn';
 import Button from '@/components/ui/Button';
@@ -7,6 +7,7 @@ import Badge from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
 import { SkeletonCard } from '@/components/ui/Skeleton';
 import { useAssessment } from '@/hooks/queries/useAssessment';
+import type { SkillBreakdown } from '@aip/types';
 
 type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info';
 
@@ -24,8 +25,10 @@ function scoreColorClass(score: number) {
 }
 
 function scoreBorderClass(score: number) {
-  if (score >= 75) return 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/10';
-  if (score >= 50) return 'border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10';
+  if (score >= 75)
+    return 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/10';
+  if (score >= 50)
+    return 'border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10';
   return 'border-rose-200 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-900/10';
 }
 
@@ -72,7 +75,10 @@ export default function StudentAssessmentResult() {
   }
 
   const { evaluation } = assessment;
-  const cfg = statusConfig[assessment.status] ?? { label: assessment.status, variant: 'default' as BadgeVariant };
+  const cfg = statusConfig[assessment.status] ?? {
+    label: assessment.status,
+    variant: 'default' as BadgeVariant,
+  };
 
   const questionMap = Object.fromEntries(assessment.questions.map((q) => [q.id, q]));
   const answerMap = Object.fromEntries(assessment.answers.map((a) => [a.questionId, a.text]));
@@ -89,9 +95,16 @@ export default function StudentAssessmentResult() {
         <Card.Body>
           <div className="flex flex-col sm:flex-row sm:items-start gap-5">
             <div className="flex-1">
-              <div className={cn('text-6xl font-bold tabular-nums leading-none', scoreColorClass(evaluation.totalScore))}>
+              <div
+                className={cn(
+                  'text-6xl font-bold tabular-nums leading-none',
+                  scoreColorClass(evaluation.totalScore),
+                )}
+              >
                 {evaluation.totalScore}
-                <span className="text-2xl font-normal text-slate-400 dark:text-slate-500">/100</span>
+                <span className="text-2xl font-normal text-slate-400 dark:text-slate-500">
+                  /100
+                </span>
               </div>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
                 {evaluation.rawScore} / {evaluation.maxScore} marks
@@ -165,6 +178,10 @@ export default function StudentAssessmentResult() {
         </Card>
       </div>
 
+      {evaluation.skillBreakdown.length > 0 && (
+        <SkillBreakdownSection breakdown={evaluation.skillBreakdown} />
+      )}
+
       <div>
         <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">
           Question Breakdown
@@ -179,7 +196,9 @@ export default function StudentAssessmentResult() {
                 <Card.Body className="space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-1.5">Question {i + 1}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-1.5">
+                        Question {i + 1}
+                      </p>
                       {question && question.targetSkills.length > 0 && (
                         <div className="flex flex-wrap gap-1 mb-2">
                           {question.targetSkills.map((s) => (
@@ -196,9 +215,16 @@ export default function StudentAssessmentResult() {
                         {question?.text}
                       </p>
                     </div>
-                    <div className={cn('text-xl font-bold tabular-nums shrink-0', questionScoreColorClass(pq.score, maxMarks))}>
+                    <div
+                      className={cn(
+                        'text-xl font-bold tabular-nums shrink-0',
+                        questionScoreColorClass(pq.score, maxMarks),
+                      )}
+                    >
                       {pq.score}
-                      <span className="text-xs font-normal text-slate-400 dark:text-slate-500">/{maxMarks}</span>
+                      <span className="text-xs font-normal text-slate-400 dark:text-slate-500">
+                        /{maxMarks}
+                      </span>
                     </div>
                   </div>
 
@@ -219,6 +245,122 @@ export default function StudentAssessmentResult() {
           })}
         </div>
       </div>
+    </div>
+  );
+}
+
+function skillBarColor(percentage: number) {
+  if (percentage >= 75) return 'bg-emerald-500';
+  if (percentage >= 50) return 'bg-amber-500';
+  return 'bg-rose-500';
+}
+
+function skillTextColor(percentage: number) {
+  if (percentage >= 75) return 'text-emerald-600 dark:text-emerald-400';
+  if (percentage >= 50) return 'text-amber-600 dark:text-amber-400';
+  return 'text-rose-600 dark:text-rose-400';
+}
+
+function SkillBar({ entry }: { entry: SkillBreakdown }) {
+  const pct = entry.maxScore > 0 ? (entry.score / entry.maxScore) * 100 : 0;
+  const width = Math.max(0, Math.min(100, pct));
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between gap-2 text-sm">
+        <span className="font-medium text-slate-800 dark:text-slate-200 truncate">
+          {entry.skillName}
+        </span>
+        <span className={cn('tabular-nums font-semibold shrink-0', skillTextColor(pct))}>
+          {entry.score}
+          <span className="text-xs font-normal text-slate-400 dark:text-slate-500">
+            /{entry.maxScore}
+          </span>
+          <span className="text-xs font-normal text-slate-500 dark:text-slate-400 ml-2">
+            {Math.round(pct)}%
+          </span>
+        </span>
+      </div>
+      <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+        <div
+          className={cn('h-full transition-all', skillBarColor(pct))}
+          style={{ width: `${width}%` }}
+        />
+      </div>
+      <p className="text-xs text-slate-500 dark:text-slate-400">
+        {entry.category.replace(/_/g, ' ').toLowerCase()} · {entry.answeredCount}/
+        {entry.questionCount} answered
+      </p>
+    </div>
+  );
+}
+
+function SkillBreakdownSection({ breakdown }: { breakdown: SkillBreakdown[] }) {
+  const withPct = breakdown.map((b) => ({
+    ...b,
+    pct: b.maxScore > 0 ? (b.score / b.maxScore) * 100 : 0,
+  }));
+  const strengths = withPct.filter((b) => b.pct >= 60).slice(0, 5);
+  const weakAreas = withPct
+    .filter((b) => b.pct < 60 && b.questionCount > 0)
+    .slice(-5)
+    .reverse();
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">
+          Skill Profile
+        </h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          How you performed across each skill in this assessment.
+        </p>
+      </div>
+
+      {(strengths.length > 0 || weakAreas.length > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {strengths.length > 0 && (
+            <Card className="border-emerald-200 dark:border-emerald-800">
+              <Card.Header className="border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/10">
+                <h3 className="text-sm font-semibold text-emerald-800 dark:text-emerald-300 uppercase tracking-wide flex items-center gap-2">
+                  <FiTrendingUp className="w-4 h-4" /> Strengths
+                </h3>
+              </Card.Header>
+              <Card.Body className="bg-emerald-50/30 dark:bg-emerald-900/5 space-y-3">
+                {strengths.map((entry) => (
+                  <SkillBar key={entry.skillId || entry.skillName} entry={entry} />
+                ))}
+              </Card.Body>
+            </Card>
+          )}
+          {weakAreas.length > 0 && (
+            <Card className="border-amber-200 dark:border-amber-800">
+              <Card.Header className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10">
+                <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wide flex items-center gap-2">
+                  <FiTrendingDown className="w-4 h-4" /> Areas to Improve
+                </h3>
+              </Card.Header>
+              <Card.Body className="bg-amber-50/30 dark:bg-amber-900/5 space-y-3">
+                {weakAreas.map((entry) => (
+                  <SkillBar key={entry.skillId || entry.skillName} entry={entry} />
+                ))}
+              </Card.Body>
+            </Card>
+          )}
+        </div>
+      )}
+
+      <Card>
+        <Card.Header>
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+            All Skills
+          </h3>
+        </Card.Header>
+        <Card.Body className="space-y-4">
+          {withPct.map((entry) => (
+            <SkillBar key={entry.skillId || entry.skillName} entry={entry} />
+          ))}
+        </Card.Body>
+      </Card>
     </div>
   );
 }

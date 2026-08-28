@@ -41,6 +41,27 @@ const achievementSchema = new Schema(
   { _id: false },
 );
 
+const educationSchema = new Schema(
+  {
+    institution: { type: String, required: true, trim: true, maxlength: 200 },
+    degree: { type: String, required: true, trim: true, maxlength: 200 },
+    field: { type: String, trim: true, maxlength: 200 },
+    startYear: { type: Number, min: 1970, max: 2100 },
+    endYear: { type: Number, min: 1970, max: 2100 },
+    grade: { type: String, trim: true, maxlength: 50 },
+    description: { type: String, maxlength: 1000 },
+  },
+  { _id: false },
+);
+
+const languageSchema = new Schema(
+  {
+    name: { type: String, required: true, trim: true, maxlength: 80 },
+    proficiency: { type: String, trim: true, maxlength: 50 },
+  },
+  { _id: false },
+);
+
 const studentProfileSchema = new Schema(
   {
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true, index: true },
@@ -71,6 +92,14 @@ const studentProfileSchema = new Schema(
     achievements: { type: [achievementSchema], default: [] },
     preferredRoles: [{ type: String, trim: true }],
     preferredLocations: [{ type: String, trim: true }],
+    softSkills: [{ type: String, trim: true, maxlength: 80 }],
+    education: { type: [educationSchema], default: [] },
+    languages: { type: [languageSchema], default: [] },
+    linkedinUrl: { type: String, trim: true },
+    githubUrl: { type: String, trim: true },
+    portfolioUrl: { type: String, trim: true },
+    twitterUrl: { type: String, trim: true },
+    careerInterests: { type: String, maxlength: 2000 },
   },
   {
     timestamps: true,

@@ -1,4 +1,4 @@
-import { Types } from 'mongoose';
+import type { Types } from 'mongoose';
 import { connectDB, disconnectDB } from '../db/mongoose';
 import { env } from '../config/env';
 import { hashPassword } from '../utils/password';
@@ -132,44 +132,176 @@ interface SkillSeed {
 }
 
 const SKILL_SEEDS: SkillSeed[] = [
-  { name: 'JavaScript', category: 'PROGRAMMING', description: 'Dynamic scripting language for web and server-side development.' },
-  { name: 'TypeScript', category: 'PROGRAMMING', description: 'Typed superset of JavaScript that compiles to plain JS.' },
-  { name: 'Python', category: 'PROGRAMMING', description: 'General-purpose language popular in data, ML, and scripting.' },
-  { name: 'Java', category: 'PROGRAMMING', description: 'Object-oriented language widely used in enterprise systems.' },
-  { name: 'C++', category: 'PROGRAMMING', description: 'Systems language known for performance and control.' },
-  { name: 'HTML', category: 'FRONTEND', description: 'Standard markup language for web page structure.' },
-  { name: 'CSS', category: 'FRONTEND', description: 'Style sheet language for describing presentation of web pages.' },
-  { name: 'React', category: 'FRONTEND', description: 'Component-based JavaScript library for building UIs.' },
-  { name: 'Next.js', category: 'FRONTEND', description: 'React framework with SSR, routing, and edge features.' },
-  { name: 'Vue', category: 'FRONTEND', description: 'Progressive JavaScript framework for building UIs.' },
-  { name: 'Node.js', category: 'BACKEND', description: 'JavaScript runtime for building scalable server applications.' },
-  { name: 'Express', category: 'BACKEND', description: 'Minimalist web framework for Node.js APIs.' },
-  { name: 'Django', category: 'BACKEND', description: 'High-level Python web framework with batteries included.' },
-  { name: 'FastAPI', category: 'BACKEND', description: 'Modern Python web framework for building fast APIs.' },
+  {
+    name: 'JavaScript',
+    category: 'PROGRAMMING',
+    description: 'Dynamic scripting language for web and server-side development.',
+  },
+  {
+    name: 'TypeScript',
+    category: 'PROGRAMMING',
+    description: 'Typed superset of JavaScript that compiles to plain JS.',
+  },
+  {
+    name: 'Python',
+    category: 'PROGRAMMING',
+    description: 'General-purpose language popular in data, ML, and scripting.',
+  },
+  {
+    name: 'Java',
+    category: 'PROGRAMMING',
+    description: 'Object-oriented language widely used in enterprise systems.',
+  },
+  {
+    name: 'C++',
+    category: 'PROGRAMMING',
+    description: 'Systems language known for performance and control.',
+  },
+  {
+    name: 'HTML',
+    category: 'FRONTEND',
+    description: 'Standard markup language for web page structure.',
+  },
+  {
+    name: 'CSS',
+    category: 'FRONTEND',
+    description: 'Style sheet language for describing presentation of web pages.',
+  },
+  {
+    name: 'React',
+    category: 'FRONTEND',
+    description: 'Component-based JavaScript library for building UIs.',
+  },
+  {
+    name: 'Next.js',
+    category: 'FRONTEND',
+    description: 'React framework with SSR, routing, and edge features.',
+  },
+  {
+    name: 'Vue',
+    category: 'FRONTEND',
+    description: 'Progressive JavaScript framework for building UIs.',
+  },
+  {
+    name: 'Node.js',
+    category: 'BACKEND',
+    description: 'JavaScript runtime for building scalable server applications.',
+  },
+  {
+    name: 'Express',
+    category: 'BACKEND',
+    description: 'Minimalist web framework for Node.js APIs.',
+  },
+  {
+    name: 'Django',
+    category: 'BACKEND',
+    description: 'High-level Python web framework with batteries included.',
+  },
+  {
+    name: 'FastAPI',
+    category: 'BACKEND',
+    description: 'Modern Python web framework for building fast APIs.',
+  },
   { name: 'MongoDB', category: 'DATABASE', description: 'Document-oriented NoSQL database.' },
-  { name: 'PostgreSQL', category: 'DATABASE', description: 'Powerful open-source relational database.' },
-  { name: 'MySQL', category: 'DATABASE', description: 'Widely used open-source relational database.' },
-  { name: 'Redis', category: 'DATABASE', description: 'In-memory data store used as cache and message broker.' },
+  {
+    name: 'PostgreSQL',
+    category: 'DATABASE',
+    description: 'Powerful open-source relational database.',
+  },
+  {
+    name: 'MySQL',
+    category: 'DATABASE',
+    description: 'Widely used open-source relational database.',
+  },
+  {
+    name: 'Redis',
+    category: 'DATABASE',
+    description: 'In-memory data store used as cache and message broker.',
+  },
   { name: 'AWS', category: 'CLOUD', description: 'Amazon Web Services cloud platform.' },
   { name: 'GCP', category: 'CLOUD', description: 'Google Cloud Platform.' },
   { name: 'Azure', category: 'CLOUD', description: 'Microsoft Azure cloud services.' },
-  { name: 'Docker', category: 'DEVOPS', description: 'Container platform for packaging and running applications.' },
-  { name: 'Kubernetes', category: 'DEVOPS', description: 'Orchestration platform for containerized workloads.' },
+  {
+    name: 'Docker',
+    category: 'DEVOPS',
+    description: 'Container platform for packaging and running applications.',
+  },
+  {
+    name: 'Kubernetes',
+    category: 'DEVOPS',
+    description: 'Orchestration platform for containerized workloads.',
+  },
   { name: 'Git', category: 'DEVOPS', description: 'Distributed version control system.' },
-  { name: 'CI/CD', category: 'DEVOPS', description: 'Continuous integration and delivery practices and tooling.' },
-  { name: 'TensorFlow', category: 'AI_ML', description: 'Open-source machine learning framework by Google.' },
-  { name: 'PyTorch', category: 'AI_ML', description: 'Deep learning framework focused on flexibility and speed.' },
-  { name: 'scikit-learn', category: 'AI_ML', description: 'Python library for classical machine learning algorithms.' },
-  { name: 'Pandas', category: 'DATA_SCIENCE', description: 'Python library for data manipulation and analysis.' },
-  { name: 'NumPy', category: 'DATA_SCIENCE', description: 'Fundamental package for numerical computing in Python.' },
-  { name: 'React Native', category: 'MOBILE', description: 'Framework for building native mobile apps with React.' },
-  { name: 'Flutter', category: 'MOBILE', description: 'Google framework for cross-platform mobile apps in Dart.' },
-  { name: 'Kotlin', category: 'MOBILE', description: 'Modern JVM language commonly used for Android development.' },
-  { name: 'OWASP', category: 'CYBERSECURITY', description: 'Application security guidance and tooling standards.' },
-  { name: 'Communication', category: 'SOFT_SKILLS', description: 'Verbal and written communication skills.' },
-  { name: 'Teamwork', category: 'SOFT_SKILLS', description: 'Collaborating effectively within diverse teams.' },
-  { name: 'Problem Solving', category: 'SOFT_SKILLS', description: 'Analytical approach to breaking down and solving problems.' },
-  { name: 'Leadership', category: 'SOFT_SKILLS', description: 'Guiding, motivating, and coordinating a team toward outcomes.' },
+  {
+    name: 'CI/CD',
+    category: 'DEVOPS',
+    description: 'Continuous integration and delivery practices and tooling.',
+  },
+  {
+    name: 'TensorFlow',
+    category: 'AI_ML',
+    description: 'Open-source machine learning framework by Google.',
+  },
+  {
+    name: 'PyTorch',
+    category: 'AI_ML',
+    description: 'Deep learning framework focused on flexibility and speed.',
+  },
+  {
+    name: 'scikit-learn',
+    category: 'AI_ML',
+    description: 'Python library for classical machine learning algorithms.',
+  },
+  {
+    name: 'Pandas',
+    category: 'DATA_SCIENCE',
+    description: 'Python library for data manipulation and analysis.',
+  },
+  {
+    name: 'NumPy',
+    category: 'DATA_SCIENCE',
+    description: 'Fundamental package for numerical computing in Python.',
+  },
+  {
+    name: 'React Native',
+    category: 'MOBILE',
+    description: 'Framework for building native mobile apps with React.',
+  },
+  {
+    name: 'Flutter',
+    category: 'MOBILE',
+    description: 'Google framework for cross-platform mobile apps in Dart.',
+  },
+  {
+    name: 'Kotlin',
+    category: 'MOBILE',
+    description: 'Modern JVM language commonly used for Android development.',
+  },
+  {
+    name: 'OWASP',
+    category: 'CYBERSECURITY',
+    description: 'Application security guidance and tooling standards.',
+  },
+  {
+    name: 'Communication',
+    category: 'SOFT_SKILLS',
+    description: 'Verbal and written communication skills.',
+  },
+  {
+    name: 'Teamwork',
+    category: 'SOFT_SKILLS',
+    description: 'Collaborating effectively within diverse teams.',
+  },
+  {
+    name: 'Problem Solving',
+    category: 'SOFT_SKILLS',
+    description: 'Analytical approach to breaking down and solving problems.',
+  },
+  {
+    name: 'Leadership',
+    category: 'SOFT_SKILLS',
+    description: 'Guiding, motivating, and coordinating a team toward outcomes.',
+  },
 ];
 
 async function seedSkills(): Promise<SkillMap> {
@@ -432,13 +564,15 @@ function studentRichProfile(seed: StudentSeed) {
     projects: [
       {
         title: `${seed.fullName.split(' ')[1] ?? 'Demo'} Portfolio Site`,
-        description: 'Personal portfolio built with a modern stack, showcasing recent projects and coursework.',
+        description:
+          'Personal portfolio built with a modern stack, showcasing recent projects and coursework.',
         techStack: ['HTML', 'CSS', 'JavaScript'],
         link: 'https://portfolio.demo/example',
       },
       {
         title: 'Demo Capstone Project',
-        description: 'A team capstone exploring a real-world problem end-to-end from requirements to deployment.',
+        description:
+          'A team capstone exploring a real-world problem end-to-end from requirements to deployment.',
         techStack: ['Python', 'Docker'],
         link: 'https://github.com/demo/capstone',
       },
@@ -457,7 +591,8 @@ function studentRichProfile(seed: StudentSeed) {
         organization: 'Demo Technologies',
         startDate: daysAgo(365),
         endDate: daysAgo(270),
-        description: 'Contributed to internal tooling and documentation as part of the platform team.',
+        description:
+          'Contributed to internal tooling and documentation as part of the platform team.',
       },
     ],
     achievements: [
@@ -762,7 +897,8 @@ interface TrainingSeed {
 const TRAINING_SEEDS: TrainingSeed[] = [
   {
     title: 'Demo AWS Fundamentals',
-    description: 'Practical introduction to AWS core services, IAM, networking, and cost fundamentals with hands-on labs.',
+    description:
+      'Practical introduction to AWS core services, IAM, networking, and cost fundamentals with hands-on labs.',
     provider: 'Demo Cloud Academy',
     skills: ['AWS', 'CI/CD'],
     durationWeeks: 4,
@@ -773,7 +909,8 @@ const TRAINING_SEEDS: TrainingSeed[] = [
   },
   {
     title: 'Demo React Advanced Patterns',
-    description: 'Deep-dive into advanced React patterns: composition, hooks, performance profiling, and testing.',
+    description:
+      'Deep-dive into advanced React patterns: composition, hooks, performance profiling, and testing.',
     provider: 'Demo Frontend Guild',
     skills: ['React', 'TypeScript', 'JavaScript'],
     durationWeeks: 6,
@@ -784,7 +921,8 @@ const TRAINING_SEEDS: TrainingSeed[] = [
   },
   {
     title: 'Demo Python for Data Science',
-    description: 'Applied Python for data science covering Pandas, NumPy, scikit-learn, and end-to-end notebook workflows.',
+    description:
+      'Applied Python for data science covering Pandas, NumPy, scikit-learn, and end-to-end notebook workflows.',
     provider: 'Demo Data School',
     skills: ['Python', 'Pandas', 'NumPy', 'scikit-learn'],
     durationWeeks: 8,
@@ -795,7 +933,8 @@ const TRAINING_SEEDS: TrainingSeed[] = [
   },
   {
     title: 'Demo DevOps with Docker & Kubernetes',
-    description: 'Hands-on DevOps program covering Docker, Kubernetes, and CI/CD pipelines on a cloud environment.',
+    description:
+      'Hands-on DevOps program covering Docker, Kubernetes, and CI/CD pipelines on a cloud environment.',
     provider: 'Demo Platform Academy',
     skills: ['Docker', 'Kubernetes', 'CI/CD'],
     durationWeeks: 6,
@@ -806,7 +945,8 @@ const TRAINING_SEEDS: TrainingSeed[] = [
   },
   {
     title: 'Demo Communication Skills for Engineers',
-    description: 'Workshop-style program on written, verbal, and cross-team communication tailored for engineering contexts.',
+    description:
+      'Workshop-style program on written, verbal, and cross-team communication tailored for engineering contexts.',
     provider: 'Demo Career Studio',
     skills: ['Communication', 'Teamwork', 'Leadership'],
     durationWeeks: 3,
@@ -1033,10 +1173,7 @@ interface CreatedJob {
   preferredIds: Types.ObjectId[];
 }
 
-async function seedJobs(
-  companies: CreatedCompany[],
-  skills: SkillMap,
-): Promise<CreatedJob[]> {
+async function seedJobs(companies: CreatedCompany[], skills: SkillMap): Promise<CreatedJob[]> {
   const created: CreatedJob[] = [];
   for (const seed of JOB_SEEDS) {
     const requiredIds = skillIdsOf(skills, seed.requiredSkills);
@@ -1381,16 +1518,33 @@ interface DemoDocSeed {
 }
 
 const ARYA_DOC_SEEDS: DemoDocSeed[] = [
-  { documentType: 'CERTIFICATE', title: 'AWS Cloud Practitioner', issuer: 'Amazon Web Services', issuedDaysAgo: 120 },
-  { documentType: 'CERTIFICATE', title: 'React Advanced Patterns', issuer: 'Demo Frontend Guild', issuedDaysAgo: 90 },
-  { documentType: 'INTERNSHIP_REPORT', title: 'Demo Technologies Summer Internship Report', issuer: 'Demo Technologies', issuedDaysAgo: 200 },
-  { documentType: 'ACADEMIC_RECORD', title: 'Semester 6 Transcript', issuer: 'Demo Institute of Technology', issuedDaysAgo: 60 },
+  {
+    documentType: 'CERTIFICATE',
+    title: 'AWS Cloud Practitioner',
+    issuer: 'Amazon Web Services',
+    issuedDaysAgo: 120,
+  },
+  {
+    documentType: 'CERTIFICATE',
+    title: 'React Advanced Patterns',
+    issuer: 'Demo Frontend Guild',
+    issuedDaysAgo: 90,
+  },
+  {
+    documentType: 'INTERNSHIP_REPORT',
+    title: 'Demo Technologies Summer Internship Report',
+    issuer: 'Demo Technologies',
+    issuedDaysAgo: 200,
+  },
+  {
+    documentType: 'ACADEMIC_RECORD',
+    title: 'Semester 6 Transcript',
+    issuer: 'Demo Institute of Technology',
+    issuedDaysAgo: 60,
+  },
 ];
 
-async function seedDemoDocuments(
-  students: CreatedStudent[],
-  admin: CreatedUser,
-): Promise<number> {
+async function seedDemoDocuments(students: CreatedStudent[], admin: CreatedUser): Promise<number> {
   const arya = students.find((s) => s.email === 'arya@demo.edu');
   if (!arya) return 0;
 
@@ -1400,7 +1554,10 @@ async function seedDemoDocuments(
     filename: `${d.title.replace(/[^a-zA-Z0-9]+/g, '_')}.txt`,
     data: Buffer.from(`Demo ${d.documentType} for ${arya.seed.fullName}: ${d.title}`, 'utf-8'),
     mimeType: 'text/plain',
-    sizeBytes: Buffer.byteLength(`Demo ${d.documentType} for ${arya.seed.fullName}: ${d.title}`, 'utf-8'),
+    sizeBytes: Buffer.byteLength(
+      `Demo ${d.documentType} for ${arya.seed.fullName}: ${d.title}`,
+      'utf-8',
+    ),
     title: d.title,
     issuer: d.issuer,
     issuedDate: daysAgo(d.issuedDaysAgo),
@@ -1504,7 +1661,8 @@ async function seedInterimReports(
       weekNumber: 1,
       periodStart: daysAgo(21),
       periodEnd: daysAgo(14),
-      workDescription: 'Onboarding, dev environment setup, and initial pairing on a small evaluation task.',
+      workDescription:
+        'Onboarding, dev environment setup, and initial pairing on a small evaluation task.',
       learnings: 'Learned the internal CI pipeline and coding standards.',
       challenges: 'Getting familiar with a large codebase took longer than expected.',
       hoursSpent: 40,
@@ -1522,7 +1680,8 @@ async function seedInterimReports(
       weekNumber: 3,
       periodStart: daysAgo(7),
       periodEnd: daysAgo(0),
-      workDescription: 'Shipped the flagged feature to production and monitored dashboards during rollout.',
+      workDescription:
+        'Shipped the flagged feature to production and monitored dashboards during rollout.',
       learnings: 'Observability practices during a rollout and rollback protocol.',
       challenges: 'Interpreting noisy latency metrics under low traffic.',
       hoursSpent: 38,
@@ -1659,7 +1818,9 @@ async function seedEventRegistrations(
   return registrations.length;
 }
 
-async function seedAptitude(students: CreatedStudent[]): Promise<{ questions: number; tests: number }> {
+async function seedAptitude(
+  students: CreatedStudent[],
+): Promise<{ questions: number; tests: number }> {
   const { ALL_APTITUDE_QUESTIONS } = await import('../seedData/aptitude');
   const inserted = await AptitudeQuestion.insertMany(
     ALL_APTITUDE_QUESTIONS.map((q) => ({

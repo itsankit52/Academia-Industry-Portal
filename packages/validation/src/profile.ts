@@ -71,6 +71,37 @@ export const updateStudentProfileSchema = z
       .optional(),
     preferredRoles: z.array(z.string().min(1).max(120)).optional(),
     preferredLocations: z.array(z.string().min(1).max(120)).optional(),
+    softSkills: z.array(z.string().min(1).max(80)).optional(),
+    education: z
+      .array(
+        z
+          .object({
+            institution: z.string().min(1).max(200),
+            degree: z.string().min(1).max(200),
+            field: z.string().max(200).optional(),
+            startYear: z.number().int().min(1970).max(2100).optional(),
+            endYear: z.number().int().min(1970).max(2100).optional(),
+            grade: z.string().max(50).optional(),
+            description: z.string().max(1000).optional(),
+          })
+          .strict(),
+      )
+      .optional(),
+    languages: z
+      .array(
+        z
+          .object({
+            name: z.string().min(1).max(80),
+            proficiency: z.string().max(50).optional(),
+          })
+          .strict(),
+      )
+      .optional(),
+    linkedinUrl: z.string().url().max(500).optional().or(z.literal('')),
+    githubUrl: z.string().url().max(500).optional().or(z.literal('')),
+    portfolioUrl: z.string().url().max(500).optional().or(z.literal('')),
+    twitterUrl: z.string().url().max(500).optional().or(z.literal('')),
+    careerInterests: z.string().max(2000).optional(),
   })
   .strict();
 

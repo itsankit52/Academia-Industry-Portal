@@ -6,6 +6,7 @@ import { AppError } from '../../utils/AppError';
 import { Internship, CompanyProfile } from '../../models';
 import { applyPagination, buildPaginated, type PaginationInput } from '../../utils/pagination';
 import { normalizeCompanyOn } from '../../utils/normalizeCompany';
+import { analyzeFullMatch } from '../matching/fullMatch.service';
 
 export interface InternshipListFilters {
   search?: string;
@@ -106,6 +107,25 @@ const populateInternship = [
   { path: 'preferredSkills', select: 'name category' },
 ] as const;
 
+/**
+ * Computes the full multi-dimensional match for a single internship against
+ * a student viewer.  Returns `null` (and never throws) when the viewer has
+ * no profile, so the list endpoint keeps working for students who have not
+ * yet filled in their profile.
+ */
+async function safeFullMatch(
+  viewer: InternshipViewer,
+  internshipId: string,
+): Promise<Awaited<ReturnType<typeof analyzeFullMatch>> | null> {
+  if (viewer.role !== 'STUDENT' || !viewer.userId) return null;
+  try {
+    return await analyzeFullMatch(viewer.userId, 'INTERNSHIP', internshipId);
+  } catch (err) {
+    if (err instanceof AppError && err.statusCode === 404) return null;
+    throw err;
+  }
+}
+
 export async function listInternships(
   pag: PaginationInput,
   filters: InternshipListFilters,
@@ -126,11 +146,41 @@ export async function listInternships(
   if (filters.search) where.$text = { $search: filters.search };
 
   const [rows, total] = await Promise.all([
-    Internship.find(where).sort(sort).skip(skip).limit(limit).populate(populateInternship as never),
+    Internship.find(where)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .populate(populateInternship as never),
     Internship.countDocuments(where),
   ]);
+
+  const isStudentViewer = viewer.role === 'STUDENT' && !!viewer.userId;
+  const matchDetails = isStudentViewer
+    ? await Promise.all(rows.map((r) => safeFullMatch(viewer, String(r._id))))
+    : rows.map(() => null);
+
   return buildPaginated(
-    rows.map((r) => normalizeCompanyOn(r.toJSON())),
+    rows.map((r, i) => {
+      const row = normalizeCompanyOn(r.toJSON());
+      const match = matchDetails[i];
+      if (!match) return row;
+      return {
+        ...row,
+        matchScore: match.score,
+        matchDetails: {
+          score: match.score,
+          matchPercentage: match.matchPercentage,
+          level: match.level,
+          recommendation: match.recommendation,
+          eligibility: match.eligibility,
+          matchedSkills: match.matchedSkills,
+          missingSkills: match.missingSkills,
+          preferredMatched: match.preferredMatched,
+          careerInterestsMatch: match.careerInterestsMatch,
+          breakdown: match.breakdown,
+        },
+      };
+    }),
     total,
     page,
     pageSize,
@@ -141,7 +191,25 @@ export async function getInternshipById(id: string, viewer: InternshipViewer = {
   const it = await Internship.findById(id).populate(populateInternship as never);
   if (!it) throw AppError.notFound('Internship not found');
   await assertCanViewInternship(it, viewer);
-  return normalizeCompanyOn(it.toJSON());
+  const row = normalizeCompanyOn(it.toJSON());
+  const match = await safeFullMatch(viewer, String(it._id));
+  if (!match) return row;
+  return {
+    ...row,
+    matchScore: match.score,
+    matchDetails: {
+      score: match.score,
+      matchPercentage: match.matchPercentage,
+      level: match.level,
+      recommendation: match.recommendation,
+      eligibility: match.eligibility,
+      matchedSkills: match.matchedSkills,
+      missingSkills: match.missingSkills,
+      preferredMatched: match.preferredMatched,
+      careerInterestsMatch: match.careerInterestsMatch,
+      breakdown: match.breakdown,
+    },
+  };
 }
 
 export async function createInternship(userId: string, input: CreateInternshipInput) {
@@ -150,11 +218,7 @@ export async function createInternship(userId: string, input: CreateInternshipIn
   return it.toJSON();
 }
 
-export async function updateInternship(
-  userId: string,
-  id: string,
-  patch: UpdateInternshipInput,
-) {
+export async function updateInternship(userId: string, id: string, patch: UpdateInternshipInput) {
   const companyId = await getMyCompanyId(userId);
   const it = await Internship.findById(id);
   if (!it) throw AppError.notFound('Internship not found');
@@ -222,5 +286,10 @@ export async function listMyInternships(
       .populate({ path: 'preferredSkills', select: 'name category' }),
     Internship.countDocuments(where),
   ]);
-  return buildPaginated(rows.map((r) => r.toJSON()), total, page, pageSize);
+  return buildPaginated(
+    rows.map((r) => r.toJSON()),
+    total,
+    page,
+    pageSize,
+  );
 }

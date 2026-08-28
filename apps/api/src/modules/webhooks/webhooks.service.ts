@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { Types } from 'mongoose';
+import type { Types } from 'mongoose';
 import { DocumentModel, Institution, StudentProfile, User } from '../../models';
 import { AppError } from '../../utils/AppError';
 import { hashPassword } from '../../utils/password';
@@ -82,7 +82,9 @@ export function parseErpStudentSyncPayload(raw: unknown): ErpStudentSyncPayload 
       fullName: asString(row.fullName, `students[${i}].fullName`),
       ...(optionalString(row.degree) ? { degree: optionalString(row.degree) } : {}),
       ...(optionalString(row.branch) ? { branch: optionalString(row.branch) } : {}),
-      ...(optionalNumber(row.semester) !== undefined ? { semester: optionalNumber(row.semester) } : {}),
+      ...(optionalNumber(row.semester) !== undefined
+        ? { semester: optionalNumber(row.semester) }
+        : {}),
       ...(optionalNumber(row.graduationYear) !== undefined
         ? { graduationYear: optionalNumber(row.graduationYear) }
         : {}),
@@ -142,7 +144,9 @@ function unusablePlaceholderSecret(): string {
   return `erp-import:${randomBytes(32).toString('base64url')}`;
 }
 
-export async function handleErpStudentSync(payload: ErpStudentSyncPayload): Promise<ErpSyncSummary> {
+export async function handleErpStudentSync(
+  payload: ErpStudentSyncPayload,
+): Promise<ErpSyncSummary> {
   const institution = await Institution.findOne({ code: payload.institutionCode });
   if (!institution) throw AppError.notFound('Institution not found for provided code');
 
@@ -199,5 +203,7 @@ export async function handleErpStudentSync(payload: ErpStudentSyncPayload): Prom
 }
 
 export function institutionExistsByCode(code: string): Promise<{ _id: Types.ObjectId } | null> {
-  return Institution.findOne({ code }).select('_id').lean() as unknown as Promise<{ _id: Types.ObjectId } | null>;
+  return Institution.findOne({ code }).select('_id').lean() as unknown as Promise<{
+    _id: Types.ObjectId;
+  } | null>;
 }

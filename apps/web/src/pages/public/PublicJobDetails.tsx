@@ -1,14 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import {
-  FiMapPin,
-  FiClock,
-  FiBriefcase,
-  FiArrowLeft,
-  FiCalendar,
-  FiUsers,
-} from 'react-icons/fi';
+import { FiMapPin, FiClock, FiBriefcase, FiArrowLeft, FiCalendar, FiUsers } from 'react-icons/fi';
 import type { Job } from '@aip/types';
 import { apiGet } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -46,7 +39,12 @@ export default function PublicJobDetails() {
   const listPath = inStudentArea ? '/student/jobs' : '/jobs';
   const isStudent = user?.role === 'STUDENT';
 
-  const { data: job, isLoading, isError, refetch } = useQuery({
+  const {
+    data: job,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['public-job', id],
     queryFn: () => apiGet<Job>(`/jobs/${id}`),
     enabled: !!id,
@@ -56,7 +54,9 @@ export default function PublicJobDetails() {
     return (
       <div className="container-page py-10">
         <div className="max-w-3xl mx-auto space-y-4">
-          {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
         </div>
       </div>
     );
@@ -83,7 +83,7 @@ export default function PublicJobDetails() {
 
   return (
     <div className="container-page py-10">
-        <Link
+      <Link
         to={listPath}
         className="inline-flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 mb-6 no-underline transition-colors"
       >
@@ -107,13 +107,17 @@ export default function PublicJobDetails() {
                 </div>
               )}
               <div>
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{job.title}</h1>
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  {job.title}
+                </h1>
                 <p className="text-slate-500 dark:text-slate-400 mt-1">{job.company.name}</p>
               </div>
             </div>
 
             <div className="flex flex-wrap gap-2 mb-5">
-              <Badge variant="info">{employmentTypeLabel[job.employmentType] ?? job.employmentType}</Badge>
+              <Badge variant="info">
+                {employmentTypeLabel[job.employmentType] ?? job.employmentType}
+              </Badge>
               <Badge variant="default">{workModeLabel[job.workMode] ?? job.workMode}</Badge>
             </div>
 
@@ -135,20 +139,27 @@ export default function PublicJobDetails() {
               {job.salary && (
                 <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                   <FiBriefcase className="w-4 h-4 text-slate-400 shrink-0" />
-                  {job.salary.currency}{job.salary.min.toLocaleString()} – {job.salary.max.toLocaleString()}
+                  {job.salary.currency}
+                  {job.salary.min.toLocaleString()} – {job.salary.max.toLocaleString()}
                 </div>
               )}
             </div>
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 mb-6">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Job Description</h2>
-            <p className="text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-line">{job.description}</p>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
+              Job Description
+            </h2>
+            <p className="text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-line">
+              {job.description}
+            </p>
           </div>
 
           {job.requiredSkills.length > 0 && (
             <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 mb-6">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Required Skills</h2>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
+                Required Skills
+              </h2>
               <div className="flex flex-wrap gap-2">
                 {job.requiredSkills.map((s) => (
                   <SkillChip key={s.id} name={s.name} />
@@ -159,7 +170,9 @@ export default function PublicJobDetails() {
 
           {job.preferredSkills.length > 0 && (
             <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Preferred Skills</h2>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
+                Preferred Skills
+              </h2>
               <div className="flex flex-wrap gap-2">
                 {job.preferredSkills.map((s) => (
                   <SkillChip key={s.id} name={s.name} />
@@ -196,19 +209,32 @@ export default function PublicJobDetails() {
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-3">
-            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Eligibility</h3>
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+              Eligibility
+            </h3>
             {job.minCgpa && (
               <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                 <FiClock className="w-4 h-4 text-slate-400 shrink-0" />
                 Min CGPA: {job.minCgpa}
               </div>
             )}
+            {(job.experienceMin !== undefined || job.experienceMax !== undefined) && (
+              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                <FiBriefcase className="w-4 h-4 text-slate-400 shrink-0" />
+                Experience: {job.experienceMin !== undefined ? `${job.experienceMin}+` : '0'} yrs
+                {job.experienceMax !== undefined ? ` – ${job.experienceMax} yrs` : ''}
+              </div>
+            )}
             {job.eligibleBranches.length > 0 && (
               <div className="text-sm text-slate-600 dark:text-slate-300">
-                <p className="font-medium text-slate-700 dark:text-slate-200 mb-1.5">Eligible branches</p>
+                <p className="font-medium text-slate-700 dark:text-slate-200 mb-1.5">
+                  Eligible branches
+                </p>
                 <div className="flex flex-wrap gap-1.5">
                   {job.eligibleBranches.map((b) => (
-                    <Badge key={b} variant="default" size="sm">{b}</Badge>
+                    <Badge key={b} variant="default" size="sm">
+                      {b}
+                    </Badge>
                   ))}
                 </div>
               </div>
@@ -218,7 +244,9 @@ export default function PublicJobDetails() {
                 <p className="font-medium text-slate-700 dark:text-slate-200 mb-1.5">Grad years</p>
                 <div className="flex flex-wrap gap-1.5">
                   {job.eligibleGradYears.map((y) => (
-                    <Badge key={y} variant="default" size="sm">{y}</Badge>
+                    <Badge key={y} variant="default" size="sm">
+                      {y}
+                    </Badge>
                   ))}
                 </div>
               </div>

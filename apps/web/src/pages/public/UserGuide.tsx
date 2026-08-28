@@ -43,6 +43,11 @@ interface Section {
   color: string;
 }
 
+/** Indexed lookup so callers can reference a section by id and stay type-safe
+ *  under `noUncheckedIndexedAccess`. The id is the key the URL hash uses, so
+ *  the values line up with the order they render on the page. */
+const sectionsById: Record<SectionId, Section> = {} as Record<SectionId, Section>;
+
 const sections: Section[] = [
   {
     id: 'welcome',
@@ -122,6 +127,13 @@ const sections: Section[] = [
     color: 'bg-orange-50 text-orange-600 dark:bg-orange-950 dark:text-orange-400',
   },
 ];
+
+// Populate the lookup from the source-of-truth array above. Done after the
+// array is initialised so the `as Record<SectionId, Section>` cast on the empty
+// object can be honoured at runtime by the assignment loop.
+for (const s of sections) {
+  sectionsById[s.id] = s;
+}
 
 /* ---------- Small reusable visual primitives ---------- */
 
@@ -311,7 +323,7 @@ export default function UserGuide() {
         <div className="space-y-4 min-w-0">
           {/* WELCOME */}
           <SectionCard
-            section={sections[0]}
+            section={sectionsById.welcome}
             isOpen={isOpen('welcome')}
             onToggle={() => toggle('welcome')}
           >
@@ -373,7 +385,7 @@ export default function UserGuide() {
 
           {/* GETTING STARTED */}
           <SectionCard
-            section={sections[1]}
+            section={sectionsById['getting-started']}
             isOpen={isOpen('getting-started')}
             onToggle={() => toggle('getting-started')}
           >
@@ -424,7 +436,7 @@ export default function UserGuide() {
 
           {/* FOR STUDENTS */}
           <SectionCard
-            section={sections[2]}
+            section={sectionsById['for-students']}
             isOpen={isOpen('for-students')}
             onToggle={() => toggle('for-students')}
           >
@@ -570,7 +582,7 @@ export default function UserGuide() {
 
           {/* FOR COMPANIES */}
           <SectionCard
-            section={sections[3]}
+            section={sectionsById['for-companies']}
             isOpen={isOpen('for-companies')}
             onToggle={() => toggle('for-companies')}
           >
@@ -680,7 +692,7 @@ export default function UserGuide() {
 
           {/* FOR ADMINS */}
           <SectionCard
-            section={sections[4]}
+            section={sectionsById['for-admins']}
             isOpen={isOpen('for-admins')}
             onToggle={() => toggle('for-admins')}
           >
@@ -775,7 +787,7 @@ export default function UserGuide() {
 
           {/* FOR FACULTY */}
           <SectionCard
-            section={sections[5]}
+            section={sectionsById['for-faculty']}
             isOpen={isOpen('for-faculty')}
             onToggle={() => toggle('for-faculty')}
           >
@@ -824,7 +836,7 @@ export default function UserGuide() {
 
           {/* FOR INSTITUTIONS */}
           <SectionCard
-            section={sections[6]}
+            section={sectionsById['for-institutions']}
             isOpen={isOpen('for-institutions')}
             onToggle={() => toggle('for-institutions')}
           >
@@ -906,7 +918,7 @@ export default function UserGuide() {
 
           {/* HOW APPLICATIONS WORK */}
           <SectionCard
-            section={sections[7]}
+            section={sectionsById['how-applications-work']}
             isOpen={isOpen('how-applications-work')}
             onToggle={() => toggle('how-applications-work')}
           >
@@ -959,7 +971,7 @@ export default function UserGuide() {
 
           {/* HOW MATCHING WORKS */}
           <SectionCard
-            section={sections[8]}
+            section={sectionsById['how-matching-works']}
             isOpen={isOpen('how-matching-works')}
             onToggle={() => toggle('how-matching-works')}
           >
@@ -1025,7 +1037,7 @@ export default function UserGuide() {
 
           {/* NAVIGATING DASHBOARDS */}
           <SectionCard
-            section={sections[9]}
+            section={sectionsById['navigating-dashboards']}
             isOpen={isOpen('navigating-dashboards')}
             onToggle={() => toggle('navigating-dashboards')}
           >
@@ -1125,7 +1137,7 @@ export default function UserGuide() {
 
           {/* HELP & FAQ */}
           <SectionCard
-            section={sections[10]}
+            section={sectionsById['help-faq']}
             isOpen={isOpen('help-faq')}
             onToggle={() => toggle('help-faq')}
           >

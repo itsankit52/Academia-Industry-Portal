@@ -21,7 +21,7 @@ type Fixtures = { ensureBackend: void };
 
 export const test = base.extend<Fixtures>({
   ensureBackend: [
-    async ({}, use) => {
+    async (_fixtures, use) => {
       const ok = await checkBackend();
       if (!ok) test.skip(true, SKIP_MSG);
       await use();

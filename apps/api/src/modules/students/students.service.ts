@@ -42,6 +42,14 @@ export async function getStudentById(id: string, role: 'ADMIN' | 'COMPANY') {
       degree: json.degree,
       branch: json.branch,
       graduationYear: json.graduationYear,
+      cgpa: json.cgpa,
+      email: (json.user as Record<string, unknown>)?.email,
+      projects: json.projects,
+      certifications: json.certifications,
+      experience: json.experience,
+      achievements: json.achievements,
+      preferredRoles: json.preferredRoles,
+      preferredLocations: json.preferredLocations,
     };
   }
   return json;
@@ -64,7 +72,12 @@ export async function listStudents(pag: PaginationInput, filters: StudentListFil
     StudentProfile.find(where).sort(sort).skip(skip).limit(limit),
     StudentProfile.countDocuments(where),
   ]);
-  return buildPaginated(rows.map((r) => r.toJSON()), total, page, pageSize);
+  return buildPaginated(
+    rows.map((r) => r.toJSON()),
+    total,
+    page,
+    pageSize,
+  );
 }
 
 export async function getMySummary(userId: string) {
@@ -106,9 +119,7 @@ export async function getMySummary(userId: string) {
       .sort({ scheduledAt: 1 })
       .limit(5)
       .lean(),
-    Job.find({ status: 'PUBLISHED' })
-      .select('requiredSkills preferredSkills _id')
-      .lean(),
+    Job.find({ status: 'PUBLISHED' }).select('requiredSkills preferredSkills _id').lean(),
   ]);
 
   const recentJobIds = recentAppsRaw
@@ -137,7 +148,8 @@ export async function getMySummary(userId: string) {
     rawId: unknown,
   ) => {
     if (!opp) return String(rawId);
-    const company = opp.company as { _id: unknown; companyName?: string; logoUrl?: string } | undefined;
+    const company = opp.company as
+      { _id: unknown; companyName?: string; logoUrl?: string } | undefined;
     return {
       id: String(opp._id),
       title: opp.title,
@@ -178,7 +190,8 @@ export async function getMySummary(userId: string) {
     id: String(iv._id),
     application: String(iv.application),
     mode: iv.mode,
-    scheduledAt: iv.scheduledAt instanceof Date ? iv.scheduledAt.toISOString() : String(iv.scheduledAt),
+    scheduledAt:
+      iv.scheduledAt instanceof Date ? iv.scheduledAt.toISOString() : String(iv.scheduledAt),
     durationMinutes: iv.durationMinutes,
     meetingLink: iv.meetingLink,
     location: iv.location,

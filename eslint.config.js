@@ -15,6 +15,7 @@ export default tseslint.config(
       '**/*.config.mjs',
       '**/*.config.ts',
       '.husky/**',
+      'scripts/**',
     ],
   },
   js.configs.recommended,

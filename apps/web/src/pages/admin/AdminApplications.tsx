@@ -60,10 +60,30 @@ export default function AdminApplications() {
       />
 
       <Filters>
-        <Input label="Search" placeholder="Student or opportunity..." value={q} onChange={(e) => setQ(e.target.value)} />
-        <Input label="Company" placeholder="Company name" value={company} onChange={(e) => setCompany(e.target.value)} />
-        <Select label="Type" options={typeOptions} value={type} onChange={(e) => setType(e.target.value)} />
-        <Select label="Status" options={statusOptions} value={status} onChange={(e) => setStatus(e.target.value)} />
+        <Input
+          label="Search"
+          placeholder="Student or opportunity..."
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        <Input
+          label="Company"
+          placeholder="Company name"
+          value={company}
+          onChange={(e) => setCompany(e.target.value)}
+        />
+        <Select
+          label="Type"
+          options={typeOptions}
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+        />
+        <Select
+          label="Status"
+          options={statusOptions}
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+        />
       </Filters>
 
       <Table>
@@ -83,15 +103,23 @@ export default function AdminApplications() {
           {isLoading ? (
             <SkeletonTableRows rows={8} cols={8} />
           ) : applications.length === 0 ? (
-            <tr><td colSpan={8}><EmptyState icon={<FiFileText />} title="No applications found" /></td></tr>
+            <tr>
+              <td colSpan={8}>
+                <EmptyState icon={<FiFileText />} title="No applications found" />
+              </td>
+            </tr>
           ) : (
             applications.map((app) => (
               <tr key={app.id}>
                 <Table.Td className="font-medium">{getStudentName(app)}</Table.Td>
-                <Table.Td className="text-slate-500 dark:text-slate-400 text-sm">{getStudentEmail(app)}</Table.Td>
+                <Table.Td className="text-slate-500 dark:text-slate-400 text-sm">
+                  {getStudentEmail(app)}
+                </Table.Td>
                 <Table.Td className="max-w-[180px] truncate">{getOpportunityTitle(app)}</Table.Td>
                 <Table.Td>
-                  <Badge variant="default" size="sm">{app.opportunityType}</Badge>
+                  <Badge variant="default" size="sm">
+                    {app.opportunityType}
+                  </Badge>
                 </Table.Td>
                 <Table.Td>{getCompanyName(app)}</Table.Td>
                 <Table.Td>
@@ -100,7 +128,9 @@ export default function AdminApplications() {
                   </Badge>
                 </Table.Td>
                 <Table.Td>
-                  {app.matchScore != null ? `${app.matchScore}%` : '—'}
+                  {app.matchScore !== null && app.matchScore !== undefined
+                    ? `${app.matchScore}%`
+                    : '—'}
                 </Table.Td>
                 <Table.Td className="text-slate-500 dark:text-slate-400 text-sm">
                   {format(new Date(app.createdAt), 'dd MMM yyyy')}

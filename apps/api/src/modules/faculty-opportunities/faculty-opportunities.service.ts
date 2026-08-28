@@ -1,16 +1,7 @@
 import type { Role } from '@aip/config';
-import type {
-  CreateFacultyOpportunityInput,
-  ListFacultyOpportunitiesQuery,
-  UpdateFacultyOpportunityInput,
-} from '@aip/validation';
+import type { CreateFacultyOpportunityInput, UpdateFacultyOpportunityInput } from '@aip/validation';
 import { AppError } from '../../utils/AppError';
-import {
-  CompanyProfile,
-  FacultyOpportunity,
-  Institution,
-  User,
-} from '../../models';
+import { CompanyProfile, FacultyOpportunity, Institution, User } from '../../models';
 import { applyPagination, buildPaginated, type PaginationInput } from '../../utils/pagination';
 
 interface HostContext {

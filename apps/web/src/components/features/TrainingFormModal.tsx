@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createTrainingSchema, type CreateTrainingInput } from '@aip/validation';
 import Modal from '@/components/ui/Modal';
@@ -25,7 +25,12 @@ export default function TrainingFormModal({ open, onClose, training }: Props) {
   const isEdit = !!training;
   const [skills, setSkills] = useState<string[]>(training?.skills.map((s) => s.id) ?? []);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: training
       ? {
@@ -69,7 +74,12 @@ export default function TrainingFormModal({ open, onClose, training }: Props) {
   const isPending = createTraining.isPending || updateTraining.isPending;
 
   return (
-    <Modal open={open} onClose={onClose} title={isEdit ? 'Edit Training' : 'Create Training'} size="lg">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={isEdit ? 'Edit Training' : 'Create Training'}
+      size="lg"
+    >
       <form onSubmit={handleSubmit(onSubmit)} className="px-6 py-4 space-y-4">
         <Input
           label="Title"
@@ -126,11 +136,7 @@ export default function TrainingFormModal({ open, onClose, training }: Props) {
           />
         </div>
 
-        <SkillPicker
-          label="Skills Covered"
-          value={skills}
-          onChange={setSkills}
-        />
+        <SkillPicker label="Skills Covered" value={skills} onChange={setSkills} />
 
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="outline" size="sm" onClick={onClose}>

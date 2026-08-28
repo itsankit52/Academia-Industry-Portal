@@ -16,6 +16,8 @@ function loadPrefs(): EmailPreferences {
     const raw = localStorage.getItem(PREF_KEY);
     if (raw) return JSON.parse(raw) as EmailPreferences;
   } catch {
+    // Local storage may be unavailable (private mode, sandboxed iframe, etc.):
+    // fall through to the default rather than failing the whole render.
   }
   return {
     emailOnStatusChange: true,

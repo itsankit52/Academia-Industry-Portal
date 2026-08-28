@@ -28,6 +28,21 @@ export interface Achievement {
   date?: string;
 }
 
+export interface Education {
+  institution: string;
+  degree: string;
+  field?: string;
+  startYear?: number;
+  endYear?: number;
+  grade?: string;
+  description?: string;
+}
+
+export interface Language {
+  name: string;
+  proficiency?: string;
+}
+
 export interface StudentProfile {
   id: string;
   userId: string;
@@ -52,6 +67,14 @@ export interface StudentProfile {
   achievements: Achievement[];
   preferredRoles: string[];
   preferredLocations: string[];
+  softSkills: string[];
+  education: Education[];
+  languages: Language[];
+  linkedinUrl?: string;
+  githubUrl?: string;
+  portfolioUrl?: string;
+  twitterUrl?: string;
+  careerInterests?: string;
   createdAt: string;
   updatedAt: string;
 }
