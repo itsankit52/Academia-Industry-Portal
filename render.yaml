@@ -1,0 +1,73 @@
+# Render Blueprint — Academia-Industry Portal Backend
+# Deploy: Import this file in Render dashboard → "New Blueprint Instance"
+# Docs:  https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: aip-api
+    env: node
+    region: oregon # change to frankfurt / singapore / ohio if preferred
+    plan: free # upgrade to starter or flex for production
+
+    # Build
+    buildCommand: pnpm install --frozen-lockfile && pnpm build
+    # Build succeeds before deploy starts; pnpm build at repo root produces:
+    #   packages/*/dist/   ← shared packages first (handled by monorepo order)
+    #   apps/api/dist/     ← TypeScript compiled output (tsc -p apps/api/tsconfig.json)
+
+    startCommand: node apps/api/dist/server.js
+
+    # Health check — Render pings this to detect crashes
+    healthCheckPath: /api/v1/health
+
+    # Env vars — fill in real values below.  Mark sensitive ones as "sync: false"
+    # to keep them out of the Blueprint YAML (they'll be prompted on first deploy
+    # and stored in Render's secret store).
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: FRONTEND_URL
+        # Production frontend on Render (same domain as API → cookies can be lax)
+        value: https://aip-qq08.onrender.com
+      - key: MONGODB_URI
+        sync: false # prompted on first deploy; stored encrypted
+      - key: MONGODB_DB_NAME
+        value: academia_industry_portal
+      - key: JWT_ACCESS_SECRET
+        sync: false # prompted on first deploy
+      - key: JWT_REFRESH_SECRET
+        sync: false # prompted on first deploy
+      - key: JWT_ACCESS_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      # Both apps are *.onrender.com — same registrable domain, so cross-site
+      # cookies are NOT required. Leave COOKIE_DOMAIN blank (host-only) and use
+      # `lax` (the default). The `none` + Secure pattern only applies when the
+      # frontend and backend are on completely different registrable domains.
+      - key: COOKIE_DOMAIN
+        value: ''
+      - key: COOKIE_SECURE
+        value: 'true'
+      - key: COOKIE_SAMESITE
+        value: lax
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: MAX_FILE_SIZE_MB
+        value: '5'
+      - key: RATE_LIMIT_WINDOW_MS
+        value: '900000'
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: '100'
+      - key: LOG_LEVEL
+        value: info
