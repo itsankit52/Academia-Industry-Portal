@@ -14,6 +14,7 @@ import {
 } from '../../models';
 import { AppError } from '../../utils/AppError';
 import { applyPagination, buildPaginated } from '../../utils/pagination';
+import { serializeLean } from '../../utils/serializeLean';
 
 export async function deactivateUser(id: string): Promise<UserDoc> {
   const doc = await User.findByIdAndUpdate(id, { isActive: false }, { new: true });
@@ -45,11 +46,7 @@ export async function deleteUserCascade(id: string): Promise<void> {
 }
 
 export async function verifyCompany(id: string): Promise<CompanyProfileDoc> {
-  const doc = await CompanyProfile.findByIdAndUpdate(
-    id,
-    { verifiedAt: new Date() },
-    { new: true },
-  );
+  const doc = await CompanyProfile.findByIdAndUpdate(id, { verifiedAt: new Date() }, { new: true });
   if (!doc) throw AppError.notFound('Company profile not found');
   return doc;
 }
@@ -86,5 +83,10 @@ export async function listUsers(input: ListUsersInput): Promise<Paginated<UserDo
     User.countDocuments(filter),
   ]);
 
-  return buildPaginated(items as unknown as UserDoc[], total, pg.page, pg.pageSize);
+  // .lean() bypasses the schema's toJSON transform, so each row has raw `_id`
+  // and no `id`. Run them through serializeLean so the wire format matches
+  // every other endpoint in the API (and the frontend's `id` references work).
+  const serialized = items.map((row) => serializeLean(row));
+
+  return buildPaginated(serialized as unknown as UserDoc[], total, pg.page, pg.pageSize);
 }
