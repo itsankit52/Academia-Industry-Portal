@@ -2,11 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { createTestApp, hasTestDb } from './helpers/app';
 import { clearTestDb, connectTestDb, disconnectTestDb } from './helpers/db';
-import {
-  createJobViaService,
-  createSkillRow,
-  createUserAndLogin,
-} from './helpers/fixtures';
+import { createJobViaService, createSkillRow, createUserAndLogin } from './helpers/fixtures';
 
 describe.skipIf(!hasTestDb)('applications', () => {
   const app = createTestApp();
@@ -40,7 +36,7 @@ describe.skipIf(!hasTestDb)('applications', () => {
     const res = await request(app)
       .post('/api/v1/applications')
       .set('Cookie', student.cookie)
-      .send({ opportunityType: 'JOB', opportunityId: String(job._id) });
+      .send({ opportunityType: 'JOB', opportunityId: job.id });
     expect(res.status).toBe(201);
     expect(res.body.data.status).toBe('APPLIED');
     expect(typeof res.body.data.matchScore).toBe('number');
@@ -54,12 +50,12 @@ describe.skipIf(!hasTestDb)('applications', () => {
     const first = await request(app)
       .post('/api/v1/applications')
       .set('Cookie', student.cookie)
-      .send({ opportunityType: 'JOB', opportunityId: String(job._id) });
+      .send({ opportunityType: 'JOB', opportunityId: job.id });
     expect(first.status).toBe(201);
     const dup = await request(app)
       .post('/api/v1/applications')
       .set('Cookie', student.cookie)
-      .send({ opportunityType: 'JOB', opportunityId: String(job._id) });
+      .send({ opportunityType: 'JOB', opportunityId: job.id });
     expect(dup.status).toBe(409);
   });
 
@@ -69,7 +65,7 @@ describe.skipIf(!hasTestDb)('applications', () => {
     const created = await request(app)
       .post('/api/v1/applications')
       .set('Cookie', student.cookie)
-      .send({ opportunityType: 'JOB', opportunityId: String(job._id) });
+      .send({ opportunityType: 'JOB', opportunityId: job.id });
     const appId = created.body.data.id as string;
 
     const res = await request(app)

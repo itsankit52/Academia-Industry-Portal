@@ -1,0 +1,226 @@
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { format } from 'date-fns';
+import {
+  FiArrowLeft,
+  FiCalendar,
+  FiClock,
+  FiExternalLink,
+  FiMapPin,
+  FiPhone,
+  FiUser,
+  FiVideo,
+} from 'react-icons/fi';
+import PageHeader from '@/components/ui/PageHeader';
+import Card from '@/components/ui/Card';
+import Badge from '@/components/ui/Badge';
+import Button from '@/components/ui/Button';
+import ErrorState from '@/components/ui/ErrorState';
+import { SkeletonCard } from '@/components/ui/Skeleton';
+import { useInterview } from '@/hooks/queries/useInterviews';
+
+/**
+ * Student-facing detail view for one interview — the destination the API has
+ * always pointed at.
+ *
+ * `interviews.service.ts` writes its INTERVIEW_SCHEDULED and INTERVIEW_UPDATED
+ * notifications with the link `/student/interviews/<id>`, but `router.tsx` only
+ * ever registered the `interviews` index, so that link matched nothing and fell
+ * through to the catch-all NotFound route. The read it needs
+ * (`GET /interviews/:id`) already existed and already refuses an interview that
+ * does not belong to the caller, so this page adds no endpoint and no new
+ * authorisation rule — it just renders what the student is already allowed to see.
+ *
+ * Deliberately *not* time-gated: whenever a meeting link exists the join control
+ * is live, whatever the clock says. A "too early / too late" rule is the kind of
+ * thing that silently prevents a legitimate join, and the company already
+ * controls availability through the interview's status.
+ */
+
+type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info';
+
+const statusConfig: Record<string, { label: string; variant: BadgeVariant }> = {
+  SCHEDULED: { label: 'Scheduled', variant: 'info' },
+  COMPLETED: { label: 'Completed', variant: 'success' },
+  CANCELLED: { label: 'Cancelled', variant: 'danger' },
+  RESCHEDULED: { label: 'Rescheduled', variant: 'warning' },
+};
+
+const modeIcon: Record<string, React.ReactNode> = {
+  ONLINE: <FiVideo className="w-4 h-4" />,
+  ONSITE: <FiMapPin className="w-4 h-4" />,
+  PHONE: <FiPhone className="w-4 h-4" />,
+};
+
+/** Same visual weight as `<Button variant="primary">`, but a real anchor so the
+ *  meeting link opens in a new tab instead of being blocked as a popup. */
+const joinButtonClasses =
+  'inline-flex items-center justify-center gap-2 h-10 px-4 text-sm font-medium rounded-lg ' +
+  'bg-indigo-600 text-white no-underline transition-colors duration-150 hover:bg-indigo-700 ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500';
+
+function DetailRow({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="text-slate-400 shrink-0 mt-0.5 dark:text-slate-500">{icon}</span>
+      <div className="min-w-0">
+        <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
+        <p className="text-sm text-slate-800 dark:text-slate-200 break-words">{children}</p>
+      </div>
+    </div>
+  );
+}
+
+export default function StudentInterviewDetails() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { data: interview, isLoading, isError, refetch } = useInterview(id ?? '');
+
+  if (isLoading) {
+    return (
+      <div className="container-page py-8">
+        <SkeletonCard />
+      </div>
+    );
+  }
+
+  if (isError || !interview) {
+    return (
+      <div className="container-page py-8 space-y-6">
+        <ErrorState
+          title="Interview unavailable"
+          description="We could not load this interview. It may have been cancelled, or it may not belong to your account."
+          onRetry={() => void refetch()}
+        />
+        <div className="flex justify-center">
+          <Link to="/student/interviews" className="text-sm text-indigo-600 hover:text-indigo-700 no-underline dark:text-indigo-400">
+            Back to all interviews
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const status = statusConfig[interview.status] ?? {
+    label: interview.status,
+    variant: 'default' as BadgeVariant,
+  };
+  const isCancelled = interview.status === 'CANCELLED';
+  const scheduledAt = new Date(interview.scheduledAt);
+  const modeLabel = interview.mode.charAt(0) + interview.mode.slice(1).toLowerCase();
+
+  return (
+    <div className="container-page py-8 space-y-6">
+      <PageHeader
+        title={interview.opportunityTitle || 'Interview'}
+        subtitle={interview.companyName || undefined}
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            iconLeft={<FiArrowLeft className="w-4 h-4" />}
+            onClick={() => navigate('/student/interviews')}
+          >
+            Back
+          </Button>
+        }
+      />
+
+      <Card>
+        <Card.Body className="space-y-5">
+          <div className="flex items-center gap-3 flex-wrap">
+            <Badge variant={status.variant}>{status.label}</Badge>
+            <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+              {modeIcon[interview.mode]}
+              {modeLabel}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <DetailRow icon={<FiCalendar className="w-4 h-4" />} label="Date &amp; time">
+              {format(scheduledAt, 'EEEE, MMM d, yyyy — h:mm a')}
+            </DetailRow>
+            <DetailRow icon={<FiClock className="w-4 h-4" />} label="Duration">
+              {interview.durationMinutes} minutes
+            </DetailRow>
+            {interview.interviewer && (
+              <DetailRow icon={<FiUser className="w-4 h-4" />} label="Interviewer">
+                {interview.interviewer}
+              </DetailRow>
+            )}
+            {interview.location && (
+              <DetailRow icon={<FiMapPin className="w-4 h-4" />} label="Location">
+                {interview.location}
+              </DetailRow>
+            )}
+          </div>
+
+          {interview.notes && (
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+              <p className="text-xs text-slate-500 mb-1 dark:text-slate-400">Notes from the company</p>
+              <p className="text-sm text-slate-800 whitespace-pre-wrap dark:text-slate-200">{interview.notes}</p>
+            </div>
+          )}
+
+          {interview.feedback && (
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+              <p className="text-xs text-slate-500 mb-1 dark:text-slate-400">Feedback</p>
+              <p className="text-sm text-slate-800 whitespace-pre-wrap dark:text-slate-200">{interview.feedback}</p>
+            </div>
+          )}
+        </Card.Body>
+
+        <Card.Footer className="space-y-3">
+          {isCancelled ? (
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              This interview was cancelled. The company will reach out if it is rescheduled.
+            </p>
+          ) : interview.mode === 'ONLINE' ? (
+            interview.meetingLink ? (
+              <>
+                <a
+                  href={interview.meetingLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={joinButtonClasses}
+                >
+                  <FiVideo className="w-4 h-4 shrink-0" />
+                  Join Interview
+                  <FiExternalLink className="w-3.5 h-3.5 shrink-0" />
+                </a>
+                <p className="text-xs text-slate-500 break-all dark:text-slate-400">
+                  Opens in a new tab: {interview.meetingLink}
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                The company has not added a meeting link yet. It will appear here once they do.
+              </p>
+            )
+          ) : interview.mode === 'ONSITE' ? (
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              This is an in-person interview.{' '}
+              {interview.location
+                ? 'Please arrive at the location above a few minutes early.'
+                : 'The company has not confirmed a location yet.'}
+            </p>
+          ) : (
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              This is a phone interview
+              {interview.interviewer ? ` — ${interview.interviewer} will call you` : ''}. Please keep your
+              phone reachable at the scheduled time.
+            </p>
+          )}
+
+          {interview.applicationId && (
+            <Link
+              to={`/student/applications/${interview.applicationId}`}
+              className="inline-block text-xs text-indigo-600 hover:text-indigo-700 no-underline dark:text-indigo-400"
+            >
+              View the application this interview belongs to
+            </Link>
+          )}
+        </Card.Footer>
+      </Card>
+    </div>
+  );
+}

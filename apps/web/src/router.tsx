@@ -45,6 +45,7 @@ const StudentSaved = lazy(() => import('@/pages/student/StudentSaved'));
 const StudentApplications = lazy(() => import('@/pages/student/StudentApplications'));
 const StudentApplicationDetails = lazy(() => import('@/pages/student/StudentApplicationDetails'));
 const StudentInterviews = lazy(() => import('@/pages/student/StudentInterviews'));
+const StudentInterviewDetails = lazy(() => import('@/pages/student/StudentInterviewDetails'));
 const StudentNotifications = lazy(() => import('@/pages/student/StudentNotifications'));
 const StudentSkillGap = lazy(() => import('@/pages/student/StudentSkillGap'));
 const StudentTraining = lazy(() => import('@/pages/student/StudentTraining'));
@@ -209,6 +210,13 @@ export const router = createBrowserRouter([
           { path: 'applications', element: s(StudentApplications) },
           { path: 'applications/:id', element: s(StudentApplicationDetails) },
           { path: 'interviews', element: s(StudentInterviews) },
+          // `interviews.service.ts` writes its interview notifications with the
+          // link `/student/interviews/<id>`. Without this child that link matched
+          // nothing and fell through to the catch-all NotFound route, so a student
+          // could never open the interview to reach its meeting link. The page
+          // reads the existing `GET /interviews/:id`, which already refuses an
+          // interview belonging to anyone else.
+          { path: 'interviews/:id', element: s(StudentInterviewDetails) },
           { path: 'notifications', element: s(StudentNotifications) },
           { path: 'skill-gap', element: s(StudentSkillGap) },
           { path: 'assessments', element: s(StudentAssessments) },

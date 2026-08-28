@@ -8,6 +8,7 @@ export const queryKeys = {
   studentApplications: (filters?: object) => ['student', 'applications', filters] as const,
   studentApplication: (id: string) => ['student', 'application', id] as const,
   studentInterviews: (tab?: string) => ['student', 'interviews', tab] as const,
+  studentInterview: (id: string) => ['student', 'interview', id] as const,
   studentNotifications: () => ['student', 'notifications'] as const,
   recommendations: (kind: string) => ['recommendations', kind] as const,
   jobs: (filters?: object) => ['jobs', filters] as const,

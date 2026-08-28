@@ -61,18 +61,26 @@ function uniqueEmail(role: Role): string {
 export async function ensureTestInstitution(): Promise<string> {
   const existing = await Institution.findOne({ code: 'TESTINST' });
   if (existing) return String(existing._id);
-  const doc = await Institution.create({
-    name: 'Test Institution',
-    code: 'TESTINST',
-    domain: 'testinst.edu',
-    address: '1 Test Way',
-    city: 'Testville',
-    state: 'TS',
-    contactEmail: 'registrar@testinst.edu',
-    verificationStatus: 'VERIFIED',
-    verifiedAt: new Date(),
-  });
-  return String(doc._id);
+  try {
+    const doc = await Institution.create({
+      name: 'Test Institution',
+      code: 'TESTINST',
+      domain: 'testinst.edu',
+      address: '1 Test Way',
+      city: 'Testville',
+      state: 'TS',
+      contactEmail: 'registrar@testinst.edu',
+      verificationStatus: 'VERIFIED',
+      verifiedAt: new Date(),
+    });
+    return String(doc._id);
+  } catch (err) {
+    // Another suite (or another worker) raced us to insert the institution.
+    // The first writer wins; fall through to the doc they wrote.
+    const after = await Institution.findOne({ code: 'TESTINST' });
+    if (after) return String(after._id);
+    throw err;
+  }
 }
 
 export async function createUserRow(
@@ -108,6 +116,9 @@ export async function createUserRow(
       designation: 'Assistant Professor',
       department: 'Computer Science',
     });
+    // `resolveActorHost` looks up `user.institution` — keep it in sync.
+    user.institution = new Types.ObjectId(institutionId);
+    await user.save();
   }
 
   return { userId: String(user._id), email, password };

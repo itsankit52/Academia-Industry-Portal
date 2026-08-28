@@ -2,6 +2,10 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    // Integration specs (/*.spec.ts) hit the same MongoDB database and cannot
+    // run in parallel without corrupting each other's state. Run every file
+    // sequentially so that `beforeEach(clearTestDb())` is safe.
+    fileParallelism: false,
     environment: 'node',
     globals: true,
     include: ['src/**/*.test.ts', 'src/**/*.spec.ts'],

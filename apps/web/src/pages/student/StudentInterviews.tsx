@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { FiCalendar } from 'react-icons/fi';
 import PageHeader from '@/components/ui/PageHeader';
 import Tabs from '@/components/ui/Tabs';
@@ -30,7 +31,9 @@ export default function StudentInterviews() {
 
             {isLoading && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)}
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <SkeletonCard key={i} />
+                ))}
               </div>
             )}
 
@@ -49,7 +52,21 @@ export default function StudentInterviews() {
             {interviews.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {interviews.map((interview) => (
-                  <InterviewCard key={interview.id} interview={interview} />
+                  // The details link sits beside the card rather than wrapping it:
+                  // `InterviewCard` already renders its own anchor for the meeting
+                  // link, and nesting anchors would swallow that click. This mirrors
+                  // how CompanyInterviews places its per-interview actions.
+                  <div key={interview.id} className="space-y-2">
+                    <InterviewCard interview={interview} />
+                    <div className="px-1">
+                      <Link
+                        to={`/student/interviews/${interview.id}`}
+                        className="text-xs text-indigo-600 hover:text-indigo-700 no-underline dark:text-indigo-400 dark:hover:text-indigo-300"
+                      >
+                        View details
+                      </Link>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
