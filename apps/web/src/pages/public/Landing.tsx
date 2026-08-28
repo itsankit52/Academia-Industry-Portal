@@ -47,28 +47,34 @@ const roles = [
   {
     icon: FiUsers,
     title: "I'm a Student",
-    description: 'Find jobs, internships, track applications, and close skill gaps with personalised recommendations.',
+    description:
+      'Find jobs, internships, track applications, and close skill gaps with personalised recommendations.',
     to: '/register',
     cta: 'Create student account',
-    color: 'border-neutral-200 hover:border-neutral-400 dark:border-neutral-700 dark:hover:border-neutral-500',
+    color:
+      'border-neutral-200 hover:border-neutral-400 dark:border-neutral-700 dark:hover:border-neutral-500',
     iconBg: 'bg-neutral-100 text-neutral-900 dark:bg-neutral-800 dark:text-neutral-200',
   },
   {
     icon: FiBriefcase,
     title: "I'm a Company",
-    description: 'Post opportunities, discover pre-matched candidates, and manage your entire campus hiring pipeline.',
+    description:
+      'Post opportunities, discover pre-matched candidates, and manage your entire campus hiring pipeline.',
     to: '/register',
     cta: 'Create company account',
-    color: 'border-neutral-200 hover:border-neutral-400 dark:border-neutral-700 dark:hover:border-neutral-500',
+    color:
+      'border-neutral-200 hover:border-neutral-400 dark:border-neutral-700 dark:hover:border-neutral-500',
     iconBg: 'bg-neutral-100 text-neutral-900 dark:bg-neutral-800 dark:text-neutral-200',
   },
   {
     icon: FiShield,
     title: "I'm an Admin",
-    description: 'Manage the placement cell, monitor real-time analytics, and drive better institutional outcomes.',
+    description:
+      'Manage the placement cell, monitor real-time analytics, and drive better institutional outcomes.',
     to: '/login',
     cta: 'Admin sign in',
-    color: 'border-neutral-200 hover:border-neutral-400 dark:border-neutral-700 dark:hover:border-neutral-500',
+    color:
+      'border-neutral-200 hover:border-neutral-400 dark:border-neutral-700 dark:hover:border-neutral-500',
     iconBg: 'bg-neutral-100 text-neutral-900 dark:bg-neutral-800 dark:text-neutral-200',
   },
 ];
@@ -125,11 +131,12 @@ export default function Landing() {
               Now open for placements
             </div>
             <h1 className="text-3xl lg:text-2xl font-bold leading-tight mb-6 tracking-tight">
-            Connect students, institutions, and companies through meaningful opportunities, collaboration and career growth.
+              Connect students, institutions, and companies through meaningful opportunities,
+              collaboration and career growth.
             </h1>
             <p className="text-lg text-neutral-600 leading-relaxed mb-10 max-w-xl dark:text-neutral-400">
-              The centralised platform connecting students, companies, and placement administrators —
-              from skill mapping to final offer.
+              The centralised platform connecting students, companies, and placement administrators
+              — from skill mapping to final offer.
             </p>
             <div className="flex flex-wrap gap-4">
               <Link
@@ -144,6 +151,13 @@ export default function Landing() {
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-neutral-300 text-neutral-700 font-medium hover:bg-neutral-50 transition-colors no-underline dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-900"
               >
                 Browse opportunities
+              </Link>
+              <Link
+                to="/guide"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-neutral-700 font-medium hover:bg-neutral-50 transition-colors no-underline dark:text-neutral-300 dark:hover:bg-neutral-900"
+              >
+                How it works
+                <FiArrowRight className="w-4 h-4" />
               </Link>
             </div>
           </div>
@@ -176,7 +190,9 @@ export default function Landing() {
             const Icon = f.icon;
             return (
               <div key={f.title} className="group">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-4 ${f.color}`}>
+                <div
+                  className={`w-10 h-10 rounded-lg flex items-center justify-center mb-4 ${f.color}`}
+                >
                   <Icon className="w-5 h-5" />
                 </div>
                 <h3 className="font-semibold text-neutral-900 mb-2 dark:text-neutral-100">
@@ -205,7 +221,9 @@ export default function Landing() {
                   key={r.title}
                   className={`bg-white rounded-lg border p-8 transition-colors dark:bg-neutral-950 ${r.color}`}
                 >
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-4 ${r.iconBg}`}>
+                  <div
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center mb-4 ${r.iconBg}`}
+                  >
                     <Icon className="w-5 h-5" />
                   </div>
                   <h3 className="text-lg font-semibold text-neutral-900 mb-2 dark:text-neutral-100">
@@ -235,8 +253,8 @@ export default function Landing() {
               Why students love it
             </h2>
             <p className="text-neutral-600 mb-8 leading-relaxed dark:text-neutral-400">
-              We built the platform students actually want — clear status updates, smart recommendations, and no more
-              chasing placement coordinators for information.
+              We built the platform students actually want — clear status updates, smart
+              recommendations, and no more chasing placement coordinators for information.
             </p>
             <ul className="space-y-3">
               {benefits.map((b) => (

@@ -10,6 +10,7 @@ import ThemeToggle from '@/components/ui/ThemeToggle';
 const publicLinks = [
   { to: '/jobs', label: 'Jobs' },
   { to: '/internships', label: 'Internships' },
+  { to: '/guide', label: 'User Guide' },
   { to: '/about', label: 'About' },
   { to: '/contact', label: 'Contact' },
 ];
@@ -20,9 +21,11 @@ export default function Navbar() {
   const logout = useLogout();
 
   const dashboardPath =
-    user?.role === 'STUDENT' ? '/student/dashboard'
-    : user?.role === 'COMPANY' ? '/company/dashboard'
-    : '/admin/dashboard';
+    user?.role === 'STUDENT'
+      ? '/student/dashboard'
+      : user?.role === 'COMPANY'
+        ? '/company/dashboard'
+        : '/admin/dashboard';
 
   return (
     <>
@@ -31,7 +34,9 @@ export default function Navbar() {
           <div className="flex items-center justify-between h-16">
             <Link to="/" className="flex items-center gap-2 no-underline" aria-label="Home">
               <span className="text-xl font-bold text-indigo-600">AIP</span>
-              <span className="hidden sm:block text-sm font-medium text-slate-600 dark:text-slate-400">Academia-Industry Portal</span>
+              <span className="hidden sm:block text-sm font-medium text-slate-600 dark:text-slate-400">
+                Academia-Industry Portal
+              </span>
             </Link>
 
             <nav className="hidden lg:flex items-center gap-1" aria-label="Primary navigation">

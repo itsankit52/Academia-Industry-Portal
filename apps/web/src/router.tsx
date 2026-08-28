@@ -21,6 +21,7 @@ function s(Component: ComponentType) {
 const Landing = lazy(() => import('@/pages/public/Landing'));
 const About = lazy(() => import('@/pages/public/About'));
 const Contact = lazy(() => import('@/pages/public/Contact'));
+const UserGuide = lazy(() => import('@/pages/public/UserGuide'));
 const PublicJobs = lazy(() => import('@/pages/public/PublicJobs'));
 const PublicJobDetails = lazy(() => import('@/pages/public/PublicJobDetails'));
 const PublicInternships = lazy(() => import('@/pages/public/PublicInternships'));
@@ -105,9 +106,13 @@ const FacultySettings = lazy(() => import('@/pages/faculty/FacultySettings'));
 
 const InstitutionDashboard = lazy(() => import('@/pages/institution/InstitutionDashboard'));
 const InstitutionStudents = lazy(() => import('@/pages/institution/InstitutionStudents'));
-const InstitutionStudentDetails = lazy(() => import('@/pages/institution/InstitutionStudentDetails'));
+const InstitutionStudentDetails = lazy(
+  () => import('@/pages/institution/InstitutionStudentDetails'),
+);
 const InstitutionFaculty = lazy(() => import('@/pages/institution/InstitutionFaculty'));
-const InstitutionFacultyDetails = lazy(() => import('@/pages/institution/InstitutionFacultyDetails'));
+const InstitutionFacultyDetails = lazy(
+  () => import('@/pages/institution/InstitutionFacultyDetails'),
+);
 const InstitutionSkillGaps = lazy(() => import('@/pages/institution/InstitutionSkillGaps'));
 const InstitutionPlacements = lazy(() => import('@/pages/institution/InstitutionPlacements'));
 const InstitutionFdps = lazy(() => import('@/pages/institution/InstitutionFdps'));
@@ -150,6 +155,7 @@ export const router = createBrowserRouter([
       { index: true, element: s(Landing) },
       { path: 'about', element: s(About) },
       { path: 'contact', element: s(Contact) },
+      { path: 'guide', element: s(UserGuide) },
       { path: 'login', element: s(Login) },
       { path: 'register', element: s(Register) },
       { path: 'jobs', element: s(PublicJobs) },

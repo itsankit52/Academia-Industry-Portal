@@ -14,6 +14,7 @@ const publicLinks = [
   { to: '/', label: 'Home' },
   { to: '/jobs', label: 'Jobs' },
   { to: '/internships', label: 'Internships' },
+  { to: '/guide', label: 'User Guide' },
   { to: '/about', label: 'About' },
   { to: '/contact', label: 'Contact' },
 ];
@@ -25,15 +26,19 @@ export default function MobileMenu({ open, onClose }: Props) {
   useEffect(() => {
     if (open) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = '';
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [open]);
 
   if (!open) return null;
 
   const dashboardPath =
-    user?.role === 'STUDENT' ? '/student/dashboard'
-    : user?.role === 'COMPANY' ? '/company/dashboard'
-    : '/admin/dashboard';
+    user?.role === 'STUDENT'
+      ? '/student/dashboard'
+      : user?.role === 'COMPANY'
+        ? '/company/dashboard'
+        : '/admin/dashboard';
 
   return (
     <div
@@ -42,7 +47,10 @@ export default function MobileMenu({ open, onClose }: Props) {
       aria-modal="true"
       aria-label="Navigation menu"
     >
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm dark:bg-black/70" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm dark:bg-black/70"
+        onClick={onClose}
+      />
       <div
         className={cn(
           'absolute top-0 right-0 h-full w-72 bg-white shadow-xl flex flex-col dark:bg-slate-900',
@@ -91,7 +99,10 @@ export default function MobileMenu({ open, onClose }: Props) {
                 Dashboard
               </Link>
               <button
-                onClick={() => { logout.mutate(); onClose(); }}
+                onClick={() => {
+                  logout.mutate();
+                  onClose();
+                }}
                 className="flex items-center justify-center w-full px-4 py-2.5 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
               >
                 Sign out
