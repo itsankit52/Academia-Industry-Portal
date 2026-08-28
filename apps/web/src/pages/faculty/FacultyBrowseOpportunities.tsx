@@ -19,6 +19,8 @@ const typeOptions = [
   { value: 'FDP', label: 'Faculty Dev Program' },
   { value: 'CONSULTANCY', label: 'Consultancy' },
   { value: 'COLLABORATIVE_RESEARCH', label: 'Collaborative Research' },
+  { value: 'PROJECT', label: 'Industry Project' },
+  { value: 'APPRENTICESHIP', label: 'Apprenticeship' },
 ];
 
 const modeOptions = [
@@ -34,7 +36,7 @@ const hostTypeOptions = [
 
 interface Filters {
   q: string;
-  opportunityType: string;
+  opportunityTypes: string[];
   mode: string;
   hostType: string;
 }
@@ -43,23 +45,28 @@ export default function FacultyBrowseOpportunities() {
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<Filters>({
     q: '',
-    opportunityType: '',
+    opportunityTypes: [],
     mode: '',
     hostType: '',
   });
   const [applyOpp, setApplyOpp] = useState<FacultyOpportunity | null>(null);
 
+  // Use the first selected type for the API (single-value filter)
   const { data, isLoading, isError, refetch } = useFacultyOpportunities({
-    ...filters,
-    opportunityType: filters.opportunityType || undefined,
+    q: filters.q || undefined,
+    opportunityType: filters.opportunityTypes[0] || undefined,
     mode: filters.mode || undefined,
     hostType: filters.hostType || undefined,
-    q: filters.q || undefined,
     page,
   });
 
   function toggleType(value: string) {
-    setFilters((prev) => ({ ...prev, opportunityType: prev.opportunityType === value ? '' : value }));
+    setFilters((prev) => {
+      const next = prev.opportunityTypes.includes(value)
+        ? prev.opportunityTypes.filter((t) => t !== value)
+        : [...prev.opportunityTypes, value];
+      return { ...prev, opportunityTypes: next };
+    });
     setPage(1);
   }
 
@@ -100,7 +107,7 @@ export default function FacultyBrowseOpportunities() {
                   <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={filters.opportunityType === opt.value}
+                      checked={filters.opportunityTypes.includes(opt.value)}
                       onChange={() => toggleType(opt.value)}
                       className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-slate-600"
                     />
@@ -149,7 +156,9 @@ export default function FacultyBrowseOpportunities() {
             <>
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">{data.total}</span>{' '}
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    {data.total}
+                  </span>{' '}
                   opportunit{data.total !== 1 ? 'ies' : 'y'} found
                 </p>
               </div>

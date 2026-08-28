@@ -93,6 +93,7 @@ const AdminIndustrySkillDemand = lazy(() => import('@/pages/admin/AdminIndustryS
 const AdminAuditLogs = lazy(() => import('@/pages/admin/AdminAuditLogs'));
 const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'));
 const AdminVerificationQueue = lazy(() => import('@/pages/admin/AdminVerificationQueue'));
+const AdminCollaborationHub = lazy(() => import('@/pages/admin/AdminCollaborationHub'));
 
 const CompanyVerifications = lazy(() => import('@/pages/company/CompanyVerifications'));
 
@@ -117,6 +118,9 @@ const InstitutionFacultyDetails = lazy(
 const InstitutionSkillGaps = lazy(() => import('@/pages/institution/InstitutionSkillGaps'));
 const InstitutionPlacements = lazy(() => import('@/pages/institution/InstitutionPlacements'));
 const InstitutionFdps = lazy(() => import('@/pages/institution/InstitutionFdps'));
+const InstitutionCollaborationHub = lazy(
+  () => import('@/pages/institution/InstitutionCollaborationHub'),
+);
 const InstitutionSettings = lazy(() => import('@/pages/institution/InstitutionSettings'));
 const InstitutionVerifications = lazy(() => import('@/pages/institution/InstitutionVerifications'));
 
@@ -125,10 +129,15 @@ const StudentMentorshipDetails = lazy(() => import('@/pages/student/StudentMento
 const StudentInterimReports = lazy(() => import('@/pages/student/StudentInterimReports'));
 const StudentEvents = lazy(() => import('@/pages/student/StudentEvents'));
 const StudentMyRegistrations = lazy(() => import('@/pages/student/StudentMyRegistrations'));
+const StudentCollaborationHub = lazy(() => import('@/pages/student/StudentCollaborationHub'));
 
 const FacultyMentorship = lazy(() => import('@/pages/faculty/FacultyMentorship'));
 const FacultyMentorshipDetails = lazy(() => import('@/pages/faculty/FacultyMentorshipDetails'));
 const FacultyEvents = lazy(() => import('@/pages/faculty/FacultyEvents'));
+const FacultyEventCreate = lazy(() => import('@/pages/faculty/FacultyEventCreate'));
+const FacultyCollaborationHub = lazy(() => import('@/pages/faculty/FacultyCollaborationHub'));
+const FacultyEventEdit = lazy(() => import('@/pages/faculty/FacultyEventEdit'));
+const FacultyEventDetails = lazy(() => import('@/pages/faculty/FacultyEventDetails'));
 
 const CompanyMentorship = lazy(() => import('@/pages/company/CompanyMentorship'));
 const CompanyMentorshipDetails = lazy(() => import('@/pages/company/CompanyMentorshipDetails'));
@@ -137,6 +146,7 @@ const CompanyEventCreate = lazy(() => import('@/pages/company/CompanyEventCreate
 const CompanyEventEdit = lazy(() => import('@/pages/company/CompanyEventEdit'));
 const CompanyEventDetails = lazy(() => import('@/pages/company/CompanyEventDetails'));
 const CompanyInterimReports = lazy(() => import('@/pages/company/CompanyInterimReports'));
+const CompanyCollaborationHub = lazy(() => import('@/pages/company/CompanyCollaborationHub'));
 
 const InstitutionEvents = lazy(() => import('@/pages/institution/InstitutionEvents'));
 const InstitutionEventCreate = lazy(() => import('@/pages/institution/InstitutionEventCreate'));
@@ -214,6 +224,7 @@ export const router = createBrowserRouter([
           { path: 'applications/:appId/reports', element: s(StudentInterimReports) },
           { path: 'events', element: s(StudentEvents) },
           { path: 'events/registrations', element: s(StudentMyRegistrations) },
+          { path: 'collaboration', element: s(StudentCollaborationHub) },
           { path: 'settings', element: s(StudentSettings) },
         ],
       },
@@ -257,6 +268,7 @@ export const router = createBrowserRouter([
           { path: 'events/:id', element: s(CompanyEventDetails) },
           { path: 'events/:id/edit', element: s(CompanyEventEdit) },
           { path: 'applications/:appId/reports', element: s(CompanyInterimReports) },
+          { path: 'collaboration', element: s(CompanyCollaborationHub) },
           { path: 'settings', element: s(CompanySettings) },
         ],
       },
@@ -287,6 +299,7 @@ export const router = createBrowserRouter([
           { path: 'verification-queue', element: s(AdminVerificationQueue) },
           { path: 'events', element: s(AdminEvents) },
           { path: 'mentorship', element: s(AdminMentorship) },
+          { path: 'collaboration', element: s(AdminCollaborationHub) },
           { path: 'audit-logs', element: s(AdminAuditLogs) },
           { path: 'settings', element: s(AdminSettings) },
         ],
@@ -314,6 +327,10 @@ export const router = createBrowserRouter([
           { path: 'mentorship', element: s(FacultyMentorship) },
           { path: 'mentorship/:requestId', element: s(FacultyMentorshipDetails) },
           { path: 'events', element: s(FacultyEvents) },
+          { path: 'events/new', element: s(FacultyEventCreate) },
+          { path: 'events/:id', element: s(FacultyEventDetails) },
+          { path: 'events/:id/edit', element: s(FacultyEventEdit) },
+          { path: 'collaboration', element: s(FacultyCollaborationHub) },
           { path: 'settings', element: s(FacultySettings) },
         ],
       },
@@ -343,6 +360,7 @@ export const router = createBrowserRouter([
           { path: 'events/new', element: s(InstitutionEventCreate) },
           { path: 'events/:id', element: s(InstitutionEventDetails) },
           { path: 'events/:id/edit', element: s(InstitutionEventEdit) },
+          { path: 'collaboration', element: s(InstitutionCollaborationHub) },
           { path: 'settings', element: s(InstitutionSettings) },
         ],
       },

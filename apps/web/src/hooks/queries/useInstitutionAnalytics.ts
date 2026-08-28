@@ -5,13 +5,38 @@ import type { Paginated } from '@aip/types';
 
 export interface DashboardStats {
   studentCount: number;
+  activeStudents: number;
+  assessmentCompletionCount: number;
+  assessmentCompletionRate: number;
+  skillDevelopmentCount: number;
+  skillDevelopmentRate: number;
   facultyCount: number;
   activeApplicationsCount: number;
-  placementsCount: number;
+  internshipApplicationsCount: number;
+  jobApplicationsCount: number;
+  shortlistedStudentsCount: number;
+  selectedStudentsCount: number;
   interviewsScheduledCount: number;
+  placementsCount: number;
+  placementPercentage: number;
   avgMatchScore: number;
   publishedJobsCount: number;
   publishedInternshipsCount: number;
+  activeCompaniesCount: number;
+  mostDemandedSkills: { skillId: string; name: string; count: number }[];
+  industrySkillDemand: {
+    skillId: string;
+    name: string;
+    category: string;
+    count: number;
+    percentage: number;
+  }[];
+  departmentWisePlacement: {
+    department: string;
+    placedCount: number;
+    totalCount: number;
+    rate: number;
+  }[];
   verifiedDocumentsCount: number;
   pendingDocumentsCount: number;
 }
@@ -46,7 +71,13 @@ export interface StudentDetail {
   preferredLocations: string[];
   projects: { title: string; description?: string; techStack: string[]; link?: string }[];
   certifications: { title: string; issuer: string; issuedAt?: string; credentialUrl?: string }[];
-  experience: { title: string; organization: string; startDate?: string; endDate?: string; description?: string }[];
+  experience: {
+    title: string;
+    organization: string;
+    startDate?: string;
+    endDate?: string;
+    description?: string;
+  }[];
   achievements: { title: string; description?: string; date?: string }[];
   user: { id: string; email: string; isActive: boolean };
   createdAt: string;
@@ -104,6 +135,15 @@ export interface FdpParticipation {
   byFacultyDept: { department: string; applied: number; accepted: number; completed: number }[];
 }
 
+export interface InstitutionStatsFilters {
+  institutionId?: string;
+  department?: string;
+  fromDate?: string;
+  toDate?: string;
+  opportunityType?: string;
+  applicationStatus?: string;
+}
+
 function qs(params: Record<string, string | number | undefined>): string {
   const p = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
@@ -113,10 +153,20 @@ function qs(params: Record<string, string | number | undefined>): string {
   return s ? `?${s}` : '';
 }
 
-export function useInstitutionStats(institutionId?: string) {
+export function useInstitutionStats(filters: InstitutionStatsFilters = {}) {
   return useQuery({
-    queryKey: queryKeys.institution.stats(institutionId),
-    queryFn: () => apiGet<DashboardStats>(`/institution/dashboard/stats${qs({ institutionId })}`),
+    queryKey: queryKeys.institution.stats(filters),
+    queryFn: () =>
+      apiGet<DashboardStats>(
+        `/institution/dashboard/stats${qs({
+          institutionId: filters.institutionId,
+          department: filters.department,
+          fromDate: filters.fromDate,
+          toDate: filters.toDate,
+          opportunityType: filters.opportunityType,
+          applicationStatus: filters.applicationStatus,
+        })}`,
+      ),
   });
 }
 

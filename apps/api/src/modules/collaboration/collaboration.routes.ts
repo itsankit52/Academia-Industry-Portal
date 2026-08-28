@@ -29,7 +29,7 @@ router.get(
 router.post(
   '/',
   requireAuth,
-  requireRole('COMPANY', 'INSTITUTION', 'ADMIN'),
+  requireRole('COMPANY', 'INSTITUTION', 'FACULTY', 'ADMIN'),
   validate(createEventSchema),
   auditLog({ action: 'EVENT_CREATE', entity: 'CollaborationEvent' }),
   ctrl.create,
@@ -40,7 +40,7 @@ router.get('/:id', validate(idParamSchema, 'params'), ctrl.getById);
 router.patch(
   '/:id',
   requireAuth,
-  requireRole('COMPANY', 'INSTITUTION', 'ADMIN'),
+  requireRole('COMPANY', 'INSTITUTION', 'FACULTY', 'ADMIN'),
   validate(idParamSchema, 'params'),
   validate(updateEventSchema),
   ctrl.update,
@@ -49,7 +49,7 @@ router.patch(
 router.post(
   '/:id/publish',
   requireAuth,
-  requireRole('COMPANY', 'INSTITUTION', 'ADMIN'),
+  requireRole('COMPANY', 'INSTITUTION', 'FACULTY', 'ADMIN'),
   validate(idParamSchema, 'params'),
   auditLog({
     action: 'EVENT_PUBLISH',
@@ -62,7 +62,7 @@ router.post(
 router.post(
   '/:id/cancel',
   requireAuth,
-  requireRole('COMPANY', 'INSTITUTION', 'ADMIN'),
+  requireRole('COMPANY', 'INSTITUTION', 'FACULTY', 'ADMIN'),
   validate(idParamSchema, 'params'),
   auditLog({
     action: 'EVENT_CANCEL',
@@ -85,17 +85,12 @@ router.post(
   ctrl.register,
 );
 
-router.delete(
-  '/:id/register',
-  requireAuth,
-  validate(idParamSchema, 'params'),
-  ctrl.unregister,
-);
+router.delete('/:id/register', requireAuth, validate(idParamSchema, 'params'), ctrl.unregister);
 
 router.get(
   '/:id/registrations',
   requireAuth,
-  requireRole('COMPANY', 'INSTITUTION', 'ADMIN'),
+  requireRole('COMPANY', 'INSTITUTION', 'FACULTY', 'ADMIN'),
   validate(idParamSchema, 'params'),
   validate(listEventRegistrationsQuerySchema, 'query'),
   ctrl.eventRegistrations,
@@ -104,7 +99,7 @@ router.get(
 router.post(
   '/:id/attendance',
   requireAuth,
-  requireRole('COMPANY', 'INSTITUTION', 'ADMIN'),
+  requireRole('COMPANY', 'INSTITUTION', 'FACULTY', 'ADMIN'),
   validate(idParamSchema, 'params'),
   validate(markAttendedSchema),
   ctrl.markAttended,

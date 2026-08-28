@@ -3,6 +3,12 @@ import { resolve } from 'path';
 
 export default defineConfig({
   test: {
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],

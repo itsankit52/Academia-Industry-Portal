@@ -10,6 +10,7 @@ import {
   FiCalendar,
   FiBell,
   FiSettings,
+  FiZap,
 } from 'react-icons/fi';
 import type { NavItem } from './StudentNavItems';
 
@@ -24,6 +25,7 @@ export const companyNavItems: NavItem[] = [
   { to: '/company/interviews', label: 'Interviews', icon: FiCalendar },
   { to: '/company/mentorship', label: 'Mentorship', icon: FiUsers },
   { to: '/company/events', label: 'Events', icon: FiCalendar },
+  { to: '/company/collaboration', label: 'Collab Hub', icon: FiZap },
   { to: '/company/notifications', label: 'Notifications', icon: FiBell },
   { to: '/company/verifications', label: 'Verifications', icon: FiCheckCircle },
   { to: '/company/settings', label: 'Settings', icon: FiSettings },

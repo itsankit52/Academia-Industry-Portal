@@ -5,6 +5,7 @@ import { Types } from 'mongoose';
 import { hashPassword } from '../../utils/password';
 import {
   CompanyProfile,
+  FacultyProfile,
   Institution,
   Skill,
   StudentProfile,
@@ -98,6 +99,15 @@ export async function createUserRow(
       user: user._id,
       companyName: opts.companyName ?? 'Test Company',
     });
+  } else if (role === 'FACULTY') {
+    const institutionId = await ensureTestInstitution();
+    await FacultyProfile.create({
+      user: user._id,
+      institution: institutionId,
+      fullName: opts.fullName ?? 'Dr. Test Faculty',
+      designation: 'Assistant Professor',
+      department: 'Computer Science',
+    });
   }
 
   return { userId: String(user._id), email, password };
@@ -108,9 +118,7 @@ export async function loginAndGetCookie(
   email: string,
   password: string,
 ): Promise<string> {
-  const res = await request(app)
-    .post('/api/v1/auth/login')
-    .send({ email, password });
+  const res = await request(app).post('/api/v1/auth/login').send({ email, password });
   return extractCookies(res.headers['set-cookie'] as string[] | undefined);
 }
 
@@ -144,15 +152,11 @@ interface JobFixtureOptions {
   preferredSkillIds?: string[];
 }
 
-export async function createJobViaService(
-  companyUserId: string,
-  opts: JobFixtureOptions = {},
-) {
+export async function createJobViaService(companyUserId: string, opts: JobFixtureOptions = {}) {
   const requiredSkillIds = opts.requiredSkillIds ?? [new Types.ObjectId().toString()];
   const input: CreateJobInput = {
     title: opts.title ?? 'Test Job',
-    description:
-      'A comprehensive test job used by the integration test suite to exercise the API.',
+    description: 'A comprehensive test job used by the integration test suite to exercise the API.',
     location: 'Bengaluru, India',
     workMode: opts.workMode ?? 'HYBRID',
     employmentType: opts.employmentType ?? 'FULL_TIME',

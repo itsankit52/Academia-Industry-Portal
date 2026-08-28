@@ -8,6 +8,7 @@ import {
   FiCalendar,
   FiSettings,
   FiCheckCircle,
+  FiZap,
 } from 'react-icons/fi';
 import type { NavItem } from './StudentNavItems';
 
@@ -19,6 +20,7 @@ export const institutionNavItems: NavItem[] = [
   { to: '/institution/placements', label: 'Placements', icon: FiAward },
   { to: '/institution/fdps', label: 'Faculty FDPs', icon: FiBookOpen },
   { to: '/institution/events', label: 'Events', icon: FiCalendar },
+  { to: '/institution/collaboration', label: 'Collab Hub', icon: FiZap },
   { to: '/institution/verifications', label: 'Verifications', icon: FiCheckCircle },
   { to: '/institution/settings', label: 'Settings', icon: FiSettings },
 ];

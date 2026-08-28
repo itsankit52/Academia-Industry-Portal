@@ -15,9 +15,18 @@ import {
 import type { ListStudentsQuery, ListFacultyQuery, DashboardScope } from '@aip/validation';
 
 export const dashboardStats = asyncHandler(async (req: Request, res: Response) => {
-  const { institutionId: qId } = req.query as DashboardScope;
-  const institutionId = await resolveInstitutionId(req.user!.id, req.user!.role, qId);
-  ok(res, await getDashboardStats(institutionId));
+  const q = req.query as DashboardScope;
+  const institutionId = await resolveInstitutionId(req.user!.id, req.user!.role, q.institutionId);
+  ok(
+    res,
+    await getDashboardStats(institutionId, {
+      department: q.department,
+      fromDate: q.fromDate,
+      toDate: q.toDate,
+      opportunityType: q.opportunityType,
+      applicationStatus: q.applicationStatus,
+    }),
+  );
 });
 
 export const listStudentsHandler = asyncHandler(async (req: Request, res: Response) => {

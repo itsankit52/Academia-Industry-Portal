@@ -44,11 +44,23 @@ export default function EventsPublic() {
 
   return (
     <div className="container-page py-8 space-y-6">
-      <PageHeader title="Events" subtitle="Discover workshops, guest lectures, challenges and live projects." />
+      <PageHeader
+        title="Events"
+        subtitle="Discover workshops, guest lectures, challenges, live projects, training programs, and research collaborations."
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-[1fr_240px] gap-3">
-        <Input placeholder="Search events…" value={search} onChange={(e) => setSearch(e.target.value)} iconLeft={<FiSearch className="w-4 h-4" />} />
-        <Select options={eventTypeOptions} value={eventType} onChange={(e) => setEventType(e.target.value as typeof eventType)} />
+        <Input
+          placeholder="Search events…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          iconLeft={<FiSearch className="w-4 h-4" />}
+        />
+        <Select
+          options={eventTypeOptions}
+          value={eventType}
+          onChange={(e) => setEventType(e.target.value as typeof eventType)}
+        />
       </div>
 
       {q.isLoading ? (
@@ -68,19 +80,36 @@ export default function EventsPublic() {
               <Card key={ev.id}>
                 <Card.Body className="space-y-3">
                   <div>
-                    <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{ev.title}</h3>
+                    <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                      {ev.title}
+                    </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">by {host}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant="info" size="sm">{ev.eventType.replace(/_/g, ' ')}</Badge>
-                    <Badge variant="default" size="sm">{ev.mode}</Badge>
+                    <Badge variant="info" size="sm">
+                      {ev.eventType.replace(/_/g, ' ')}
+                    </Badge>
+                    <Badge variant="default" size="sm">
+                      {ev.mode}
+                    </Badge>
                   </div>
-                  <p className="text-sm text-slate-700 dark:text-slate-300 line-clamp-3">{ev.description}</p>
+                  <p className="text-sm text-slate-700 dark:text-slate-300 line-clamp-3">
+                    {ev.description}
+                  </p>
                   <div className="flex flex-wrap gap-3 text-xs text-slate-500 dark:text-slate-400">
-                    <span className="inline-flex items-center gap-1"><FiCalendar className="w-3.5 h-3.5" /> {format(new Date(ev.startAt), 'MMM d, yyyy')}</span>
-                    {ev.location && <span className="inline-flex items-center gap-1"><FiMapPin className="w-3.5 h-3.5" /> {ev.location}</span>}
+                    <span className="inline-flex items-center gap-1">
+                      <FiCalendar className="w-3.5 h-3.5" />{' '}
+                      {format(new Date(ev.startAt), 'MMM d, yyyy')}
+                    </span>
+                    {ev.location && (
+                      <span className="inline-flex items-center gap-1">
+                        <FiMapPin className="w-3.5 h-3.5" /> {ev.location}
+                      </span>
+                    )}
                     {typeof ev.capacity === 'number' && (
-                      <span className="inline-flex items-center gap-1"><FiUsers className="w-3.5 h-3.5" /> {ev.registeredCount}/{ev.capacity}</span>
+                      <span className="inline-flex items-center gap-1">
+                        <FiUsers className="w-3.5 h-3.5" /> {ev.registeredCount}/{ev.capacity}
+                      </span>
                     )}
                   </div>
                   <div className="flex justify-end pt-2">
@@ -99,7 +128,11 @@ export default function EventsPublic() {
           })}
         </div>
       ) : (
-        <EmptyState icon={<FiCalendar />} title="No events found" description="Try clearing filters or checking back later." />
+        <EmptyState
+          icon={<FiCalendar />}
+          title="No events found"
+          description="Try clearing filters or checking back later."
+        />
       )}
     </div>
   );

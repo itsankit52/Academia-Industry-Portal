@@ -1,7 +1,16 @@
 import { z } from 'zod';
+import { APPLICATION_STATUSES, OPPORTUNITY_TYPES } from '@aip/config';
 
 export const dashboardScopeSchema = z.object({
-  institutionId: z.string().regex(/^[a-f\d]{24}$/i, 'Invalid institutionId').optional(),
+  institutionId: z
+    .string()
+    .regex(/^[a-f\d]{24}$/i, 'Invalid institutionId')
+    .optional(),
+  department: z.string().optional(),
+  fromDate: z.coerce.date().optional(),
+  toDate: z.coerce.date().optional(),
+  opportunityType: z.enum([...OPPORTUNITY_TYPES]).optional(),
+  applicationStatus: z.enum([...APPLICATION_STATUSES]).optional(),
 });
 
 export const listStudentsQuerySchema = dashboardScopeSchema.extend({

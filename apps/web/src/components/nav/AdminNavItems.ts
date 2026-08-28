@@ -14,6 +14,7 @@ import {
   FiHelpCircle,
   FiCalendar,
   FiUserCheck,
+  FiZap,
 } from 'react-icons/fi';
 import type { NavItem } from './StudentNavItems';
 
@@ -31,6 +32,7 @@ export const adminNavItems: NavItem[] = [
   { to: '/admin/industry-skill-demand', label: 'Skill Demand', icon: FiTrendingUp },
   { to: '/admin/events', label: 'Events', icon: FiCalendar },
   { to: '/admin/mentorship', label: 'Mentorship', icon: FiUserCheck },
+  { to: '/admin/collaboration', label: 'Collab Hub', icon: FiZap },
   { to: '/admin/verification-queue', label: 'Verifications', icon: FiCheckCircle },
   { to: '/admin/audit-logs', label: 'Audit Logs', icon: FiShield },
   { to: '/admin/settings', label: 'Settings', icon: FiSettings },

@@ -16,6 +16,7 @@ import {
   FiSettings,
   FiTarget,
   FiZap,
+  FiUsers,
 } from 'react-icons/fi';
 
 export interface NavItem {
@@ -44,5 +45,6 @@ export const studentNavItems: NavItem[] = [
   { to: '/student/learning', label: 'Learning', icon: FiZap },
   { to: '/student/mentorship', label: 'Mentorship', icon: FiUser },
   { to: '/student/events', label: 'Events', icon: FiCalendar },
+  { to: '/student/collaboration', label: 'Collab Hub', icon: FiUsers },
   { to: '/student/settings', label: 'Settings', icon: FiSettings },
 ];

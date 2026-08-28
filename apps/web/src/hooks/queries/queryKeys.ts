@@ -65,7 +65,7 @@ export const queryKeys = {
   },
 
   institution: {
-    stats: (institutionId?: string) => ['institution', 'stats', institutionId] as const,
+    stats: (filters?: object) => ['institution', 'stats', filters] as const,
     students: (filters?: object) => ['institution', 'students', 'list', filters] as const,
     student: (id: string) => ['institution', 'students', id] as const,
     faculty: (filters?: object) => ['institution', 'faculty', 'list', filters] as const,

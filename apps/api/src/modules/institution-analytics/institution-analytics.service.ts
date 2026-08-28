@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import {
   Application,
+  AptitudeTest,
   FacultyProfile,
   Interview,
   Internship,
@@ -14,15 +15,48 @@ import { AppError } from '../../utils/AppError';
 import { buildPaginated } from '../../utils/pagination';
 import type { Paginated } from '@aip/types';
 
+export interface DashboardStatsFilters {
+  department?: string;
+  fromDate?: Date;
+  toDate?: Date;
+  opportunityType?: string;
+  applicationStatus?: string;
+}
+
 export interface DashboardStats {
   studentCount: number;
+  activeStudents: number;
+  assessmentCompletionCount: number;
+  assessmentCompletionRate: number;
+  skillDevelopmentCount: number;
+  skillDevelopmentRate: number;
   facultyCount: number;
   activeApplicationsCount: number;
-  placementsCount: number;
+  internshipApplicationsCount: number;
+  jobApplicationsCount: number;
+  shortlistedStudentsCount: number;
+  selectedStudentsCount: number;
   interviewsScheduledCount: number;
+  placementsCount: number;
+  placementPercentage: number;
   avgMatchScore: number;
   publishedJobsCount: number;
   publishedInternshipsCount: number;
+  activeCompaniesCount: number;
+  mostDemandedSkills: { skillId: string; name: string; count: number }[];
+  industrySkillDemand: {
+    skillId: string;
+    name: string;
+    category: string;
+    count: number;
+    percentage: number;
+  }[];
+  departmentWisePlacement: {
+    department: string;
+    placedCount: number;
+    totalCount: number;
+    rate: number;
+  }[];
   verifiedDocumentsCount: number;
   pendingDocumentsCount: number;
 }
@@ -77,7 +111,8 @@ export async function resolveInstitutionId(
   queryInstitutionId?: string,
 ): Promise<Types.ObjectId> {
   if (queryInstitutionId) {
-    if (!/^[a-f\d]{24}$/i.test(queryInstitutionId)) throw AppError.badRequest('Invalid institutionId');
+    if (!/^[a-f\d]{24}$/i.test(queryInstitutionId))
+      throw AppError.badRequest('Invalid institutionId');
     return new Types.ObjectId(queryInstitutionId);
   }
   const user = await User.findById(userId).select('institution').lean();
@@ -91,40 +126,219 @@ export async function resolveInstitutionId(
   return user.institution as Types.ObjectId;
 }
 
-export async function getDashboardStats(institutionId: Types.ObjectId): Promise<DashboardStats> {
-  const [studentCount, facultyCount] = await Promise.all([
-    StudentProfile.countDocuments({ institution: institutionId }),
+export async function getDashboardStats(
+  institutionId: Types.ObjectId,
+  filters: DashboardStatsFilters = {},
+): Promise<DashboardStats> {
+  const studentMatch: Record<string, unknown> = { institution: institutionId };
+  if (filters.department) studentMatch.branch = filters.department;
+
+  const studentQuery = StudentProfile.find(studentMatch).select('_id user');
+  const [studentProfiles, facultyCount, studentCount] = await Promise.all([
+    studentQuery.lean(),
     FacultyProfile.countDocuments({ institution: institutionId }),
+    StudentProfile.countDocuments(studentMatch),
   ]);
 
-  const studentIds = (await StudentProfile.distinct('_id', { institution: institutionId })) as Types.ObjectId[];
+  const studentIds = studentProfiles.map((s) => s._id) as Types.ObjectId[];
+  const studentUserIds = studentProfiles.map((s) => s.user) as Types.ObjectId[];
 
-  const [activeApplicationsCount, placementsCount, applicationIds, publishedJobsCount, publishedInternshipsCount] =
-    await Promise.all([
-      Application.countDocuments({ student: { $in: studentIds }, status: { $ne: 'SELECTED' } }),
-      Application.countDocuments({ student: { $in: studentIds }, status: 'SELECTED' }),
-      Application.distinct('_id', { student: { $in: studentIds } }) as Promise<Types.ObjectId[]>,
-      Job.countDocuments({ status: 'PUBLISHED' }),
-      Internship.countDocuments({ status: 'PUBLISHED' }),
-    ]);
+  const activeUserMatch: Record<string, unknown> = { _id: { $in: studentUserIds }, isActive: true };
+  const activeStudents = await User.countDocuments(activeUserMatch);
 
-  const [interviewsScheduledCount, matchResult] = await Promise.all([
-    Interview.countDocuments({ application: { $in: applicationIds }, status: 'SCHEDULED' }),
+  const dateMatch: Record<string, unknown> = {};
+  if (filters.fromDate) dateMatch.$gte = filters.fromDate;
+  if (filters.toDate) dateMatch.$lte = filters.toDate;
+
+  const appBaseMatch: Record<string, unknown> = { student: { $in: studentIds } };
+  if (filters.opportunityType) appBaseMatch.opportunityType = filters.opportunityType;
+  if (filters.applicationStatus) appBaseMatch.status = filters.applicationStatus;
+  if (filters.fromDate || filters.toDate) appBaseMatch.createdAt = dateMatch;
+
+  const [
+    activeApplicationsCount,
+    internshipApplicationsCount,
+    jobApplicationsCount,
+    shortlistedStudentsCount,
+    selectedStudentsCount,
+    interviewAppIds,
+    publishedJobsCount,
+    publishedInternshipsCount,
+    assessmentAgg,
+    distinctCompanyIds,
+    departmentAgg,
+    matchResult,
+  ] = await Promise.all([
+    Application.countDocuments({ ...appBaseMatch, status: { $ne: 'SELECTED' } }),
+    Application.countDocuments({ ...appBaseMatch, opportunityType: 'INTERNSHIP' }),
+    Application.countDocuments({ ...appBaseMatch, opportunityType: 'JOB' }),
+    Application.distinct('student', { ...appBaseMatch, status: 'SHORTLISTED' }).then(
+      (arr) => (arr as Types.ObjectId[]).length,
+    ),
+    Application.distinct('student', { ...appBaseMatch, status: 'SELECTED' }).then(
+      (arr) => (arr as Types.ObjectId[]).length,
+    ),
+    Application.distinct('_id', {
+      ...appBaseMatch,
+      status: { $in: ['INTERVIEW_SCHEDULED', 'SHORTLISTED'] },
+    }) as Promise<Types.ObjectId[]>,
+    Job.countDocuments({ status: 'PUBLISHED' }),
+    Internship.countDocuments({ status: 'PUBLISHED' }),
+    AptitudeTest.aggregate<{ _id: string; count: number }>([
+      { $match: { user: { $in: studentUserIds }, status: 'SUBMITTED' } },
+      { $group: { _id: '$user', count: { $sum: 1 } } },
+    ]),
+    Application.distinct('opportunity', {
+      ...appBaseMatch,
+      opportunityType: { $in: ['JOB', 'INTERNSHIP'] },
+    }),
+    StudentProfile.aggregate<{ _id: string | null; total: number; placed: number }>([
+      { $match: studentMatch },
+      {
+        $lookup: {
+          from: 'applications',
+          let: { sid: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ['$student', '$$sid'] },
+                status: 'SELECTED',
+                ...(filters.fromDate || filters.toDate ? { createdAt: dateMatch } : {}),
+              },
+            },
+          ],
+          as: 'placements',
+        },
+      },
+      {
+        $group: {
+          _id: '$branch',
+          total: { $sum: 1 },
+          placed: { $sum: { $size: '$placements' } },
+        },
+      },
+    ]),
     Application.aggregate<{ avg: number }>([
-      { $match: { student: { $in: studentIds }, matchScore: { $exists: true, $ne: null } } },
+      { $match: { ...appBaseMatch, matchScore: { $exists: true, $ne: null } } },
       { $group: { _id: null, avg: { $avg: '$matchScore' } } },
     ]),
   ]);
 
+  const [interviewsScheduledCount, skillDemandRows, activeCompaniesCount] = await Promise.all([
+    Interview.countDocuments({ application: { $in: interviewAppIds }, status: 'SCHEDULED' }),
+    Job.aggregate<{ _id: unknown; count: number; name: string; category: string }>([
+      { $match: { status: 'PUBLISHED' } },
+      {
+        $project: {
+          skills: {
+            $concatArrays: [
+              { $ifNull: ['$requiredSkills', []] },
+              { $ifNull: ['$preferredSkills', []] },
+            ],
+          },
+        },
+      },
+      { $unwind: '$skills' },
+      { $group: { _id: '$skills', count: { $sum: 1 } } },
+      {
+        $unionWith: {
+          coll: 'internships',
+          pipeline: [
+            { $match: { status: 'PUBLISHED' } },
+            {
+              $project: {
+                skills: {
+                  $concatArrays: [
+                    { $ifNull: ['$requiredSkills', []] },
+                    { $ifNull: ['$preferredSkills', []] },
+                  ],
+                },
+              },
+            },
+            { $unwind: '$skills' },
+            { $group: { _id: '$skills', count: { $sum: 1 } } },
+          ],
+        },
+      },
+      { $group: { _id: '$_id', count: { $sum: '$count' } } },
+      { $sort: { count: -1 } },
+      { $limit: 20 },
+      { $lookup: { from: 'skills', localField: '_id', foreignField: '_id', as: 'skill' } },
+      { $unwind: '$skill' },
+      { $project: { _id: 1, count: 1, name: '$skill.name', category: '$skill.category' } },
+    ]),
+    distinctCompanyIds.length > 0
+      ? User.countDocuments({
+          _id: { $in: distinctCompanyIds as Types.ObjectId[] },
+          isActive: true,
+        })
+      : Promise.resolve(0),
+  ]);
+
+  const totalSkillDemand = skillDemandRows.reduce((s, r) => s + r.count, 0);
+  const industrySkillDemand = skillDemandRows.map((r) => ({
+    skillId: String(r._id),
+    name: r.name,
+    category: r.category,
+    count: r.count,
+    percentage: totalSkillDemand > 0 ? Math.round((r.count / totalSkillDemand) * 1000) / 10 : 0,
+  }));
+
+  const mostDemandedSkills = industrySkillDemand.slice(0, 10).map((s) => ({
+    skillId: s.skillId,
+    name: s.name,
+    count: s.count,
+  }));
+
+  const assessmentCompletionCount = assessmentAgg.length;
+  const assessmentCompletionRate =
+    studentCount > 0 ? Math.round((assessmentCompletionCount / studentCount) * 1000) / 10 : 0;
+  const studentsWithSkills = await StudentSkill.distinct('student', {
+    student: { $in: studentIds },
+  });
+  const skillDevelopmentCount = (studentsWithSkills as Types.ObjectId[]).length;
+  const skillDevelopmentRate =
+    studentCount > 0 ? Math.round((skillDevelopmentCount / studentCount) * 1000) / 10 : 0;
+
+  const placementPercentage =
+    studentCount > 0 ? Math.round((selectedStudentsCount / studentCount) * 1000) / 10 : 0;
+
+  const departmentWisePlacement = departmentAgg
+    .map((d) => {
+      const totalCount = d.total;
+      const placedCount = d.placed;
+      return {
+        department: d._id ?? 'UNSPECIFIED',
+        placedCount,
+        totalCount,
+        rate: totalCount > 0 ? Math.round((placedCount / totalCount) * 1000) / 10 : 0,
+      };
+    })
+    .sort((a, b) => b.totalCount - a.totalCount);
+
   return {
     studentCount,
+    activeStudents,
+    assessmentCompletionCount,
+    assessmentCompletionRate,
+    skillDevelopmentCount,
+    skillDevelopmentRate,
     facultyCount,
     activeApplicationsCount,
-    placementsCount,
+    internshipApplicationsCount,
+    jobApplicationsCount,
+    shortlistedStudentsCount,
+    selectedStudentsCount,
     interviewsScheduledCount,
+    placementsCount: selectedStudentsCount,
+    placementPercentage,
     avgMatchScore: Math.round((matchResult[0]?.avg ?? 0) * 10) / 10,
     publishedJobsCount,
     publishedInternshipsCount,
+    activeCompaniesCount,
+    mostDemandedSkills,
+    industrySkillDemand,
+    departmentWisePlacement,
     verifiedDocumentsCount: 0,
     pendingDocumentsCount: 0,
   };
@@ -202,7 +416,13 @@ export async function getStudentById(id: string, institutionId: Types.ObjectId) 
 
 export async function listFaculty(
   institutionId: Types.ObjectId,
-  filters: { page: number; pageSize: number; q?: string; department?: string; designation?: string },
+  filters: {
+    page: number;
+    pageSize: number;
+    q?: string;
+    department?: string;
+    designation?: string;
+  },
 ): Promise<Paginated<FacultyRow>> {
   const { page, pageSize } = filters;
   const skip = (page - 1) * pageSize;
@@ -262,7 +482,9 @@ export async function getFacultyById(id: string, institutionId: Types.ObjectId) 
 }
 
 export async function getSkillGapTrends(institutionId: Types.ObjectId): Promise<SkillGapItem[]> {
-  const studentIds = (await StudentProfile.distinct('_id', { institution: institutionId })) as Types.ObjectId[];
+  const studentIds = (await StudentProfile.distinct('_id', {
+    institution: institutionId,
+  })) as Types.ObjectId[];
   const studentCount = studentIds.length;
   if (studentCount === 0) return [];
 
@@ -316,7 +538,9 @@ export async function getSkillGapTrends(institutionId: Types.ObjectId): Promise<
   missingCounts.sort((a, b) => b.missing - a.missing);
   const top15 = missingCounts.slice(0, 15);
 
-  const skillDocs = await Skill.find({ _id: { $in: top15.map((t) => new Types.ObjectId(t.skillId)) } })
+  const skillDocs = await Skill.find({
+    _id: { $in: top15.map((t) => new Types.ObjectId(t.skillId)) },
+  })
     .select('name category')
     .lean();
   const skillMap = new Map(skillDocs.map((s) => [String(s._id), s]));
@@ -330,8 +554,12 @@ export async function getSkillGapTrends(institutionId: Types.ObjectId): Promise<
   }));
 }
 
-export async function getPlacementMetrics(institutionId: Types.ObjectId): Promise<PlacementMetrics> {
-  const studentIds = (await StudentProfile.distinct('_id', { institution: institutionId })) as Types.ObjectId[];
+export async function getPlacementMetrics(
+  institutionId: Types.ObjectId,
+): Promise<PlacementMetrics> {
+  const studentIds = (await StudentProfile.distinct('_id', {
+    institution: institutionId,
+  })) as Types.ObjectId[];
 
   const twelveMonthsAgo = new Date();
   twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
@@ -358,17 +586,22 @@ export async function getPlacementMetrics(institutionId: Types.ObjectId): Promis
       },
       { $sort: { _id: 1 } },
     ]),
-    Application.distinct('student', { student: { $in: studentIds }, status: 'SELECTED' }) as Promise<Types.ObjectId[]>,
+    Application.distinct('student', {
+      student: { $in: studentIds },
+      status: 'SELECTED',
+    }) as Promise<Types.ObjectId[]>,
     StudentProfile.aggregate<{ _id: string | null; total: number }>([
       { $match: { institution: institutionId } },
       { $group: { _id: '$branch', total: { $sum: 1 } } },
     ]),
   ]);
 
-  const placedBranchCounts = await StudentProfile.aggregate<{ _id: string | null; placed: number }>([
-    { $match: { _id: { $in: placedStudentIds }, institution: institutionId } },
-    { $group: { _id: '$branch', placed: { $sum: 1 } } },
-  ]);
+  const placedBranchCounts = await StudentProfile.aggregate<{ _id: string | null; placed: number }>(
+    [
+      { $match: { _id: { $in: placedStudentIds }, institution: institutionId } },
+      { $group: { _id: '$branch', placed: { $sum: 1 } } },
+    ],
+  );
 
   const placedMap = new Map(placedBranchCounts.map((r) => [r._id ?? 'UNSPECIFIED', r.placed]));
 
@@ -389,7 +622,9 @@ export async function getPlacementMetrics(institutionId: Types.ObjectId): Promis
   };
 }
 
-export async function getFdpParticipation(institutionId: Types.ObjectId): Promise<FdpParticipation> {
+export async function getFdpParticipation(
+  institutionId: Types.ObjectId,
+): Promise<FdpParticipation> {
   const [totalFaculty, studentIds] = await Promise.all([
     FacultyProfile.countDocuments({ institution: institutionId }),
     StudentProfile.distinct('_id', { institution: institutionId }) as Promise<Types.ObjectId[]>,

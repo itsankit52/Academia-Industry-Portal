@@ -34,7 +34,7 @@ async function resolveActorHost(userId: string, role: Role): Promise<HostRef> {
       hostName: String(c.companyName),
     };
   }
-  if (role === 'INSTITUTION' || role === 'ADMIN') {
+  if (role === 'INSTITUTION' || role === 'FACULTY' || role === 'ADMIN') {
     const user = await User.findById(userId).select('institution').lean();
     if (!user?.institution) throw AppError.badRequest('User has no institution to host under');
     const inst = await Institution.findById(user.institution).select('name');
@@ -69,7 +69,7 @@ async function assertHostOrAdmin(eventId: string, userId: string, role: Role) {
     const c = await CompanyProfile.findOne({ user: userId }).select('_id');
     if (c && String(event.host) === String(c._id)) return event;
   }
-  if (role === 'INSTITUTION' && event.hostType === 'INSTITUTION') {
+  if ((role === 'INSTITUTION' || role === 'FACULTY') && event.hostType === 'INSTITUTION') {
     const user = await User.findById(userId).select('institution').lean();
     if (user?.institution && String(event.host) === String(user.institution)) return event;
   }
@@ -148,12 +148,7 @@ export async function getEventById(id: string) {
   };
 }
 
-export async function updateEvent(
-  id: string,
-  userId: string,
-  role: Role,
-  input: UpdateEventInput,
-) {
+export async function updateEvent(id: string, userId: string, role: Role, input: UpdateEventInput) {
   const event = await assertHostOrAdmin(id, userId, role);
   if (input.title !== undefined) event.title = input.title;
   if (input.description !== undefined) event.description = input.description;
