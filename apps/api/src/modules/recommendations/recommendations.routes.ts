@@ -11,5 +11,6 @@ router.get('/jobs', controller.jobsForMe);
 router.get('/internships', controller.internshipsForMe);
 router.get('/trainings', controller.trainingsForMe);
 router.get('/skills-gap', controller.skillsGap);
+router.get('/learning', controller.learningForMe);
 
 export default router;

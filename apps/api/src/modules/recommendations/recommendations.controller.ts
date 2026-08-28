@@ -2,11 +2,14 @@ import type { Request, Response } from 'express';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { ok } from '../../utils/apiResponse';
 import { AppError } from '../../utils/AppError';
+import type { OpportunityType } from '@aip/config';
 import {
   computeSkillsGap,
   recommendInternships,
   recommendJobs,
+  recommendLearning,
   recommendTrainings,
+  type LearningRecommendationsParams,
 } from './recommendations.service';
 
 function requireUserId(req: Request): string {
@@ -44,5 +47,21 @@ export const trainingsForMe = asyncHandler(async (req: Request, res: Response) =
 export const skillsGap = asyncHandler(async (req: Request, res: Response) => {
   const userId = requireUserId(req);
   const result = await computeSkillsGap(userId);
+  ok(res, result);
+});
+
+export const learningForMe = asyncHandler(async (req: Request, res: Response) => {
+  const userId = requireUserId(req);
+  const q = req.query as Record<string, unknown>;
+  const params: LearningRecommendationsParams = {
+    ...pageParams(req),
+    targetOpportunityId:
+      typeof q.targetOpportunityId === 'string' ? q.targetOpportunityId : undefined,
+    targetOpportunityType:
+      q.targetOpportunityType === 'JOB' || q.targetOpportunityType === 'INTERNSHIP'
+        ? (q.targetOpportunityType as OpportunityType)
+        : undefined,
+  };
+  const result = await recommendLearning(userId, params);
   ok(res, result);
 });

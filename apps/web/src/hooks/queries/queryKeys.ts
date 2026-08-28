@@ -14,6 +14,8 @@ export const queryKeys = {
   internships: (filters?: object) => ['internships', filters] as const,
   trainings: (filters?: object) => ['trainings', 'list', filters] as const,
   recommendedTrainings: () => ['trainings', 'recommended'] as const,
+  learningRecommendations: (params?: object) =>
+    ['recommendations', 'learning', params ?? {}] as const,
 
   student: {
     dashboard: ['student', 'dashboard'] as const,

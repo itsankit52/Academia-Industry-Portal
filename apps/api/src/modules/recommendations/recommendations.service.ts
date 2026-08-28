@@ -1,16 +1,21 @@
 import { Types } from 'mongoose';
 import type { Paginated } from '@aip/types';
 import type { MatchResult } from '@aip/types';
+import type { OpportunityType } from '@aip/config';
 import {
   Application,
+  CollaborationEvent,
   Internship,
   Job,
+  MentorProfile,
   Skill,
   StudentProfile,
   StudentSkill,
   TrainingProgram,
+  type CollaborationEventDoc,
   type InternshipDoc,
   type JobDoc,
+  type MentorProfileDoc,
   type StudentProfileDoc,
   type TrainingProgramDoc,
 } from '../../models';
@@ -50,7 +55,10 @@ function isEligible(profile: StudentProfileDoc, opp: OpportunityLike): boolean {
     if (!profile.branch || !opp.eligibleBranches.includes(profile.branch as string)) return false;
   }
   if (opp.eligibleGradYears && opp.eligibleGradYears.length > 0) {
-    if (typeof profile.graduationYear !== 'number' || !opp.eligibleGradYears.includes(profile.graduationYear)) {
+    if (
+      typeof profile.graduationYear !== 'number' ||
+      !opp.eligibleGradYears.includes(profile.graduationYear)
+    ) {
       return false;
     }
   }
@@ -146,21 +154,21 @@ export async function recommendJobs(
   const enriched: RecommendedJob[] = (jobs as unknown as JobDoc[])
     .filter((job) => !appliedIds.has(String(job._id)))
     .map((job) => {
-    const requiredDocs = (job.requiredSkills ?? []) as unknown as unknown[];
-    const preferredDocs = (job.preferredSkills ?? []) as unknown as unknown[];
-    const required = requiredDocs.map(idOf);
-    const preferred = preferredDocs.map(idOf);
-    const matchResult = computeMatch(skillIds, required, preferred);
-    const names = nameLookup(requiredDocs, preferredDocs);
-    return {
-      // Serialized because the query used `.lean()` — see `serializeOpportunity`.
-      job: serializeOpportunity(job),
-      matchResult,
-      matchedSkills: namedSkills(matchResult.matchedSkills, names),
-      missingSkills: namedSkills(matchResult.missingSkills, names),
-      eligible: isEligible(profile, job as unknown as OpportunityLike),
-    };
-  });
+      const requiredDocs = (job.requiredSkills ?? []) as unknown as unknown[];
+      const preferredDocs = (job.preferredSkills ?? []) as unknown as unknown[];
+      const required = requiredDocs.map(idOf);
+      const preferred = preferredDocs.map(idOf);
+      const matchResult = computeMatch(skillIds, required, preferred);
+      const names = nameLookup(requiredDocs, preferredDocs);
+      return {
+        // Serialized because the query used `.lean()` — see `serializeOpportunity`.
+        job: serializeOpportunity(job),
+        matchResult,
+        matchedSkills: namedSkills(matchResult.matchedSkills, names),
+        missingSkills: namedSkills(matchResult.missingSkills, names),
+        eligible: isEligible(profile, job as unknown as OpportunityLike),
+      };
+    });
 
   enriched.sort((a, b) => b.matchResult.score - a.matchResult.score);
   const total = enriched.length;
@@ -211,15 +219,16 @@ export interface RecommendedTrainingView {
   overlapSkillIds: string[];
 }
 
-async function collectMissingSkillIds(
-  userId: string,
-  topN = 10,
-): Promise<string[]> {
+async function collectMissingSkillIds(userId: string, topN = 10): Promise<string[]> {
   const { profile, skillIds } = await loadStudentContext(userId);
 
   const [jobs, internships] = await Promise.all([
-    Job.find({ status: 'PUBLISHED' }).select('requiredSkills preferredSkills minCgpa eligibleBranches eligibleGradYears').lean(),
-    Internship.find({ status: 'PUBLISHED' }).select('requiredSkills preferredSkills minCgpa eligibleBranches eligibleGradYears').lean(),
+    Job.find({ status: 'PUBLISHED' })
+      .select('requiredSkills preferredSkills minCgpa eligibleBranches eligibleGradYears')
+      .lean(),
+    Internship.find({ status: 'PUBLISHED' })
+      .select('requiredSkills preferredSkills minCgpa eligibleBranches eligibleGradYears')
+      .lean(),
   ]);
 
   interface Ranked {
@@ -334,4 +343,244 @@ export async function computeSkillsGap(userId: string): Promise<{ missingSkills:
     .sort((a, b) => b.count - a.count);
 
   return { missingSkills: result };
+}
+
+// ---------------------------------------------------------------------------
+// Learning Recommendations
+// ---------------------------------------------------------------------------
+
+export interface RecommendedMentor {
+  mentor: MentorProfileDoc;
+  expertiseMatch: string[];
+  expertiseMatchCount: number;
+}
+
+export interface RecommendedWorkshop {
+  event: CollaborationEventDoc;
+  tagMatch: string[];
+  tagMatchCount: number;
+}
+
+export interface RecommendedLearningResource {
+  trainings: RecommendedTrainingView[];
+  mentors: RecommendedMentor[];
+  workshops: RecommendedWorkshop[];
+  missingSkills: SkillGapItem[];
+  targetOpportunityId?: string;
+  targetOpportunityType?: OpportunityType;
+}
+
+export interface LearningRecommendationsParams extends PageParams {
+  targetOpportunityId?: string;
+  targetOpportunityType?: OpportunityType;
+}
+
+/** Collects missing skill ids for a target opportunity or all published opportunities. */
+async function collectMissingForTarget(
+  userId: string,
+  targetOpportunityId?: string,
+  targetOpportunityType?: OpportunityType,
+): Promise<string[]> {
+  const { profile, skillIds } = await loadStudentContext(userId);
+
+  if (targetOpportunityId && targetOpportunityType) {
+    const fields = 'requiredSkills preferredSkills minCgpa eligibleBranches eligibleGradYears';
+    const opp =
+      targetOpportunityType === 'JOB'
+        ? await Job.findById(targetOpportunityId).select(fields).lean()
+        : await Internship.findById(targetOpportunityId).select(fields).lean();
+
+    if (opp) {
+      const required = (
+        (opp as unknown as { requiredSkills?: unknown[] }).requiredSkills ?? []
+      ).map((s) => String(s));
+      const preferred = (
+        (opp as unknown as { preferredSkills?: unknown[] }).preferredSkills ?? []
+      ).map((s) => String(s));
+      const r = computeMatch(skillIds, required, preferred);
+      return r.missingSkills.map(String);
+    }
+  }
+
+  // Fall back to all published opportunities
+  const [jobs, internships] = await Promise.all([
+    Job.find({ status: 'PUBLISHED' })
+      .select('requiredSkills preferredSkills minCgpa eligibleBranches eligibleGradYears')
+      .lean(),
+    Internship.find({ status: 'PUBLISHED' })
+      .select('requiredSkills preferredSkills minCgpa eligibleBranches eligibleGradYears')
+      .lean(),
+  ]);
+
+  interface Ranked {
+    missing: string[];
+    score: number;
+  }
+  const ranked: Ranked[] = [];
+
+  for (const job of jobs) {
+    const required = (job.requiredSkills ?? []).map((s) => String(s));
+    const preferred = (job.preferredSkills ?? []).map((s) => String(s));
+    const r = computeMatch(skillIds, required, preferred);
+    if (isEligible(profile, job as unknown as OpportunityLike)) {
+      ranked.push({ missing: r.missingSkills.map(String), score: r.score });
+    }
+  }
+  for (const intern of internships) {
+    const required = (intern.requiredSkills ?? []).map((s) => String(s));
+    const preferred = (intern.preferredSkills ?? []).map((s) => String(s));
+    const r = computeMatch(skillIds, required, preferred);
+    if (isEligible(profile, intern as unknown as OpportunityLike)) {
+      ranked.push({ missing: r.missingSkills.map(String), score: r.score });
+    }
+  }
+
+  ranked.sort((a, b) => b.score - a.score);
+  const top = ranked.slice(0, 10);
+  const set = new Set<string>();
+  for (const r of top) for (const m of r.missing) set.add(m);
+  return Array.from(set);
+}
+
+/**
+ * Recommends mentors whose expertise overlaps with the student's missing skills.
+ * Excludes mentors whose userId matches the requesting student.
+ */
+export async function recommendMentors(
+  userId: string,
+  missingSkillIds: string[],
+  limit = 10,
+): Promise<RecommendedMentor[]> {
+  if (missingSkillIds.length === 0) return [];
+
+  // Resolve missing skill ids to names for string comparison with expertise
+  const skillRows = await Skill.find({
+    _id: { $in: missingSkillIds.map((id) => new Types.ObjectId(id)) },
+  })
+    .select('name')
+    .lean();
+  const missingNames = new Set(skillRows.map((s) => String(s.name).toLowerCase().trim()));
+
+  // Load all available mentors (exclude the requesting student)
+  const mentors = await MentorProfile.find({
+    availability: 'AVAILABLE',
+    user: { $ne: new Types.ObjectId(userId) },
+  }).lean();
+
+  const ranked = (mentors as unknown as MentorProfileDoc[])
+    .map((mentor) => {
+      const expertise = (mentor.expertise ?? []).map((e) => String(e).toLowerCase().trim());
+      const expertiseMatch = expertise.filter((e) => missingNames.has(e));
+      return { mentor, expertiseMatch, expertiseMatchCount: expertiseMatch.length };
+    })
+    .filter((item) => item.expertiseMatchCount > 0)
+    .sort((a, b) => b.expertiseMatchCount - a.expertiseMatchCount)
+    .slice(0, limit);
+
+  return ranked;
+}
+
+/**
+ * Recommends workshops and certification events whose tags overlap with the student's
+ * missing skills. Only includes PUBLISHED events with a future start date.
+ */
+export async function recommendWorkshops(
+  userId: string,
+  missingSkillIds: string[],
+  limit = 10,
+): Promise<RecommendedWorkshop[]> {
+  if (missingSkillIds.length === 0) return [];
+
+  // Resolve missing skill ids to names for string comparison with tags
+  const skillRows = await Skill.find({
+    _id: { $in: missingSkillIds.map((id) => new Types.ObjectId(id)) },
+  })
+    .select('name')
+    .lean();
+  const missingNames = new Set(skillRows.map((s) => String(s.name).toLowerCase().trim()));
+
+  const now = new Date();
+  const events = await CollaborationEvent.find({
+    status: 'PUBLISHED',
+    startAt: { $gte: now },
+  }).lean();
+
+  const ranked = (events as unknown as CollaborationEventDoc[])
+    .map((event) => {
+      const tags = (event.tags ?? []).map((t) => String(t).toLowerCase().trim());
+      const tagMatch = tags.filter((t) => missingNames.has(t));
+      return { event, tagMatch, tagMatchCount: tagMatch.length };
+    })
+    .filter((item) => item.tagMatchCount > 0)
+    .sort((a, b) => b.tagMatchCount - a.tagMatchCount)
+    .slice(0, limit);
+
+  return ranked;
+}
+
+/**
+ * Unified learning recommendations: training programmes, mentors, and workshops/certifications
+ * aligned with the student's skill gaps and (optionally) a target opportunity.
+ */
+export async function recommendLearning(
+  userId: string,
+  params: LearningRecommendationsParams,
+): Promise<RecommendedLearningResource> {
+  const missingIds = await collectMissingForTarget(
+    userId,
+    params.targetOpportunityId,
+    params.targetOpportunityType,
+  );
+  const missingSet = new Set(missingIds);
+
+  // --- Trainings ---
+  const filter: Record<string, unknown> = { status: 'ACTIVE' };
+  if (missingIds.length > 0) {
+    filter.skills = { $in: missingIds.map((id) => new Types.ObjectId(id)) };
+  }
+  const trainings = await TrainingProgram.find(filter).populate('skills').lean();
+  const trainingsRanked: RecommendedTrainingView[] = (trainings as unknown as TrainingProgramDoc[])
+    .map((training) => {
+      const skillIds = ((training.skills ?? []) as unknown as unknown[]).map(idOf);
+      const overlapSkillIds = skillIds.filter((id) => missingSet.has(id));
+      return {
+        training: serializeLean(training),
+        overlapCount: overlapSkillIds.length,
+        overlapSkillIds,
+      };
+    })
+    .sort((a, b) => b.overlapCount - a.overlapCount);
+
+  // --- Mentors ---
+  const mentors = await recommendMentors(userId, missingIds, 10);
+
+  // --- Workshops ---
+  const workshops = await recommendWorkshops(userId, missingIds, 10);
+
+  // --- Missing skills for display ---
+  const skillGapItems: SkillGapItem[] = [];
+  if (missingIds.length > 0) {
+    const counts = new Map<string, number>();
+    for (const id of missingIds) counts.set(id, 1);
+    const skillRows = await Skill.find({
+      _id: { $in: missingIds.map((id) => new Types.ObjectId(id)) },
+    }).lean();
+    for (const s of skillRows) {
+      skillGapItems.push({
+        id: String(s._id),
+        name: String(s.name),
+        category: String(s.category),
+        count: counts.get(String(s._id)) ?? 0,
+      });
+    }
+  }
+
+  return {
+    trainings: trainingsRanked,
+    mentors,
+    workshops,
+    missingSkills: skillGapItems,
+    targetOpportunityId: params.targetOpportunityId,
+    targetOpportunityType: params.targetOpportunityType,
+  };
 }
