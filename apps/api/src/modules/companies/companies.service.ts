@@ -1,13 +1,7 @@
 import { Readable } from 'node:stream';
 import type { UpdateCompanyProfileInput } from '@aip/validation';
 import { AppError } from '../../utils/AppError';
-import {
-  Application,
-  CompanyProfile,
-  Internship,
-  Interview,
-  Job,
-} from '../../models';
+import { Application, CompanyProfile, Internship, Interview, Job, User } from '../../models';
 import { cloudinary, isCloudinaryConfigured } from '../../config/cloudinary';
 import { applyPagination, buildPaginated, type PaginationInput } from '../../utils/pagination';
 import { serializeLean } from '../../utils/serializeLean';
@@ -83,15 +77,48 @@ export async function listCompanies(pag: PaginationInput, filters: CompanyListFi
   const where: Record<string, unknown> = {};
   if (filters.industry) where.industry = filters.industry;
   if (filters.verified !== undefined) {
-    where.verifiedAt = filters.verified
-      ? { $exists: true, $ne: null }
-      : { $in: [null, undefined] };
+    where.verifiedAt = filters.verified ? { $exists: true, $ne: null } : { $in: [null, undefined] };
   }
   const [rows, total] = await Promise.all([
     CompanyProfile.find(where).sort(sort).skip(skip).limit(limit),
     CompanyProfile.countDocuments(where),
   ]);
-  return buildPaginated(rows.map((r) => r.toJSON()), total, page, pageSize);
+
+  // The admin companies UI needs the user id (for activate/deactivate) and the
+  // user's isActive flag, plus a per-company active-jobs count. CompanyProfile
+  // only stores the user ref, and isActive lives on the User, so we hydrate
+  // both with a single bulk fetch.
+  const userIds = rows.map((r) => r.user).filter((id): id is NonNullable<typeof id> => Boolean(id));
+  const companyIds = rows.map((r) => r._id);
+  const [users, jobCounts] = await Promise.all([
+    userIds.length
+      ? User.find({ _id: { $in: userIds } }, { isActive: 1 }).lean()
+      : Promise.resolve([]),
+    companyIds.length
+      ? Job.aggregate<{ _id: unknown; count: number }>([
+          { $match: { company: { $in: companyIds }, status: 'PUBLISHED' } },
+          { $group: { _id: '$company', count: { $sum: 1 } } },
+        ])
+      : Promise.resolve([]),
+  ]);
+
+  const activeByUser = new Map<string, boolean>(
+    users.map((u) => [String(u._id), Boolean(u.isActive)]),
+  );
+  const jobsByCompany = new Map<string, number>(jobCounts.map((j) => [String(j._id), j.count]));
+
+  const items = rows.map((r) => {
+    const json = r.toJSON() as unknown as { id: string; user?: unknown; verifiedAt?: unknown };
+    return {
+      ...json,
+      userId: json.user ? String(json.user) : '',
+      isActive: activeByUser.get(String(json.user)) ?? true,
+      isVerified: Boolean(json.verifiedAt),
+      activeJobsCount: jobsByCompany.get(json.id) ?? 0,
+    };
+  });
+
+  return buildPaginated(items, total, page, pageSize);
 }
 
 export interface CompanyDashboard {
