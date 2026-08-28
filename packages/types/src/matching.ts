@@ -56,3 +56,19 @@ export interface GapSkill {
   id: string;
   name: string;
 }
+
+/**
+ * The structured response produced by Gemini for the AI-powered skill gap analysis.
+ * All fields are optional — the caller always falls back to the deterministic
+ * math when Gemini is unavailable, times out, or returns malformed data.
+ */
+export interface AiSkillGapAnalysis {
+  /** Skills the student is missing relative to the opportunity. */
+  skillGaps: string[];
+  /** Identified strengths the student brings to the opportunity. */
+  strengths: string[];
+  /** Concrete, actionable suggestions for the student to become a stronger fit. */
+  recommendedSkills: string[];
+  /** A prose explanation of the match score and how it was derived. */
+  matchExplanation: string;
+}

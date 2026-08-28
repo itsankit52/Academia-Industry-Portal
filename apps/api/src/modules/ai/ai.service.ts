@@ -1,3 +1,4 @@
+import type { AiSkillGapAnalysis } from '@aip/types';
 import type { OpportunityType } from '@aip/config';
 import { getModel, isGeminiConfigured } from '../../config/gemini';
 import { AppError } from '../../utils/AppError';
@@ -67,6 +68,76 @@ function extractJsonArray(text: string): unknown {
   }
 }
 
+/**
+ * Extracts the first JSON object found in the text. Tries:
+ * 1. A ```json ... ``` code block
+ * 2. Any {...} sequence
+ * 3. Direct JSON.parse of the trimmed text
+ * Returns null if nothing parseable is found.
+ */
+function extractJsonObject(text: string): AiSkillGapAnalysis | null {
+  const trimmed = text.trim();
+
+  // Try a ```json ... ``` block first
+  const codeBlockMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlockMatch) {
+    try {
+      return JSON.parse(codeBlockMatch[1]!.trim());
+    } catch {
+      // fall through
+    }
+  }
+
+  // Try to find the outermost {...}
+  const first = trimmed.indexOf('{');
+  const last = trimmed.lastIndexOf('}');
+  if (first !== -1 && last !== -1 && last > first) {
+    try {
+      return JSON.parse(trimmed.slice(first, last + 1));
+    } catch {
+      // fall through
+    }
+  }
+
+  // Try the whole text
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Validates and normalises a parsed object into AiSkillGapAnalysis.
+ *
+ * Each of the four expected fields is required: arrays must be arrays
+ * (otherwise the structure is wrong), and `matchExplanation` must be a string.
+ * Returns null on structural failure so the caller can fall back to math.
+ */
+function parseAiAnalysis(raw: unknown): AiSkillGapAnalysis | null {
+  if (raw === null || raw === undefined || typeof raw !== 'object') return null;
+  const obj = raw as Record<string, unknown>;
+  const arrOfStr = (v: unknown): string[] | null => {
+    if (v === null || v === undefined) return [];
+    if (!Array.isArray(v)) return null;
+    return v
+      .filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+      .map((s) => s.trim());
+  };
+  const skillGaps = arrOfStr(obj.skillGaps);
+  const strengths = arrOfStr(obj.strengths);
+  const recommendedSkills = arrOfStr(obj.recommendedSkills);
+  if (skillGaps === null || strengths === null || recommendedSkills === null) return null;
+  if (typeof obj.matchExplanation !== 'string') return null;
+
+  return {
+    skillGaps,
+    strengths,
+    recommendedSkills,
+    matchExplanation: obj.matchExplanation.trim(),
+  };
+}
+
 export interface AnalyzeResumeResult {
   skills: string[];
   warning?: string;
@@ -111,6 +182,8 @@ export interface ExplainJobMatchResult extends SkillGapAnalysis {
   aiEnhanced: boolean;
   /** Why the AI narrative is absent, when it is. Never contains provider detail. */
   aiUnavailableReason?: 'NOT_CONFIGURED' | 'REQUEST_FAILED';
+  /** Structured AI analysis — always present, populated from math when Gemini is unavailable. */
+  aiAnalysis: AiSkillGapAnalysis;
 }
 
 function names(skills: GapSkill[]): string[] {
@@ -144,17 +217,40 @@ function deterministicNarrative(gap: SkillGapAnalysis): string {
   return parts.join(' ');
 }
 
+/**
+ * Assembles the deterministic (math-only) aiAnalysis for when Gemini is unavailable.
+ */
+function deterministicAiAnalysis(gap: SkillGapAnalysis): AiSkillGapAnalysis {
+  return {
+    skillGaps: names(gap.missingSkills),
+    strengths: names(gap.matchedSkills),
+    recommendedSkills: names(gap.missingSkills),
+    matchExplanation: deterministicNarrative(gap),
+  };
+}
+
 function buildPrompt(gap: SkillGapAnalysis): string {
   const matched = names(gap.matchedSkills);
   const missing = names(gap.missingSkills);
+  const preferred = names(gap.preferredSkills);
+  const preferredHeld = names(gap.preferredMatched);
+
   return [
-    `You are analyzing a match between a student and the ${gap.opportunityType.toLowerCase()} "${gap.opportunityTitle}".`,
-    `Match score: ${gap.score}/100 (${gap.level}). Required skills met: ${gap.matchedSkills.length}/${gap.requiredSkills.length} (${gap.matchPercentage}%).`,
-    `Matched skills: ${matched.length > 0 ? matched.join(', ') : 'none'}.`,
+    `You are analyzing a student-opportunity match for "${gap.opportunityTitle}" (${gap.opportunityType.toLowerCase()}).`,
+    `Score: ${gap.score}/100 (${gap.level}). Required skills met: ${gap.matchedSkills.length}/${gap.requiredSkills.length} (${gap.matchPercentage}%). Preferred skills held: ${gap.preferredMatched.length}/${gap.preferredSkills.length}.`,
+    `Required skills: ${matched.length > 0 ? matched.join(', ') : 'none'}.`,
     `Missing skills: ${missing.length > 0 ? missing.join(', ') : 'none'}.`,
-    'Write 2-3 sentences summarizing the fit and give exactly one specific, actionable recommendation for the student.',
-    'Only discuss the skills listed above — do not introduce any other skill, employer or statistic.',
-    'Do not restate the score. Do not include lists or headings; return plain prose.',
+    `Preferred skills: ${preferred.length > 0 ? preferred.join(', ') : 'none'}.`,
+    `Preferred skills you have: ${preferredHeld.length > 0 ? preferredHeld.join(', ') : 'none'}.`,
+    '',
+    'Return ONLY a single JSON object in a ```json ... ``` code block, with exactly these four fields:',
+    '{',
+    '  "skillGaps": ["skill1", "skill2", ...],   // skills you are missing that are critical for the role',
+    '  "strengths": ["skill1", "skill2", ...],   // your key strengths relative to this opportunity',
+    '  "recommendedSkills": ["skill1", "skill2", ...],  // specific, actionable skills to learn or improve',
+    '  "matchExplanation": "2-4 sentence prose explanation of the match and what to focus on"',
+    '}',
+    'Only mention skills from the lists above — do not introduce any other skill, employer, or statistic.',
   ].join('\n');
 }
 
@@ -162,9 +258,10 @@ function buildPrompt(gap: SkillGapAnalysis): string {
  * Produces a skill-gap analysis for one opportunity.
  *
  * The numbers are always computed from MongoDB by `computeSkillGap`; Gemini is
- * only ever asked for the prose. If it is unconfigured or fails, the request
- * still succeeds with the deterministic analysis and a locally-written summary,
- * flagged via `aiEnhanced: false` so nothing fabricated is passed off as AI.
+ * only ever asked for the enriched structured analysis. If it is unconfigured,
+ * times out, or returns malformed data, the request still succeeds with the
+ * deterministic analysis, flagged via `aiEnhanced: false` so nothing fabricated
+ * is passed off as AI.
  */
 export async function explainJobMatch(
   userId: string,
@@ -193,13 +290,39 @@ export async function explainJobMatch(
       narrative: deterministicNarrative(gap),
       aiEnhanced: false,
       aiUnavailableReason: 'NOT_CONFIGURED',
+      aiAnalysis: deterministicAiAnalysis(gap),
     };
   }
 
   try {
-    const narrative = (await callGemini(buildPrompt(gap))).trim();
-    if (narrative.length === 0) throw new Error('Gemini returned an empty narrative');
-    return { ...base, narrative, aiEnhanced: true };
+    const raw = (await callGemini(buildPrompt(gap))).trim();
+    if (raw.length === 0) throw new Error('Gemini returned an empty response');
+
+    const parsed = extractJsonObject(raw);
+    if (parsed === null) {
+      logger.warn(
+        { opportunityId: gap.opportunityId },
+        'Skill gap: Gemini response was not valid JSON — falling back',
+      );
+      throw new Error('Gemini response was not valid JSON');
+    }
+
+    const aiAnalysis = parseAiAnalysis(parsed);
+    if (aiAnalysis === null) {
+      logger.warn(
+        { opportunityId: gap.opportunityId },
+        'Skill gap: Gemini JSON had invalid structure — falling back',
+      );
+      throw new Error('Gemini JSON had invalid structure');
+    }
+
+    const narrative = aiAnalysis.matchExplanation || deterministicNarrative(gap);
+    return {
+      ...base,
+      narrative,
+      aiEnhanced: true,
+      aiAnalysis,
+    };
   } catch (err) {
     // `callGemini` has already logged the provider's message; this records that
     // the feature degraded rather than failed. The error itself is swallowed on
@@ -217,6 +340,7 @@ export async function explainJobMatch(
       narrative: deterministicNarrative(gap),
       aiEnhanced: false,
       aiUnavailableReason: 'REQUEST_FAILED',
+      aiAnalysis: deterministicAiAnalysis(gap),
     };
   }
 }

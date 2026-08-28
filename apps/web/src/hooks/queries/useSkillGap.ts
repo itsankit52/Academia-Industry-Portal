@@ -38,6 +38,17 @@ export interface SkillGapResult {
   /** Skill names only — retained for older callers. */
   matched: string[];
   missing: string[];
+  /**
+   * Structured AI analysis. Always present — populated from math when Gemini
+   * is unavailable. Contains skillGaps, strengths, recommendedSkills, and
+   * matchExplanation.
+   */
+  aiAnalysis: {
+    skillGaps: string[];
+    strengths: string[];
+    recommendedSkills: string[];
+    matchExplanation: string;
+  };
 }
 
 export function useSkillGap() {
