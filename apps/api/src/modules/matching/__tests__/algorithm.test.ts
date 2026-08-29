@@ -21,11 +21,7 @@ describe('computeMatch', () => {
   });
 
   it('exact-match required + all preferred → score 100, STRONG_MATCH', () => {
-    const r = computeMatch(
-      ['a', 'b', 'c', 'x', 'y'],
-      ['a', 'b', 'c'],
-      ['x', 'y'],
-    );
+    const r = computeMatch(['a', 'b', 'c', 'x', 'y'], ['a', 'b', 'c'], ['x', 'y']);
     expect(r.score).toBe(100);
     expect(r.level).toBe('STRONG_MATCH');
     expect(sorted(r.matchedSkills)).toEqual(['a', 'b', 'c']);
@@ -35,13 +31,13 @@ describe('computeMatch', () => {
     expect(r.recommendation).toContain('Excellent fit');
   });
 
-  it('half required matched, no preferred → score 50, PARTIAL_MATCH', () => {
+  it('half required matched, no preferred → score 50, GOOD_MATCH', () => {
     const r = computeMatch(['a', 'b'], ['a', 'b', 'c', 'd'], []);
     expect(r.score).toBe(50);
-    expect(r.level).toBe('PARTIAL_MATCH');
+    expect(r.level).toBe('GOOD_MATCH');
     expect(sorted(r.matchedSkills)).toEqual(['a', 'b']);
     expect(sorted(r.missingSkills)).toEqual(['c', 'd']);
-    expect(r.recommendation).toContain('Partial fit');
+    expect(r.recommendation).toContain('Good fit');
   });
 
   it('half required matched, with preferred → required is worth 80 of the score', () => {
@@ -97,11 +93,7 @@ describe('computeMatch', () => {
   });
 
   it('duplicate IDs are handled via Set semantics', () => {
-    const r = computeMatch(
-      ['a', 'a', 'b', 'b'],
-      ['a', 'a', 'c'],
-      ['b', 'b'],
-    );
+    const r = computeMatch(['a', 'a', 'b', 'b'], ['a', 'a', 'c'], ['b', 'b']);
     expect(sorted(r.matchedSkills)).toEqual(['a']);
     expect(sorted(r.missingSkills)).toEqual(['c']);
     expect(sorted(r.preferredMatched)).toEqual(['b']);
@@ -118,11 +110,7 @@ describe('computeMatch', () => {
   });
 
   it('coerces non-string ids to strings via map(String)', () => {
-    const r = computeMatch(
-      [1 as unknown as string, 2 as unknown as string],
-      ['1'],
-      ['2'],
-    );
+    const r = computeMatch([1 as unknown as string, 2 as unknown as string], ['1'], ['2']);
     expect(sorted(r.matchedSkills)).toEqual(['1']);
     expect(sorted(r.preferredMatched)).toEqual(['2']);
     expect(r.missingSkills).toEqual([]);

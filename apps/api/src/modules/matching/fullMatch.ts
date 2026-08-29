@@ -5,12 +5,17 @@
  * lives in fullMatch.service.ts.
  */
 
+import type { Proficiency } from '@aip/config';
 import type {
   GapSkill,
   FullMatchResult,
   FullMatchEligibility,
   FullMatchCareerInterests,
   FullMatchBreakdown,
+  ProficiencyGapSkill,
+  MatchExplanation,
+  MatchReason,
+  MatchWarning,
 } from '@aip/types';
 import type { MatchLevel } from '@aip/config';
 import { FULL_MATCH_WEIGHTS, MATCH_THRESHOLDS } from '@aip/config';
@@ -20,12 +25,34 @@ import { scoreMatch, type MatchCounts } from './algorithm';
 export type { FullMatchResult } from '@aip/types';
 
 // ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const PROFICIENCY_ORDER: Record<Proficiency, number> = {
+  BEGINNER: 1,
+  INTERMEDIATE: 2,
+  ADVANCED: 3,
+  EXPERT: 4,
+};
+
+const PROFICIENCY_LABELS: Record<Proficiency, string> = {
+  BEGINNER: 'Beginner',
+  INTERMEDIATE: 'Intermediate',
+  ADVANCED: 'Advanced',
+  EXPERT: 'Expert',
+};
+
+// ---------------------------------------------------------------------------
 // Input shapes
 // ---------------------------------------------------------------------------
 
 export interface FullMatchTechnicalSkill {
   id: string;
   name: string;
+  /** Student's proficiency level in this skill (null if not added). */
+  proficiency?: Proficiency | null;
+  /** Industry demand weight for this skill (0-1 scale, higher = more demanded). */
+  demandWeight?: number;
 }
 
 export interface FullMatchSoftSkill {
@@ -41,6 +68,11 @@ export interface FullMatchEligibilityInput {
   eligibleBranches?: string[] | null | undefined;
   eligibleGradYears?: number[] | null | undefined;
   eligibleDegrees?: string[] | null | undefined;
+}
+
+export interface IndustryDemandSignal {
+  skillId: string;
+  demandCount: number;
 }
 
 /** All data needed to compute the match — normalised from DB records. */
@@ -61,6 +93,9 @@ export interface FullMatchInput {
   studentCareerInterests?: string[] | null | undefined;
   opportunityPreferredRoles?: string[] | null | undefined;
   opportunityPreferredLocations?: string[] | null | undefined;
+
+  // Industry demand — count of opportunities requiring each skill (for demand weighting)
+  industryDemand?: IndustryDemandSignal[];
 }
 
 // ---------------------------------------------------------------------------
@@ -76,18 +111,24 @@ function nameKey(name: string | null | undefined): string {
 /**
  * Converts a list of technical skills to a unique-keyed map so duplicate names
  * collapse to a single entry and the set can be used for O(1) lookup.
+ * Preserves the proficiency and demandWeight from the first occurrence.
  */
 function toTechnicalSet(
   skills: FullMatchTechnicalSkill[] | null | undefined,
-): Map<string, GapSkill> {
-  const map = new Map<string, GapSkill>();
+): Map<string, FullMatchTechnicalSkill> {
+  const map = new Map<string, FullMatchTechnicalSkill>();
   if (!Array.isArray(skills)) return map;
   for (const entry of skills) {
     if (!entry || entry.name === null || entry.name === undefined) continue;
     const name = nameKey(entry.name);
     if (!name) continue;
     if (!map.has(name)) {
-      map.set(name, { id: entry.id, name: String(entry.name).trim() });
+      map.set(name, {
+        id: entry.id,
+        name: String(entry.name).trim(),
+        proficiency: entry.proficiency ?? null,
+        demandWeight: entry.demandWeight ?? 0,
+      });
     }
   }
   return map;
@@ -292,9 +333,9 @@ export function scoreCareerInterests(
 
 /** Converts the full-match skill format into the counts shape scoreMatch expects. */
 function technicalMatchCounts(
-  student: Map<string, GapSkill>,
-  required: Map<string, GapSkill>,
-  preferred: Map<string, GapSkill>,
+  student: Map<string, FullMatchTechnicalSkill>,
+  required: Map<string, FullMatchTechnicalSkill>,
+  preferred: Map<string, FullMatchTechnicalSkill>,
 ): MatchCounts {
   let requiredMatched = 0;
   for (const name of required.keys()) {
@@ -302,7 +343,7 @@ function technicalMatchCounts(
   }
 
   // Exclude skills already in required from the preferred pool
-  const effectivePreferred = new Map<string, GapSkill>();
+  const effectivePreferred = new Map<string, FullMatchTechnicalSkill>();
   for (const [name, skill] of preferred) {
     if (!required.has(name)) effectivePreferred.set(name, skill);
   }
@@ -321,6 +362,204 @@ function technicalMatchCounts(
 }
 
 // ---------------------------------------------------------------------------
+// Proficiency matching
+// ---------------------------------------------------------------------------
+
+/**
+ * Computes proficiency-based score and per-skill gaps.
+ *
+ * The required skill's own proficiency (if set) is treated as the minimum
+ * level. A skill the student has but at a lower level is recorded as a
+ * `proficiencyGap`; a skill the student is missing is recorded as missing
+ * (gap = required level). When neither is set, the function returns 100
+ * (nothing to check) rather than 0.
+ */
+export function scoreProficiencyGaps(
+  student: Map<string, FullMatchTechnicalSkill>,
+  required: Map<string, FullMatchTechnicalSkill>,
+): { score: number; gaps: ProficiencyGapSkill[] } {
+  if (required.size === 0) return { score: 100, gaps: [] };
+
+  let totalLevel = 0;
+  let achievedLevel = 0;
+  const gaps: ProficiencyGapSkill[] = [];
+
+  for (const [name, requiredSkill] of required) {
+    const requiredLevel = requiredSkill.proficiency ?? null;
+    // No proficiency requirement stated for this skill → it's met at any level,
+    // so it contributes nothing to the proficiency score (no penalty, no bonus).
+    if (requiredLevel === null) {
+      continue;
+    }
+    const requiredRank = PROFICIENCY_ORDER[requiredLevel];
+    const studentSkill = student.get(name);
+    totalLevel += requiredRank;
+    if (!studentSkill) {
+      // Student hasn't added the skill at all — full gap.
+      gaps.push({
+        id: requiredSkill.id,
+        name: requiredSkill.name,
+        requiredLevel,
+        studentLevel: null,
+        gapLevels: requiredRank,
+        missing: true,
+      });
+      continue;
+    }
+    const studentRank = studentSkill.proficiency ? PROFICIENCY_ORDER[studentSkill.proficiency] : 0;
+    achievedLevel += Math.min(studentRank, requiredRank);
+    if (studentRank < requiredRank) {
+      gaps.push({
+        id: requiredSkill.id,
+        name: requiredSkill.name,
+        requiredLevel,
+        studentLevel: studentSkill.proficiency ?? null,
+        gapLevels: requiredRank - studentRank,
+        missing: false,
+      });
+    }
+  }
+
+  const score = totalLevel === 0 ? 100 : Math.round((achievedLevel / totalLevel) * 100);
+  return { score, gaps };
+}
+
+// ---------------------------------------------------------------------------
+// Industry demand matching
+// ---------------------------------------------------------------------------
+
+/**
+ * Computes how well the student's required-skill coverage aligns with industry
+ * demand. The denominator is the total industry demand for the opportunity's
+ * required skills; the numerator is the demand-weighted count of those skills
+ * the student already holds.
+ */
+export function scoreIndustryDemand(
+  student: Map<string, FullMatchTechnicalSkill>,
+  required: Map<string, FullMatchTechnicalSkill>,
+  industryDemand: IndustryDemandSignal[] | undefined,
+): number {
+  if (required.size === 0) return 100;
+  if (!Array.isArray(industryDemand) || industryDemand.length === 0) return 100;
+
+  const demandById = new Map<string, number>();
+  for (const signal of industryDemand) {
+    if (typeof signal.skillId === 'string' && typeof signal.demandCount === 'number') {
+      demandById.set(signal.skillId, signal.demandCount);
+    }
+  }
+
+  let totalDemand = 0;
+  let achievedDemand = 0;
+  for (const [name, requiredSkill] of required) {
+    // Use the demand weight carried on the required skill, falling back to the
+    // cross-opportunity demand map keyed by id.
+    const fromWeight = requiredSkill.demandWeight ?? 0;
+    const fromMap = requiredSkill.id ? (demandById.get(requiredSkill.id) ?? 0) : 0;
+    const weight = Math.max(fromWeight, fromMap);
+    if (weight === 0) {
+      // No demand signal → neutral; count as met so it doesn't drag the score down.
+      totalDemand += 1;
+      if (student.has(name)) achievedDemand += 1;
+      continue;
+    }
+    totalDemand += weight;
+    if (student.has(name)) achievedDemand += weight;
+  }
+
+  return totalDemand === 0 ? 100 : Math.round((achievedDemand / totalDemand) * 100);
+}
+
+// ---------------------------------------------------------------------------
+// Explanation builder
+// ---------------------------------------------------------------------------
+
+function buildExplanation(params: {
+  matchedTechnical: GapSkill[];
+  missingTechnical: GapSkill[];
+  proficiencyGaps: ProficiencyGapSkill[];
+  softResult: { matched: string[]; missing: string[] };
+  careerResult: FullMatchCareerInterests;
+  eligibility: { passed: boolean; failures: string[] };
+  technicalScore: number;
+  proficiencyScore: number;
+  industryDemandScore: number;
+  requiredTotal: number;
+}): MatchExplanation {
+  const reasons: MatchReason[] = [];
+  const warnings: MatchWarning[] = [];
+
+  // Skill match reasons
+  if (params.matchedTechnical.length > 0) {
+    const topMatched = params.matchedTechnical.slice(0, 3).map((s) => s.name);
+    reasons.push({
+      kind: 'SKILL_MATCH',
+      message: `You have ${params.matchedTechnical.length} matching skill${params.matchedTechnical.length !== 1 ? 's' : ''}: ${topMatched.join(', ')}${params.matchedTechnical.length > 3 ? ` and ${params.matchedTechnical.length - 3} more` : ''}.`,
+    });
+  }
+
+  // Career interest alignment
+  if (params.careerResult.matched.length > 0) {
+    reasons.push({
+      kind: 'CAREER_INTEREST',
+      message: `Matches your career interest: ${params.careerResult.matched[0]}${params.careerResult.matched.length > 1 ? ` and ${params.careerResult.matched.length - 1} more` : ''}.`,
+    });
+  }
+
+  // Eligibility
+  if (params.eligibility.passed) {
+    reasons.push({
+      kind: 'ELIGIBILITY',
+      message: 'You meet all eligibility criteria for this role.',
+    });
+  }
+
+  // Proficiency gaps as warnings
+  for (const gap of params.proficiencyGaps.slice(0, 3)) {
+    if (gap.missing) {
+      warnings.push({
+        kind: 'MISSING_SKILL',
+        message: `Missing ${gap.name} — required at ${PROFICIENCY_LABELS[gap.requiredLevel]} level.`,
+      });
+    } else {
+      warnings.push({
+        kind: 'PROFICIENCY_GAP',
+        message: `Improve ${gap.name} from ${PROFICIENCY_LABELS[gap.studentLevel!]} to ${PROFICIENCY_LABELS[gap.requiredLevel]}.`,
+      });
+    }
+  }
+
+  // Missing skills warnings (top 2 not already in proficiency gaps)
+  const missingNames = new Set(params.proficiencyGaps.filter((g) => g.missing).map((g) => g.name));
+  const otherMissing = params.missingTechnical.filter((s) => !missingNames.has(s.name)).slice(0, 2);
+  for (const skill of otherMissing) {
+    warnings.push({
+      kind: 'MISSING_SKILL',
+      message: `Missing ${skill.name}.`,
+    });
+  }
+
+  // Eligibility failures
+  if (!params.eligibility.passed) {
+    for (const failure of params.eligibility.failures.slice(0, 2)) {
+      warnings.push({
+        kind: 'INELIGIBLE',
+        message: failure,
+      });
+    }
+  }
+
+  return {
+    reasons,
+    warnings,
+    skillRatio: {
+      matched: params.matchedTechnical.length,
+      total: params.requiredTotal,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Main pure function
 // ---------------------------------------------------------------------------
 
@@ -328,10 +567,12 @@ function technicalMatchCounts(
  * The deterministic mathematical matching engine.
  *
  * Score composition (sums to 100):
- *   TECHNICAL  × 0.70   — deterministic weighted score from required + preferred skills
- *   SOFT       × 0.10   — soft-skill overlap
- *   CAREER     × 0.10   — career-interest overlap
- *   ELIGIBILITY × 0.10  — bonus applied only when all eligibility gates pass
+ *   TECHNICAL       × 0.50   — deterministic weighted score from required + preferred skills
+ *   PROFICIENCY     × 0.10   — how well student's proficiency meets required levels
+ *   SOFT            × 0.10   — soft-skill overlap
+ *   CAREER          × 0.10   — career-interest overlap
+ *   INDUSTRY_DEMAND × 0.10   — how much of industry's demand the student covers
+ *   ELIGIBILITY     × 0.10   — bonus applied only when all eligibility gates pass
  *
  * Eligibility failures do NOT reduce the score to zero — they are surfaced
  * separately as `eligibility.passed / eligibility.failures` so the student can
@@ -365,6 +606,12 @@ export function computeFullMatch(input: FullMatchInput): FullMatchResult {
     }
   }
 
+  // ----- Proficiency gaps -----
+  const proficiencyResult = scoreProficiencyGaps(studentSet, requiredSet);
+
+  // ----- Industry demand -----
+  const industryDemandScore = scoreIndustryDemand(studentSet, requiredSet, input.industryDemand);
+
   // ----- Soft skills -----
   const softResult = scoreSoftSkills(
     input.studentSoftSkills ?? [],
@@ -383,14 +630,21 @@ export function computeFullMatch(input: FullMatchInput): FullMatchResult {
 
   // ----- Final score -----
   const technicalFraction = technicalScore * FULL_MATCH_WEIGHTS.TECHNICAL;
+  const proficiencyFraction = proficiencyResult.score * FULL_MATCH_WEIGHTS.PROFICIENCY;
   const softFraction = softResult.score * FULL_MATCH_WEIGHTS.SOFT;
   const careerFraction = careerResult.score * FULL_MATCH_WEIGHTS.CAREER;
+  const demandFraction = industryDemandScore * FULL_MATCH_WEIGHTS.INDUSTRY_DEMAND;
   const eligibilityBonus = eligibility.passed ? FULL_MATCH_WEIGHTS.ELIGIBILITY : 0;
 
   const score = Math.min(
     100,
     Math.round(
-      technicalFraction / 100 + softFraction / 100 + careerFraction / 100 + eligibilityBonus,
+      technicalFraction +
+        proficiencyFraction +
+        softFraction +
+        careerFraction +
+        demandFraction +
+        eligibilityBonus,
     ),
   );
 
@@ -428,10 +682,25 @@ export function computeFullMatch(input: FullMatchInput): FullMatchResult {
 
   const breakdown: FullMatchBreakdown = {
     technical: technicalScore,
+    proficiency: proficiencyResult.score,
     soft: softResult.score,
     career: careerResult.score,
+    industryDemand: industryDemandScore,
     eligibility: eligibility.passed ? 100 : 0,
   };
+
+  const explanation = buildExplanation({
+    matchedTechnical,
+    missingTechnical,
+    proficiencyGaps: proficiencyResult.gaps,
+    softResult,
+    careerResult,
+    eligibility,
+    technicalScore,
+    proficiencyScore: proficiencyResult.score,
+    industryDemandScore,
+    requiredTotal: counts.requiredTotal,
+  });
 
   return {
     score,
@@ -447,8 +716,10 @@ export function computeFullMatch(input: FullMatchInput): FullMatchResult {
       technical: missingTechnical,
       soft: softResult.missing,
     },
+    proficiencyGaps: proficiencyResult.gaps,
     preferredMatched,
     careerInterestsMatch: careerResult,
     breakdown,
+    explanation,
   };
 }

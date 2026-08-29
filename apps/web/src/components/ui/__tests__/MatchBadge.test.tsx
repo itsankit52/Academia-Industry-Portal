@@ -20,12 +20,12 @@ describe('MatchBadge', () => {
     expect(container.firstChild).toHaveClass('text-sky-700');
   });
 
-  it('renders Partial Match for score 50', () => {
+  it('renders Good Match for score 50 (at GOOD threshold)', () => {
     const { container } = render(<MatchBadge score={50} />);
-    expect(screen.getByText(/partial match/i)).toBeInTheDocument();
+    expect(screen.getByText(/good match/i)).toBeInTheDocument();
     expect(screen.getByText('50%')).toBeInTheDocument();
-    expect(container.firstChild).toHaveClass('bg-amber-50');
-    expect(container.firstChild).toHaveClass('text-amber-700');
+    expect(container.firstChild).toHaveClass('bg-sky-50');
+    expect(container.firstChild).toHaveClass('text-sky-700');
   });
 
   it('renders Low Match for score 20', () => {

@@ -7,9 +7,17 @@ import {
   type FullMatchInput,
 } from '../fullMatch';
 
-function tSkill(id: string, name: string) {
-  return { id, name };
+function tSkill(id: string, name: string, proficiency?: string | null) {
+  return { id, name, proficiency };
 }
+
+/**
+ * Default required-skill proficiency for tests that don't think about the
+ * proficiency dimension. Phase 4 added the proficiency score (10% weight);
+ * an "INTERMEDIATE" default matches the typical recruiter expectation and
+ * makes student-vs-required comparisons neutral.
+ */
+const DEFAULT_PROFICIENCY = 'INTERMEDIATE';
 
 function soft(name: string) {
   return { name };
@@ -343,11 +351,13 @@ describe('computeFullMatch — full match', () => {
 
     const r = computeFullMatch(input);
 
-    // Technical: required 2/2=100 (×70=70) + preferred 1/1=100 (×10=10) = 80
-    // Soft: 1/1=100 (×10=10) = 10
-    // Career: 2/2=100 (×10=10) = 10
+    // Technical: 100 × 0.50 = 50
+    // Proficiency: 100 × 0.10 = 10
+    // Soft: 100 × 0.10 = 10
+    // Career: 100 × 0.10 = 10
+    // Industry demand: 100 × 0.10 = 10
     // Eligibility bonus: 10
-    // Total: 70+10+10+10 = 100
+    // Total: 50 + 10 + 10 + 10 + 10 + 10 = 100
     expect(r.score).toBe(100);
     expect(r.level).toBe('STRONG_MATCH');
     expect(r.matchPercentage).toBe(100);
@@ -379,11 +389,13 @@ describe('computeFullMatch — full match', () => {
 
     const r = computeFullMatch(input);
 
-    // Technical: required 2/2=100 (×70=70) + preferred none (×0=0) = 70
-    // Soft: 100 (×10=10) = 10
-    // Career: 100 (×10=10) = 10
+    // Technical: 100 × 0.50 = 50
+    // Proficiency: 100 × 0.10 = 10
+    // Soft: 100 × 0.10 = 10
+    // Career: 100 × 0.10 = 10
+    // Industry demand: 100 × 0.10 = 10
     // Eligibility bonus: 0 (failed)
-    // Total: 70+10+10+0 = 90
+    // Total: 50 + 10 + 10 + 10 + 10 + 0 = 90
     expect(r.score).toBe(90);
     expect(r.level).toBe('STRONG_MATCH');
     expect(r.eligibility.passed).toBe(false);
@@ -393,7 +405,9 @@ describe('computeFullMatch — full match', () => {
 
   it('score 0 (LOW_MATCH) when nothing matches and eligibility also fails', () => {
     // No technical match (0), no soft match (0), no career match (0),
-    // eligibility failed (0 bonus) → 0 + 0 + 0 + 0 = 0.
+    // proficiency: 100 × 0.1 = 10 (no required proficiency set → neutral 100),
+    // industry demand: 100 × 0.1 = 10 (no demand data → neutral 100),
+    // eligibility failed (0 bonus) → 0 + 0 + 0 + 10 + 10 + 0 = 20 → LOW_MATCH (< 30).
     const input = makeInput({
       studentSkills: [tSkill('99', 'COBOL')],
       requiredSkills: [tSkill('1', 'Python'), tSkill('2', 'Django')],
@@ -413,7 +427,7 @@ describe('computeFullMatch — full match', () => {
       opportunityPreferredLocations: ['Mumbai'],
     });
     const r = computeFullMatch(input);
-    expect(r.score).toBe(0);
+    expect(r.score).toBe(20);
     expect(r.level).toBe('LOW_MATCH');
     expect(r.eligibility.passed).toBe(false);
     expect(r.recommendation).toContain('appear ineligible');
@@ -441,13 +455,15 @@ describe('computeFullMatch — partial match', () => {
 
     const r = computeFullMatch(input);
 
-    // Technical: required 1/4=25 (×70=17.5) → 18
-    // Soft: 0/1=0 (×10=0) = 0
-    // Career: 100 (×10=10) = 10
-    // Eligibility bonus: 10
-    // Total: 18+0+10+10 = 38 → LOW_MATCH (< 40 PARTIAL threshold)
-    expect(r.score).toBe(38);
-    expect(r.level).toBe('LOW_MATCH');
+    // Technical: required 1/4=25 (×0.5=12.5) → 13
+    // Proficiency: no required proficiency set → 100 (×0.1=10) = 10
+    // Soft: 0/1=0 (×0.1=0) = 0
+    // Career: no preferences → 100 (×0.1=10) = 10
+    // Industry demand: no demand data → 100 (×0.1=10) = 10
+    // Eligibility: all open → bonus 10
+    // Total: 13+10+0+10+10+10 = 53 → GOOD_MATCH (>= 50, < 80)
+    expect(r.score).toBe(53);
+    expect(r.level).toBe('GOOD_MATCH');
     expect(r.matchPercentage).toBe(25);
     expect(gapNames(r.matchedSkills.technical)).toContain('Python');
     expect(gapNames(r.missingSkills.technical)).toContain('Django');
@@ -472,12 +488,14 @@ describe('computeFullMatch — no match', () => {
 
     const r = computeFullMatch(input);
 
-    // Technical: required 0/2=0 (×70=0) + preferred 0/1=0 (×0=0) = 0
-    // Soft: 0/2=0 (×10=0) = 0
-    // Career: 0/2=0 (×10=0) = 0
+    // Technical: 0 × 0.50 = 0
+    // Proficiency: 100 × 0.10 = 10
+    // Soft: 0 × 0.10 = 0
+    // Career: 0 × 0.10 = 0
+    // Industry demand: 100 × 0.10 = 10
     // Eligibility bonus: 10
-    // Total: 0+0+0+10 = 10
-    expect(r.score).toBe(10);
+    // Total: 0+10+0+0+10+10 = 30
+    expect(r.score).toBe(30);
     expect(r.level).toBe('LOW_MATCH');
     expect(r.matchPercentage).toBe(0);
     expect(r.eligibility.passed).toBe(true);
@@ -845,5 +863,143 @@ describe('computeFullMatch — recommendation strings', () => {
     });
     const r = computeFullMatch(input);
     expect(r.recommendation).toContain('appear ineligible');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Proficiency gaps
+// ---------------------------------------------------------------------------
+
+import { scoreProficiencyGaps, scoreIndustryDemand } from '../fullMatch';
+
+describe('scoreProficiencyGaps', () => {
+  it('returns score 100 and empty gaps when no required skills', () => {
+    const result = scoreProficiencyGaps(new Map(), new Map());
+    expect(result.score).toBe(100);
+    expect(result.gaps).toEqual([]);
+  });
+
+  it('reports a proficiency gap when student level is below required', () => {
+    const student = new Map([['python', { id: '1', name: 'Python', proficiency: 'BEGINNER' }]]);
+    const required = new Map([
+      ['python', { id: '1', name: 'Python', proficiency: 'INTERMEDIATE' }],
+    ]);
+    const result = scoreProficiencyGaps(student, required);
+    // Beginner (1) vs Intermediate (2): gap = 1, score = 1/2 * 100 = 50
+    expect(result.score).toBe(50);
+    expect(result.gaps).toHaveLength(1);
+    expect(result.gaps[0]).toMatchObject({
+      id: '1',
+      name: 'Python',
+      requiredLevel: 'INTERMEDIATE',
+      studentLevel: 'BEGINNER',
+      gapLevels: 1,
+      missing: false,
+    });
+  });
+
+  it('reports missing skill when student does not have the skill', () => {
+    const student = new Map();
+    const required = new Map([
+      ['docker', { id: '2', name: 'Docker', proficiency: 'INTERMEDIATE' }],
+    ]);
+    const result = scoreProficiencyGaps(student, required);
+    // Missing skill: gap = 2 (Intermediate rank), score = 0
+    expect(result.score).toBe(0);
+    expect(result.gaps).toHaveLength(1);
+    expect(result.gaps[0]).toMatchObject({
+      name: 'Docker',
+      studentLevel: null,
+      gapLevels: 2,
+      missing: true,
+    });
+  });
+
+  it('skips proficiency check when required has no proficiency', () => {
+    const student = new Map([['python', { id: '1', name: 'Python', proficiency: 'BEGINNER' }]]);
+    const required = new Map([['python', { id: '1', name: 'Python', proficiency: undefined }]]);
+    const result = scoreProficiencyGaps(student, required);
+    // No proficiency required → full credit
+    expect(result.score).toBe(100);
+    expect(result.gaps).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Industry demand
+// ---------------------------------------------------------------------------
+
+describe('scoreIndustryDemand', () => {
+  it('returns 100 when no required skills', () => {
+    const result = scoreIndustryDemand(new Map(), new Map(), undefined);
+    expect(result).toBe(100);
+  });
+
+  it('returns 100 when no demand data', () => {
+    const student = new Map([['python', { id: '1', name: 'Python' }]]);
+    const required = new Map([['python', { id: '1', name: 'Python' }]]);
+    const result = scoreIndustryDemand(student, required, []);
+    expect(result).toBe(100);
+  });
+
+  it('rewards matching required skills with demand weight', () => {
+    const student = new Map([['python', { id: '1', name: 'Python' }]]);
+    const required = new Map([
+      ['python', { id: '1', name: 'Python' }],
+      ['docker', { id: '2', name: 'Docker' }],
+    ]);
+    const demand = [
+      { skillId: '1', demandCount: 10 },
+      { skillId: '2', demandCount: 5 },
+    ];
+    // Student has python (demand 10) but not docker (demand 5)
+    // Score = 10 / 15 = 66.67 → 67
+    const result = scoreIndustryDemand(student, required, demand);
+    expect(result).toBe(67);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Explanation building
+// ---------------------------------------------------------------------------
+
+describe('computeFullMatch — explanation', () => {
+  it('builds explanation with skill match reasons', () => {
+    const input = makeInput({
+      studentSkills: [tSkill('1', 'Python'), tSkill('2', 'Django')],
+      requiredSkills: [tSkill('1', 'Python'), tSkill('3', 'React')],
+      eligibility: {
+        studentCgpa: 8.0,
+        requiredCgpa: 7.0,
+        studentBranch: 'Computer Science',
+        eligibleBranches: ['Computer Science'],
+        studentGraduationYear: 2025,
+        eligibleGradYears: [2025],
+      },
+    });
+    const r = computeFullMatch(input);
+    expect(r.explanation).toBeDefined();
+    expect(r.explanation.skillRatio).toEqual({ matched: 1, total: 2 });
+    expect(r.explanation.reasons.some((m) => m.kind === 'SKILL_MATCH')).toBe(true);
+    expect(r.explanation.reasons.some((m) => m.kind === 'ELIGIBILITY')).toBe(true);
+  });
+
+  it('builds warnings for missing skills', () => {
+    const input = makeInput({
+      studentSkills: [],
+      requiredSkills: [tSkill('1', 'Python')],
+      eligibility: {},
+    });
+    const r = computeFullMatch(input);
+    expect(r.explanation.warnings.some((w) => w.kind === 'MISSING_SKILL')).toBe(true);
+  });
+
+  it('includes career interest alignment in reasons', () => {
+    const input = makeInput({
+      studentCareerInterests: ['Backend Developer'],
+      opportunityPreferredRoles: ['Backend Developer'],
+    });
+    const r = computeFullMatch(input);
+    expect(r.explanation.reasons.some((m) => m.kind === 'CAREER_INTEREST')).toBe(true);
   });
 });

@@ -5,21 +5,29 @@ export const MAX_PAGE_SIZE = 100;
 
 export const MATCHING_WEIGHTS = { REQUIRED: 80, PREFERRED: 20 } as const;
 
-export const MATCH_THRESHOLDS = { STRONG: 85, GOOD: 60, PARTIAL: 40 } as const;
+export const MATCH_THRESHOLDS = { STRONG: 80, GOOD: 50, PARTIAL: 35 } as const;
 
 /**
  * Weights used by the full multi-dimensional match (computeFullMatch).
- * Must sum to 100.
+ * The score for each dimension is multiplied by its weight; the eligibility
+ * entry is an absolute bonus added to the final score when all criteria pass.
  * - TECHNICAL: deterministic weighted score from required + preferred skills (0-100).
- *   When split, required=70, preferred=10 (inherited from MATCHING_WEIGHTS).
+ *   When split, required=60, preferred=10 (inherited from MATCHING_WEIGHTS).
+ * - PROFICIENCY: how well the student's proficiency levels meet the required levels.
  * - SOFT: overlap of student soft skills vs opportunity soft skills.
  * - CAREER: overlap of student career interests vs opportunity preferredRoles/locations.
- * - ELIGIBILITY: bonus applied only when all eligibility criteria are met.
+ * - INDUSTRY_DEMAND: how much of the industry's demand the student's skills cover.
+ * - ELIGIBILITY: bonus added to the final score when all eligibility criteria are met.
+ *
+ * Sum of weights (excluding the eligibility bonus) is 0.9; the eligibility
+ * bonus adds the remaining 0.1 (10 points).
  */
 export const FULL_MATCH_WEIGHTS = {
-  TECHNICAL: 70,
-  SOFT: 10,
-  CAREER: 10,
+  TECHNICAL: 0.5,
+  PROFICIENCY: 0.1,
+  SOFT: 0.1,
+  CAREER: 0.1,
+  INDUSTRY_DEMAND: 0.1,
   ELIGIBILITY: 10,
 } as const;
 
