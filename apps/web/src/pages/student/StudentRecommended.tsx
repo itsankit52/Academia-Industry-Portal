@@ -12,6 +12,7 @@ import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
 import ErrorState from '@/components/ui/ErrorState';
 import { SkeletonCard } from '@/components/ui/Skeleton';
+import OpportunityMatchInsight from '@/components/cards/OpportunityMatchInsight';
 import {
   useRecommendations,
   type NamedSkill,
@@ -27,7 +28,7 @@ import {
 function MatchSkills({ matched, missing }: { matched: NamedSkill[]; missing: NamedSkill[] }) {
   if (matched.length === 0 && missing.length === 0) return null;
   return (
-    <div className="flex flex-wrap gap-1.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+    <div className="flex flex-wrap gap-1.5">
       {matched.map((s) => (
         <SkillChip
           key={s.id}
@@ -57,11 +58,13 @@ function RecommendationShell({
   eligible,
   children,
   skills,
+  insight,
 }: {
   score: number;
   eligible: boolean;
   children: ReactNode;
   skills: ReactNode;
+  insight: ReactNode;
 }) {
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-3">
@@ -79,16 +82,28 @@ function RecommendationShell({
         </div>
       </div>
       {skills}
+      {insight}
     </div>
   );
 }
 
 function JobRecommendation({ item }: { item: RecommendedJob }) {
+  const skillRatio = `${item.matchedSkills.length}/${item.matchedSkills.length + item.missingSkills.length} required skills`;
   return (
     <RecommendationShell
       score={item.matchResult.score}
       eligible={item.eligible}
       skills={<MatchSkills matched={item.matchedSkills} missing={item.missingSkills} />}
+      insight={
+        <OpportunityMatchInsight
+          insight={item.insight}
+          eligible={item.eligible}
+          skillRatio={
+            item.matchedSkills.length + item.missingSkills.length > 0 ? skillRatio : undefined
+          }
+          proficiencyGaps={item.proficiencyGaps}
+        />
+      }
     >
       <JobCard job={item.job} linkPrefix="/student/jobs" />
     </RecommendationShell>
@@ -96,11 +111,22 @@ function JobRecommendation({ item }: { item: RecommendedJob }) {
 }
 
 function InternshipRecommendation({ item }: { item: RecommendedInternship }) {
+  const skillRatio = `${item.matchedSkills.length}/${item.matchedSkills.length + item.missingSkills.length} required skills`;
   return (
     <RecommendationShell
       score={item.matchResult.score}
       eligible={item.eligible}
       skills={<MatchSkills matched={item.matchedSkills} missing={item.missingSkills} />}
+      insight={
+        <OpportunityMatchInsight
+          insight={item.insight}
+          eligible={item.eligible}
+          skillRatio={
+            item.matchedSkills.length + item.missingSkills.length > 0 ? skillRatio : undefined
+          }
+          proficiencyGaps={item.proficiencyGaps}
+        />
+      }
     >
       <InternshipCard internship={item.internship} linkPrefix="/student/internships" />
     </RecommendationShell>

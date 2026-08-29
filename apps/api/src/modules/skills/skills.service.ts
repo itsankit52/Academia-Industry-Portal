@@ -1,8 +1,4 @@
-import type {
-  CreateSkillInput,
-  UpdateSkillInput,
-  AddStudentSkillInput,
-} from '@aip/validation';
+import type { CreateSkillInput, UpdateSkillInput, AddStudentSkillInput } from '@aip/validation';
 import type { Proficiency } from '@aip/config';
 import { AppError } from '../../utils/AppError';
 import { Skill, StudentSkill, StudentProfile } from '../../models';
@@ -24,7 +20,12 @@ export async function listSkills(pag: PaginationInput, filters: SkillListFilters
     Skill.find(where).sort(sort).skip(skip).limit(limit),
     Skill.countDocuments(where),
   ]);
-  return buildPaginated(rows.map((r) => r.toJSON()), total, page, pageSize);
+  return buildPaginated(
+    rows.map((r) => r.toJSON()),
+    total,
+    page,
+    pageSize,
+  );
 }
 
 export async function createSkill(input: CreateSkillInput) {
@@ -48,11 +49,7 @@ export async function updateSkill(id: string, patch: UpdateSkillInput) {
 }
 
 export async function archiveSkill(id: string) {
-  const skill = await Skill.findByIdAndUpdate(
-    id,
-    { $set: { status: 'ARCHIVED' } },
-    { new: true },
-  );
+  const skill = await Skill.findByIdAndUpdate(id, { $set: { status: 'ARCHIVED' } }, { new: true });
   if (!skill) throw AppError.notFound('Skill not found');
 }
 
@@ -83,6 +80,49 @@ export async function addMyStudentSkill(userId: string, input: AddStudentSkillIn
   });
   await created.populate('skill');
   return created.toJSON();
+}
+
+/**
+ * Adds a student skill by the skill name (not id).
+ *
+ * Used by the resume flow: AI extraction returns strings, not catalogue ids.
+ * We look the name up case-insensitively (Skill.name is stored lowercased by
+ * the schema) and only create a StudentSkill when the catalogue already has
+ * the skill — the resume review screen is the place to teach the AI about
+ * new skills, not the silent side-effect of accepting an upload.
+ *
+ * Returns the existing StudentSkill when the student has already added this
+ * skill; never overwrites the student's existing proficiency. Throws 404 if
+ * the skill isn't in the catalogue.
+ */
+export async function addMyStudentSkillByName(
+  userId: string,
+  name: string,
+  proficiency: AddStudentSkillInput['proficiency'] = 'BEGINNER',
+) {
+  const trimmed = name.trim();
+  if (!trimmed) throw AppError.badRequest('Skill name is required');
+  const normalised = trimmed.toLowerCase();
+  const studentId = await getStudentIdFromUser(userId);
+  const skillDoc = await Skill.findOne({ name: normalised }).select('_id');
+  if (!skillDoc) {
+    throw AppError.notFound(
+      `"${trimmed}" is not in the skills catalogue yet. Use the Add Skill form to suggest it.`,
+    );
+  }
+  const skillId = String(skillDoc._id);
+  const existing = await StudentSkill.findOne({ student: studentId, skill: skillId });
+  if (existing) {
+    await existing.populate('skill');
+    return { created: false, studentSkill: existing.toJSON() };
+  }
+  const created = await StudentSkill.create({
+    student: studentId,
+    skill: skillId,
+    proficiency,
+  });
+  await created.populate('skill');
+  return { created: true, studentSkill: created.toJSON() };
 }
 
 export interface UpdateStudentSkillPatch {

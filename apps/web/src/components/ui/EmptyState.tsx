@@ -5,10 +5,12 @@ interface EmptyStateProps {
   icon?: ReactNode;
   title: string;
   description?: string;
-  action?: {
-    label: string;
-    onClick: () => void;
-  };
+  action?:
+    | {
+        label: string;
+        onClick: () => void;
+      }
+    | ReactNode;
 }
 
 export default function EmptyState({ icon, title, description, action }: EmptyStateProps) {
@@ -20,11 +22,17 @@ export default function EmptyState({ icon, title, description, action }: EmptySt
         </div>
       )}
       <h3 className="text-base font-semibold text-slate-900 mb-1 dark:text-slate-100">{title}</h3>
-      {description && <p className="text-sm text-slate-500 max-w-xs mb-5 dark:text-slate-400">{description}</p>}
-      {action && (
+      {description && (
+        <p className="text-sm text-slate-500 max-w-xs mb-5 dark:text-slate-400">{description}</p>
+      )}
+      {action && typeof action === 'object' && 'onClick' in action && (
         <Button size="sm" onClick={action.onClick}>
           {action.label}
         </Button>
+      )}
+      {action && typeof action !== 'object' && <div className="mt-2">{action}</div>}
+      {action && typeof action === 'object' && !('onClick' in action) && (
+        <div className="mt-2">{action}</div>
       )}
     </div>
   );

@@ -17,6 +17,7 @@ export const queryKeys = {
   recommendedTrainings: () => ['trainings', 'recommended'] as const,
   learningRecommendations: (params?: object) =>
     ['recommendations', 'learning', params ?? {}] as const,
+  fullMatch: (type: string, id: string) => ['recommendations', 'full-match', type, id] as const,
 
   student: {
     dashboard: ['student', 'dashboard'] as const,

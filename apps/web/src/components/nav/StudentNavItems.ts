@@ -17,6 +17,7 @@ import {
   FiTarget,
   FiZap,
   FiUsers,
+  FiActivity,
 } from 'react-icons/fi';
 
 export interface NavItem {
@@ -39,6 +40,7 @@ export const studentNavItems: NavItem[] = [
   { to: '/student/interviews', label: 'Interviews', icon: FiCalendar },
   { to: '/student/notifications', label: 'Notifications', icon: FiBell },
   { to: '/student/skill-gap', label: 'Skill Gap', icon: FiBarChart2 },
+  { to: '/student/skill-profile', label: 'Skill Profile', icon: FiActivity },
   { to: '/student/assessments', label: 'Assessments', icon: FiClipboard },
   { to: '/student/aptitude', label: 'Aptitude', icon: FiTarget },
   { to: '/student/training', label: 'Training', icon: FiAward },

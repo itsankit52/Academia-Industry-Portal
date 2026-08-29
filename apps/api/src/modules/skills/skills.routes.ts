@@ -15,9 +15,7 @@ import * as ctrl from './skills.controller';
 
 const router = Router();
 
-const proficiencyEnum = z.enum(
-  PROFICIENCY_LEVELS as unknown as [Proficiency, ...Proficiency[]],
-);
+const proficiencyEnum = z.enum(PROFICIENCY_LEVELS as unknown as [Proficiency, ...Proficiency[]]);
 
 const updateStudentSkillSchema = z
   .object({
@@ -49,11 +47,14 @@ router.delete(
   ctrl.remove,
 );
 
-router.get(
-  '/me/student-skills',
+router.get('/me/student-skills', requireAuth, requireRole('STUDENT'), ctrl.listMyStudentSkills);
+router.get('/me/profile', requireAuth, requireRole('STUDENT'), ctrl.getMyProfile);
+router.get('/me/skill-timeline', requireAuth, requireRole('STUDENT'), ctrl.getMySkillTimeline);
+router.post(
+  '/me/skills-from-resume',
   requireAuth,
   requireRole('STUDENT'),
-  ctrl.listMyStudentSkills,
+  ctrl.addSkillsFromResume,
 );
 router.post(
   '/me/student-skills',

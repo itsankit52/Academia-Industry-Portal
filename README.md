@@ -45,11 +45,13 @@ Five-role platform connecting students, faculty, companies, institutions, and pl
 ## Quick Start (TL;DR)
 
 **macOS / Linux:**
+
 ```bash
 bash scripts/setup.sh
 ```
 
 **Windows:**
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
 ```
@@ -57,6 +59,7 @@ powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
 Both scripts verify Node 20+, install pnpm@9, install all workspace dependencies, copy `.env.example` to `.env`, and print generated JWT secrets to paste in.
 
 **Then complete setup:**
+
 ```bash
 # 1. Edit .env — set MONGODB_URI and paste the JWT secrets printed above
 # 2. Validate your .env is complete
@@ -201,6 +204,7 @@ graph TB
 ```
 
 **Directory tree:**
+
 ```
 academia-industry-portal/
 ├── apps/
@@ -216,39 +220,39 @@ academia-industry-portal/
 
 **Backend modules** (`apps/api/src/modules/`):
 
-| Module | Purpose |
-|---|---|
-| `auth` | JWT register / login / refresh / logout |
-| `students` | Student profile CRUD and dashboard summary |
-| `companies` | Company profile CRUD |
-| `skills` | Skill catalog management |
-| `jobs` | Job posting CRUD |
-| `internships` | Internship posting CRUD |
-| `applications` | Application lifecycle, status transitions, PDF certificate endpoint |
-| `interviews` | Interview scheduling and management |
-| `recommendations` | Opportunity and training recommendations |
-| `matching` | Skill-matching algorithm (internal service — not mounted as a route) |
-| `notifications` | In-app notification delivery |
-| `training` | Training program catalog |
-| `saved-opportunities` | Bookmarking |
-| `analytics` | Admin dashboard aggregation queries |
-| `resumes` | Resume upload and download (DB or Cloudinary) |
-| `ai` | Gemini-powered career assistant |
-| `assessments` | AI assessment generate / answer / submit / evaluate |
-| `admin` | Admin management operations |
-| `audit` | Audit log queries |
-| `institutions` | Institution CRUD, verification, public catalog |
-| `faculty` | Faculty profile CRUD |
-| `faculty-opportunities` | FDP / consultancy / collaborative research / faculty internship CRUD |
-| `documents` | Document upload, metadata listing, and verification queue |
-| `portfolio` | Public student portfolio rendering (unauthenticated) |
+| Module                  | Purpose                                                               |
+| ----------------------- | --------------------------------------------------------------------- |
+| `auth`                  | JWT register / login / refresh / logout                               |
+| `students`              | Student profile CRUD and dashboard summary                            |
+| `companies`             | Company profile CRUD                                                  |
+| `skills`                | Skill catalog management                                              |
+| `jobs`                  | Job posting CRUD                                                      |
+| `internships`           | Internship posting CRUD                                               |
+| `applications`          | Application lifecycle, status transitions, PDF certificate endpoint   |
+| `interviews`            | Interview scheduling and management                                   |
+| `recommendations`       | Opportunity and training recommendations                              |
+| `matching`              | Skill-matching algorithm (internal service — not mounted as a route)  |
+| `notifications`         | In-app notification delivery                                          |
+| `training`              | Training program catalog                                              |
+| `saved-opportunities`   | Bookmarking                                                           |
+| `analytics`             | Admin dashboard aggregation queries                                   |
+| `resumes`               | Resume upload and download (DB or Cloudinary)                         |
+| `ai`                    | Gemini-powered career assistant                                       |
+| `assessments`           | AI assessment generate / answer / submit / evaluate                   |
+| `admin`                 | Admin management operations                                           |
+| `audit`                 | Audit log queries                                                     |
+| `institutions`          | Institution CRUD, verification, public catalog                        |
+| `faculty`               | Faculty profile CRUD                                                  |
+| `faculty-opportunities` | FDP / consultancy / collaborative research / faculty internship CRUD  |
+| `documents`             | Document upload, metadata listing, and verification queue             |
+| `portfolio`             | Public student portfolio rendering (unauthenticated)                  |
 | `institution-analytics` | Institution-scoped metrics: placements, skill gaps, FDP participation |
-| `mentorship` | MentorProfile CRUD and mentorship request / message lifecycle |
-| `aptitude` | Aptitude question bank and test lifecycle |
-| `collaboration` | Collaboration event CRUD and registration |
-| `events` | Event registration management |
-| `interim-reports` | Interim report submission and mentor feedback |
-| `webhooks` | LMS certification and ERP student sync (HMAC-SHA256 verified) |
+| `mentorship`            | MentorProfile CRUD and mentorship request / message lifecycle         |
+| `aptitude`              | Aptitude question bank and test lifecycle                             |
+| `collaboration`         | Collaboration event CRUD and registration                             |
+| `events`                | Event registration management                                         |
+| `interim-reports`       | Interim report submission and mentor feedback                         |
+| `webhooks`              | LMS certification and ERP student sync (HMAC-SHA256 verified)         |
 
 ### Request flow
 
@@ -566,35 +570,35 @@ erDiagram
 
 ### Model reference table
 
-| Model | Primary purpose | Notable design |
-|---|---|---|
-| `User` | Auth identity | `passwordHash` and `refreshTokenVersion` are `select: false`; auth service selects them explicitly |
-| `StudentProfile` | Student details | Carries optional `institution` ObjectId for multi-tenancy scoping; embeds `projects`, `certifications`, `experience`, `achievements` arrays; `preferredRoles` and `preferredLocations` arrays |
-| `CompanyProfile` | Company details | `verifiedAt` presence indicates verified status; `companyName` indexed |
-| `FacultyProfile` | Faculty details | `institution` (required ObjectId ref to `Institution`); carries `designation`, `department`, `qualifications[]`, `researchInterests[]` |
-| `Institution` | Multi-tenancy anchor | `code` (uppercase, unique) and `domain` (lowercase, unique) are the natural keys; `verificationStatus: PENDING \| VERIFIED \| REJECTED`; both `StudentProfile` and `FacultyProfile` carry an `institution` ObjectId |
-| `Skill` | Shared skill catalog | Lowercased on write; `status: ACTIVE \| ARCHIVED`; text index on `name` |
-| `StudentSkill` | Student-to-skill junction | Compound unique `(student, skill)`; `proficiency: BEGINNER \| INTERMEDIATE \| ADVANCED \| EXPERT` |
-| `Job` | Job postings | `salary` is an embedded subdoc with `min`, `max`, `currency`; text index on title, description, location |
-| `Internship` | Internship postings | Uses `durationMonths` and `stipend` instead of salary range |
+| Model                | Primary purpose                                   | Notable design                                                                                                                                                                                                                                                                                                        |
+| -------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `User`               | Auth identity                                     | `passwordHash` and `refreshTokenVersion` are `select: false`; auth service selects them explicitly                                                                                                                                                                                                                    |
+| `StudentProfile`     | Student details                                   | Carries optional`institution` ObjectId for multi-tenancy scoping; embeds `projects`, `certifications`, `experience`, `achievements` arrays; `preferredRoles` and `preferredLocations` arrays                                                                                                                          |
+| `CompanyProfile`     | Company details                                   | `verifiedAt` presence indicates verified status; `companyName` indexed                                                                                                                                                                                                                                                |
+| `FacultyProfile`     | Faculty details                                   | `institution` (required ObjectId ref to `Institution`); carries `designation`, `department`, `qualifications[]`, `researchInterests[]`                                                                                                                                                                                |
+| `Institution`        | Multi-tenancy anchor                              | `code` (uppercase, unique) and `domain` (lowercase, unique) are the natural keys; `verificationStatus: PENDING \| VERIFIED \| REJECTED`; both `StudentProfile` and `FacultyProfile` carry an `institution` ObjectId                                                                                                   |
+| `Skill`              | Shared skill catalog                              | Lowercased on write;`status: ACTIVE \| ARCHIVED`; text index on `name`                                                                                                                                                                                                                                                |
+| `StudentSkill`       | Student-to-skill junction                         | Compound unique`(student, skill)`; `proficiency: BEGINNER \| INTERMEDIATE \| ADVANCED \| EXPERT`                                                                                                                                                                                                                      |
+| `Job`                | Job postings                                      | `salary` is an embedded subdoc with `min`, `max`, `currency`; text index on title, description, location                                                                                                                                                                                                              |
+| `Internship`         | Internship postings                               | Uses`durationMonths` and `stipend` instead of salary range                                                                                                                                                                                                                                                            |
 | `FacultyOpportunity` | FDP / consultancy / research / faculty internship | `hostType: COMPANY \| INSTITUTION` and `host` ObjectId use `refPath` (not plain ObjectId); `targetRoles[]` can include STUDENT and/or FACULTY; `opportunityType: FACULTY_INTERNSHIP \| FDP \| CONSULTANCY \| COLLABORATIVE_RESEARCH \| PROJECT \| APPRENTICESHIP`; `status: DRAFT \| PUBLISHED \| CLOSED \| ARCHIVED` |
-| `Application` | Unified application record | Polymorphic `opportunity` field (plain ObjectId, no `ref`); `opportunityType` discriminates across 8 opportunity types; compound unique `(student, opportunityType, opportunity)`; `timeline[]` records every status change with timestamp |
-| `SavedOpportunity` | Bookmarks | Same polymorphic pattern as `Application`; compound unique `(student, opportunityType, opportunity)` |
-| `Interview` | Interview scheduling | `mode: ONLINE \| OFFLINE \| HYBRID`; linked to `Application` |
-| `TrainingProgram` | Training catalog | `skills[]` are ObjectId refs to `Skill` |
-| `Notification` | In-app notifications | `readAt: null` means unread; indexed on `(user, createdAt DESC)` |
-| `Resume` | PDF storage | `storageMode: DATABASE \| CLOUDINARY`; `data: Buffer` is `select: false`; `cloudinaryPublicId` is sparse unique |
-| `Document` | User-uploaded credentials | `documentType: RESUME \| CERTIFICATE \| INTERNSHIP_REPORT \| ACADEMIC_RECORD`; `data: Buffer` is `select: false` and also stripped in `toJSON` transform; `verificationStatus: PENDING \| VERIFIED \| REJECTED`; `verifiedBy` ref to the reviewing `User` |
-| `Assessment` | AI skill assessment | Embeds `questions[]`, `answers[]`, and an `evaluation` subdoc in a single document; `expiresAt = startedAt + durationMinutes * 60000`; `generatedByModel` records which Gemini model produced the questions |
-| `AuditLog` | Admin action history | `before` and `after` are `Mixed` to accommodate any document shape; indexed on `(createdAt DESC, action)` |
-| `MentorProfile` | Mentor listing | Published by company employees or senior faculty; `capacity` and `currentMenteeCount` enforce the max concurrent mentees rule server-side |
-| `MentorshipRequest` | Mentorship pairing | `status: PENDING \| ACCEPTED \| DECLINED`; carries `message` (initial ask) and `responseMessage` (mentor reply) |
-| `MentorshipMessage` | Threaded inbox | Linked to an accepted `MentorshipRequest`; `sender` ref to `User` |
-| `InterimReport` | Internship progress log | Linked to `Application`; carries `hoursWorked`, `workDescription`, `learnings`, `challenges`; company mentor adds `feedback` and `rating`; feeds PDF certificate generation |
-| `CollaborationEvent` | Hosted events | `eventType: WORKSHOP \| GUEST_LECTURE \| INNOVATION_CHALLENGE \| LIVE_PROJECT`; `hostType: COMPANY \| INSTITUTION` with `host` ObjectId; `capacity` is enforced at registration time |
-| `EventRegistration` | Event attendance | `attendeeRole: STUDENT \| FACULTY`; compound unique `(event, attendee)` prevents double registration |
-| `AptitudeQuestion` | Question bank entry | `correctIndex` (0–3 index into `options[]`) is `select: false` — never sent to student clients; admin routes explicitly select it for question curation |
-| `AptitudeTest` | Test session | `status: IN_PROGRESS \| SUBMITTED \| EXPIRED`; `expiresAt` is server-authoritative; `passingScore` defaults to 60; `durationSeconds` defaults to 1800 (30 min); `passed` flag triggers student skill proficiency auto-upgrade; indexes on `(user, createdAt DESC)` |
+| `Application`        | Unified application record                        | Polymorphic`opportunity` field (plain ObjectId, no `ref`); `opportunityType` discriminates across 8 opportunity types; compound unique `(student, opportunityType, opportunity)`; `timeline[]` records every status change with timestamp                                                                             |
+| `SavedOpportunity`   | Bookmarks                                         | Same polymorphic pattern as`Application`; compound unique `(student, opportunityType, opportunity)`                                                                                                                                                                                                                   |
+| `Interview`          | Interview scheduling                              | `mode: ONLINE \| OFFLINE \| HYBRID`; linked to `Application`                                                                                                                                                                                                                                                          |
+| `TrainingProgram`    | Training catalog                                  | `skills[]` are ObjectId refs to `Skill`                                                                                                                                                                                                                                                                               |
+| `Notification`       | In-app notifications                              | `readAt: null` means unread; indexed on `(user, createdAt DESC)`                                                                                                                                                                                                                                                      |
+| `Resume`             | PDF storage                                       | `storageMode: DATABASE \| CLOUDINARY`; `data: Buffer` is `select: false`; `cloudinaryPublicId` is sparse unique                                                                                                                                                                                                       |
+| `Document`           | User-uploaded credentials                         | `documentType: RESUME \| CERTIFICATE \| INTERNSHIP_REPORT \| ACADEMIC_RECORD`; `data: Buffer` is `select: false` and also stripped in `toJSON` transform; `verificationStatus: PENDING \| VERIFIED \| REJECTED`; `verifiedBy` ref to the reviewing `User`                                                             |
+| `Assessment`         | AI skill assessment                               | Embeds`questions[]`, `answers[]`, and an `evaluation` subdoc in a single document; `expiresAt = startedAt + durationMinutes * 60000`; `generatedByModel` records which Gemini model produced the questions                                                                                                            |
+| `AuditLog`           | Admin action history                              | `before` and `after` are `Mixed` to accommodate any document shape; indexed on `(createdAt DESC, action)`                                                                                                                                                                                                             |
+| `MentorProfile`      | Mentor listing                                    | Published by company employees or senior faculty;`capacity` and `currentMenteeCount` enforce the max concurrent mentees rule server-side                                                                                                                                                                              |
+| `MentorshipRequest`  | Mentorship pairing                                | `status: PENDING \| ACCEPTED \| DECLINED`; carries `message` (initial ask) and `responseMessage` (mentor reply)                                                                                                                                                                                                       |
+| `MentorshipMessage`  | Threaded inbox                                    | Linked to an accepted`MentorshipRequest`; `sender` ref to `User`                                                                                                                                                                                                                                                      |
+| `InterimReport`      | Internship progress log                           | Linked to`Application`; carries `hoursWorked`, `workDescription`, `learnings`, `challenges`; company mentor adds `feedback` and `rating`; feeds PDF certificate generation                                                                                                                                            |
+| `CollaborationEvent` | Hosted events                                     | `eventType: WORKSHOP \| GUEST_LECTURE \| INNOVATION_CHALLENGE \| LIVE_PROJECT`; `hostType: COMPANY \| INSTITUTION` with `host` ObjectId; `capacity` is enforced at registration time                                                                                                                                  |
+| `EventRegistration`  | Event attendance                                  | `attendeeRole: STUDENT \| FACULTY`; compound unique `(event, attendee)` prevents double registration                                                                                                                                                                                                                  |
+| `AptitudeQuestion`   | Question bank entry                               | `correctIndex` (0–3 index into `options[]`) is `select: false` — never sent to student clients; admin routes explicitly select it for question curation                                                                                                                                                               |
+| `AptitudeTest`       | Test session                                      | `status: IN_PROGRESS \| SUBMITTED \| EXPIRED`; `expiresAt` is server-authoritative; `passingScore` defaults to 60; `durationSeconds` defaults to 1800 (30 min); `passed` flag triggers student skill proficiency auto-upgrade; indexes on `(user, createdAt DESC)`                                                    |
 
 ---
 
@@ -730,59 +734,59 @@ sequenceDiagram
 
 ### Frontend (`apps/web`)
 
-| Dependency | Version | Purpose |
-|---|---|---|
-| React | 18.3.1 | UI framework |
-| TypeScript | 5.4.5 | Type safety |
-| Vite | 5.4.1 | Dev server and bundler |
-| Tailwind CSS | 3.4.10 | Utility-first styling |
-| React Router | 6.26.0 | Client-side routing |
-| TanStack Query | 5.51.0 | Server state and caching |
-| React Hook Form | 7.52.1 | Form management |
-| Zod | 3.23.8 | Schema validation |
-| Axios | 1.7.4 | HTTP client |
-| Zustand | 4.5.4 | Auth client state |
-| Recharts | 2.12.7 | Analytics charts |
-| Sonner | 1.5.0 | Toast notifications |
-| date-fns | 3.6.0 | Date formatting |
-| react-icons | 5.2.1 | Icon library |
+| Dependency            | Version       | Purpose                   |
+| --------------------- | ------------- | ------------------------- |
+| React                 | 18.3.1        | UI framework              |
+| TypeScript            | 5.4.5         | Type safety               |
+| Vite                  | 5.4.1         | Dev server and bundler    |
+| Tailwind CSS          | 3.4.10        | Utility-first styling     |
+| React Router          | 6.26.0        | Client-side routing       |
+| TanStack Query        | 5.51.0        | Server state and caching  |
+| React Hook Form       | 7.52.1        | Form management           |
+| Zod                   | 3.23.8        | Schema validation         |
+| Axios                 | 1.7.4         | HTTP client               |
+| Zustand               | 4.5.4         | Auth client state         |
+| Recharts              | 2.12.7        | Analytics charts          |
+| Sonner                | 1.5.0         | Toast notifications       |
+| date-fns              | 3.6.0         | Date formatting           |
+| react-icons           | 5.2.1         | Icon library              |
 | clsx + tailwind-merge | 2.1.1 / 2.5.2 | Conditional class merging |
 
 ### Backend (`apps/api`)
 
-| Dependency | Version | Purpose |
-|---|---|---|
-| Node.js | 20+ | Runtime |
-| Express | 4.19.2 | HTTP framework |
-| TypeScript | 5.4.5 | Type safety |
-| Mongoose | 8.5.1 | MongoDB ODM |
-| Zod | 3.23.8 | Request validation |
-| jsonwebtoken | 9.0.2 | JWT sign and verify |
-| bcryptjs | 2.4.3 | Password hashing |
-| Helmet | 7.1.0 | Security headers |
-| cors | 2.8.5 | Cross-origin policy |
-| express-rate-limit | 7.4.0 | Rate limiting |
-| Multer | 1.4.5-lts.1 | Multipart file upload |
-| pdfkit | 0.15.x | PDF certificate generation |
-| Pino / pino-http | 9.3.2 / 10.2.0 | Structured logging |
-| @google/generative-ai | 0.21.0 | Gemini SDK |
-| cloudinary | 2.4.0 | Cloud file storage SDK |
-| cookie-parser | 1.4.6 | httpOnly cookie parsing |
-| dotenv | 16.4.5 | `.env` file loading |
+| Dependency            | Version        | Purpose                    |
+| --------------------- | -------------- | -------------------------- |
+| Node.js               | 20+            | Runtime                    |
+| Express               | 4.19.2         | HTTP framework             |
+| TypeScript            | 5.4.5          | Type safety                |
+| Mongoose              | 8.5.1          | MongoDB ODM                |
+| Zod                   | 3.23.8         | Request validation         |
+| jsonwebtoken          | 9.0.2          | JWT sign and verify        |
+| bcryptjs              | 2.4.3          | Password hashing           |
+| Helmet                | 7.1.0          | Security headers           |
+| cors                  | 2.8.5          | Cross-origin policy        |
+| express-rate-limit    | 7.4.0          | Rate limiting              |
+| Multer                | 1.4.5-lts.1    | Multipart file upload      |
+| pdfkit                | 0.15.x         | PDF certificate generation |
+| Pino / pino-http      | 9.3.2 / 10.2.0 | Structured logging         |
+| @google/generative-ai | 0.21.0         | Gemini SDK                 |
+| cloudinary            | 2.4.0          | Cloud file storage SDK     |
+| cookie-parser         | 1.4.6          | httpOnly cookie parsing    |
+| dotenv                | 16.4.5         | `.env` file loading        |
 
 ### Tooling
 
-| Tool | Version | Purpose |
-|---|---|---|
-| pnpm | 9.15.0 | Package manager and workspaces |
-| ESLint | 9.9.0 | Linting (0 warnings policy) |
-| Prettier | 3.3.3 | Code formatting |
-| Husky | 9.1.4 | Pre-commit git hooks |
-| lint-staged | 15.2.7 | Run checks on staged files |
-| Vitest | 2.0.5 | Unit and integration tests |
-| Playwright | 1.46.1 | End-to-end tests |
-| Supertest | 7.0.0 | API integration tests |
-| tsx | 4.19.0 | TypeScript execution for dev and scripts |
+| Tool        | Version | Purpose                                  |
+| ----------- | ------- | ---------------------------------------- |
+| pnpm        | 9.15.0  | Package manager and workspaces           |
+| ESLint      | 9.9.0   | Linting (0 warnings policy)              |
+| Prettier    | 3.3.3   | Code formatting                          |
+| Husky       | 9.1.4   | Pre-commit git hooks                     |
+| lint-staged | 15.2.7  | Run checks on staged files               |
+| Vitest      | 2.0.5   | Unit and integration tests               |
+| Playwright  | 1.46.1  | End-to-end tests                         |
+| Supertest   | 7.0.0   | API integration tests                    |
+| tsx         | 4.19.0  | TypeScript execution for dev and scripts |
 
 ---
 
@@ -809,6 +813,7 @@ npm install -g pnpm@9
 ```
 
 Verify:
+
 ```powershell
 node -v    # v20.x.x or newer
 pnpm -v    # 9.x.x
@@ -834,23 +839,23 @@ node scripts\check-env.mjs         # validates all required vars are present
 
 **What each required variable does:**
 
-| Variable | Purpose | Example |
-|---|---|---|
-| `MONGODB_URI` | Atlas connection string | `mongodb+srv://user:pass@cluster.mongodb.net/` |
-| `JWT_ACCESS_SECRET` | Signs 15-minute access tokens (≥32 chars, 96 recommended) | `<first output from gen-secrets>` |
-| `JWT_REFRESH_SECRET` | Signs 7-day refresh tokens (must differ from access secret) | `<second output from gen-secrets>` |
-| `FRONTEND_URL` | CORS allowed origin — must match exactly what the browser sees | `http://localhost:5173` |
-| `PORT` | API listen port | `4000` |
+| Variable             | Purpose                                                        | Example                                        |
+| -------------------- | -------------------------------------------------------------- | ---------------------------------------------- |
+| `MONGODB_URI`        | Atlas connection string                                        | `mongodb+srv://user:pass@cluster.mongodb.net/` |
+| `JWT_ACCESS_SECRET`  | Signs 15-minute access tokens (≥32 chars, 96 recommended)      | `<first output from gen-secrets>`              |
+| `JWT_REFRESH_SECRET` | Signs 7-day refresh tokens (must differ from access secret)    | `<second output from gen-secrets>`             |
+| `FRONTEND_URL`       | CORS allowed origin — must match exactly what the browser sees | `http://localhost:5173`                        |
+| `PORT`               | API listen port                                                | `4000`                                         |
 
 Optional variables for specific features:
 
-| Variable | Feature unlocked |
-|---|---|
-| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Resume and logo storage via Cloudinary CDN |
-| `GEMINI_API_KEY` | AI Assessment generation and evaluation |
-| `GEMINI_MODEL` | Override the Gemini model — set to `gemini-2.5-flash` |
-| `WEBHOOK_LMS_SECRET` | HMAC-SHA256 shared secret for LMS certification webhook (Coursera, Udemy) |
-| `WEBHOOK_ERP_SECRET` | HMAC-SHA256 shared secret for institutional ERP student sync webhook |
+| Variable                                                               | Feature unlocked                                                          |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Resume and logo storage via Cloudinary CDN                                |
+| `GEMINI_API_KEY`                                                       | AI Assessment generation and evaluation                                   |
+| `GEMINI_MODEL`                                                         | Override the Gemini model — set to`gemini-2.5-flash`                      |
+| `WEBHOOK_LMS_SECRET`                                                   | HMAC-SHA256 shared secret for LMS certification webhook (Coursera, Udemy) |
+| `WEBHOOK_ERP_SECRET`                                                   | HMAC-SHA256 shared secret for institutional ERP student sync webhook      |
 
 ### Step 4: Seed and run
 
@@ -915,6 +920,7 @@ bash scripts/setup.sh
 ```
 
 > **macOS gotcha:** `dotenv` in `apps/api/src/config/env.ts` resolves `.env` from `process.cwd()`, which is `apps/api` when run under `tsx`. If your setup script doesn't symlink `.env` automatically, run:
+>
 > ```bash
 > ln -sf ../../.env apps/api/.env
 > ln -sf ../../.env apps/web/.env
@@ -928,34 +934,34 @@ All variables belong in `.env` at the repo root. The setup scripts symlink it in
 
 > **Security rule:** never prefix a secret with `VITE_`. Every `VITE_*` variable is embedded into the browser bundle at build time. `JWT_*`, `MONGODB_*`, `CLOUDINARY_API_SECRET`, `GEMINI_API_KEY`, `WEBHOOK_LMS_SECRET`, and `WEBHOOK_ERP_SECRET` must never have a `VITE_` prefix.
 
-| Variable | Required | Default | Purpose | Safe placeholder |
-|---|---|---|---|---|
-| `NODE_ENV` | No | `development` | Runtime mode | `development` |
-| `PORT` | No | `4000` | API listen port | `4000` |
-| `API_URL` | No | — | Public API base URL | `http://localhost:4000` |
-| `FRONTEND_URL` | **Yes** | — | CORS allowed origin (exact match) | `http://localhost:5173` |
-| `MONGODB_URI` | **Yes** | — | MongoDB Atlas connection string | `mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/` |
-| `MONGODB_DB_NAME` | No | `academia_industry_portal` | Database name | `academia_industry_portal` |
-| `JWT_ACCESS_SECRET` | **Yes** | — | Signs access tokens — ≥32 chars; 96 hex recommended | `<output from gen-secrets line 1>` |
-| `JWT_REFRESH_SECRET` | **Yes** | — | Signs refresh tokens — must differ from access secret | `<output from gen-secrets line 2>` |
-| `JWT_ACCESS_EXPIRES_IN` | No | `15m` | Access token TTL | `15m` |
-| `JWT_REFRESH_EXPIRES_IN` | No | `7d` | Refresh token TTL | `7d` |
-| `COOKIE_DOMAIN` | No | `localhost` | Cookie domain scope | `localhost` |
-| `COOKIE_SECURE` | No | `false` | Require HTTPS for cookies — set `true` in production | `false` |
-| `CLOUDINARY_CLOUD_NAME` | If Cloudinary | — | Your cloud name (short slug, not a URL) | `my-cloud-name` |
-| `CLOUDINARY_API_KEY` | If Cloudinary | — | Cloudinary API key | `123456789012345` |
-| `CLOUDINARY_API_SECRET` | If Cloudinary | — | Cloudinary API secret | `<cloudinary-api-secret>` |
-| `RESUME_STORAGE` | No | `DATABASE` | `DATABASE` stores PDF binary in MongoDB; `CLOUDINARY` uploads to CDN | `DATABASE` |
-| `GEMINI_API_KEY` | If AI features | — | Google AI Studio API key | `<your-gemini-api-key>` |
-| `GEMINI_MODEL` | No | `gemini-2.5-flash` | Gemini model ID — do not use `gemini-1.5-flash`, deprecated in 2025. Change via env only — never hardcoded in code. See `docs/CHANGING_AI_MODEL.md` | `gemini-2.5-flash` |
-| `MAX_FILE_SIZE_MB` | No | `5` | Max upload size in MB | `5` |
-| `RATE_LIMIT_WINDOW_MS` | No | `900000` | Rate limit window in ms (15 minutes) | `900000` |
-| `RATE_LIMIT_MAX_REQUESTS` | No | `100` | Max requests per window per IP | `100` |
-| `LOG_LEVEL` | No | `info` | Pino log level (`trace`, `debug`, `info`, `warn`, `error`) | `info` |
-| `WEBHOOK_LMS_SECRET` | If LMS webhooks | — | HMAC-SHA256 shared secret for LMS certification events (Coursera, Udemy). Feature disabled if unset | `<lms-webhook-secret>` |
-| `WEBHOOK_ERP_SECRET` | If ERP sync | — | HMAC-SHA256 shared secret for institutional ERP student sync. Feature disabled if unset | `<erp-webhook-secret>` |
-| `VITE_API_URL` | **Yes (frontend)** | — | Backend URL visible to the browser | `http://localhost:4000/api/v1` |
-| `VITE_APP_NAME` | No | — | App name in the browser tab | `Academia-Industry Portal` |
+| Variable                  | Required           | Default                    | Purpose                                                                                                                                            | Safe placeholder                                     |
+| ------------------------- | ------------------ | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `NODE_ENV`                | No                 | `development`              | Runtime mode                                                                                                                                       | `development`                                        |
+| `PORT`                    | No                 | `4000`                     | API listen port                                                                                                                                    | `4000`                                               |
+| `API_URL`                 | No                 | —                          | Public API base URL                                                                                                                                | `http://localhost:4000`                              |
+| `FRONTEND_URL`            | **Yes**            | —                          | CORS allowed origin (exact match)                                                                                                                  | `http://localhost:5173`                              |
+| `MONGODB_URI`             | **Yes**            | —                          | MongoDB Atlas connection string                                                                                                                    | `mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/` |
+| `MONGODB_DB_NAME`         | No                 | `academia_industry_portal` | Database name                                                                                                                                      | `academia_industry_portal`                           |
+| `JWT_ACCESS_SECRET`       | **Yes**            | —                          | Signs access tokens — ≥32 chars; 96 hex recommended                                                                                                | `<output from gen-secrets line 1>`                   |
+| `JWT_REFRESH_SECRET`      | **Yes**            | —                          | Signs refresh tokens — must differ from access secret                                                                                              | `<output from gen-secrets line 2>`                   |
+| `JWT_ACCESS_EXPIRES_IN`   | No                 | `15m`                      | Access token TTL                                                                                                                                   | `15m`                                                |
+| `JWT_REFRESH_EXPIRES_IN`  | No                 | `7d`                       | Refresh token TTL                                                                                                                                  | `7d`                                                 |
+| `COOKIE_DOMAIN`           | No                 | `localhost`                | Cookie domain scope                                                                                                                                | `localhost`                                          |
+| `COOKIE_SECURE`           | No                 | `false`                    | Require HTTPS for cookies — set`true` in production                                                                                                | `false`                                              |
+| `CLOUDINARY_CLOUD_NAME`   | If Cloudinary      | —                          | Your cloud name (short slug, not a URL)                                                                                                            | `my-cloud-name`                                      |
+| `CLOUDINARY_API_KEY`      | If Cloudinary      | —                          | Cloudinary API key                                                                                                                                 | `123456789012345`                                    |
+| `CLOUDINARY_API_SECRET`   | If Cloudinary      | —                          | Cloudinary API secret                                                                                                                              | `<cloudinary-api-secret>`                            |
+| `RESUME_STORAGE`          | No                 | `DATABASE`                 | `DATABASE` stores PDF binary in MongoDB; `CLOUDINARY` uploads to CDN                                                                               | `DATABASE`                                           |
+| `GEMINI_API_KEY`          | If AI features     | —                          | Google AI Studio API key                                                                                                                           | `<your-gemini-api-key>`                              |
+| `GEMINI_MODEL`            | No                 | `gemini-2.5-flash`         | Gemini model ID — do not use`gemini-1.5-flash`, deprecated in 2025. Change via env only — never hardcoded in code. See `docs/CHANGING_AI_MODEL.md` | `gemini-2.5-flash`                                   |
+| `MAX_FILE_SIZE_MB`        | No                 | `5`                        | Max upload size in MB                                                                                                                              | `5`                                                  |
+| `RATE_LIMIT_WINDOW_MS`    | No                 | `900000`                   | Rate limit window in ms (15 minutes)                                                                                                               | `900000`                                             |
+| `RATE_LIMIT_MAX_REQUESTS` | No                 | `100`                      | Max requests per window per IP                                                                                                                     | `100`                                                |
+| `LOG_LEVEL`               | No                 | `info`                     | Pino log level (`trace`, `debug`, `info`, `warn`, `error`)                                                                                         | `info`                                               |
+| `WEBHOOK_LMS_SECRET`      | If LMS webhooks    | —                          | HMAC-SHA256 shared secret for LMS certification events (Coursera, Udemy). Feature disabled if unset                                                | `<lms-webhook-secret>`                               |
+| `WEBHOOK_ERP_SECRET`      | If ERP sync        | —                          | HMAC-SHA256 shared secret for institutional ERP student sync. Feature disabled if unset                                                            | `<erp-webhook-secret>`                               |
+| `VITE_API_URL`            | **Yes (frontend)** | —                          | Backend URL visible to the browser                                                                                                                 | `http://localhost:4000/api/v1`                       |
+| `VITE_APP_NAME`           | No                 | —                          | App name in the browser tab                                                                                                                        | `Academia-Industry Portal`                           |
 
 > `RESUME_STORAGE` is not present in `.env.example` because its default (`DATABASE`) requires no additional configuration. Add it explicitly only when switching to Cloudinary.
 
@@ -963,35 +969,35 @@ All variables belong in `.env` at the repo root. The setup scripts symlink it in
 
 ## Development Commands
 
-| Command | Effect | When to use |
-|---|---|---|
-| `pnpm dev` | Starts API (:4000) and web (:5173) in parallel | Day-to-day development |
-| `pnpm --filter @aip/api dev` | Backend only | Backend-only work |
-| `pnpm --filter @aip/web dev` | Frontend only | Frontend-only work |
-| `pnpm build` | Builds all packages then all apps in dependency order | Pre-deployment |
-| `pnpm build:api` | Builds backend to `apps/api/dist/` | Quick API build check |
-| `pnpm build:web` | Builds frontend to `apps/web/dist/` | Quick frontend build check |
-| `pnpm typecheck` | `tsc --noEmit` across all workspaces | Before committing |
-| `pnpm lint` | ESLint with `--max-warnings 0` across all workspaces | Before committing |
-| `pnpm format` | Prettier writes all TS / JSON / MD / YAML | Code hygiene |
-| `pnpm format:check` | Prettier check only (no writes) | CI |
-| `pnpm test` | All unit and integration tests | Before pushing |
-| `pnpm --filter @aip/api test` | Backend tests only | After backend changes |
-| `pnpm --filter @aip/web test` | Frontend tests only | After frontend changes |
-| `pnpm test:e2e` | Playwright end-to-end (needs `pnpm dev` and `pnpm seed` running) | Feature validation |
-| `pnpm seed` | **Deletes every collection**, including accounts created through signup, then repopulates demo data. Refused when `NODE_ENV=production`, and refused for a non-local `MONGODB_URI` unless you pass `--force` (or set `SEED_FORCE=1`) | After a DB reset |
-| `pnpm start:api` | Runs compiled `apps/api/dist/server.js` | Production API |
-| `pnpm --filter @aip/web preview` | Serves built `apps/web/dist/` | Production build check |
-| `pnpm clean` | Removes all `dist/` and `node_modules/` | Full reset |
+| Command                          | Effect                                                                                                                                                                                                                               | When to use                |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------- |
+| `pnpm dev`                       | Starts API (:4000) and web (:5173) in parallel                                                                                                                                                                                       | Day-to-day development     |
+| `pnpm --filter @aip/api dev`     | Backend only                                                                                                                                                                                                                         | Backend-only work          |
+| `pnpm --filter @aip/web dev`     | Frontend only                                                                                                                                                                                                                        | Frontend-only work         |
+| `pnpm build`                     | Builds all packages then all apps in dependency order                                                                                                                                                                                | Pre-deployment             |
+| `pnpm build:api`                 | Builds backend to`apps/api/dist/`                                                                                                                                                                                                    | Quick API build check      |
+| `pnpm build:web`                 | Builds frontend to`apps/web/dist/`                                                                                                                                                                                                   | Quick frontend build check |
+| `pnpm typecheck`                 | `tsc --noEmit` across all workspaces                                                                                                                                                                                                 | Before committing          |
+| `pnpm lint`                      | ESLint with`--max-warnings 0` across all workspaces                                                                                                                                                                                  | Before committing          |
+| `pnpm format`                    | Prettier writes all TS / JSON / MD / YAML                                                                                                                                                                                            | Code hygiene               |
+| `pnpm format:check`              | Prettier check only (no writes)                                                                                                                                                                                                      | CI                         |
+| `pnpm test`                      | All unit and integration tests                                                                                                                                                                                                       | Before pushing             |
+| `pnpm --filter @aip/api test`    | Backend tests only                                                                                                                                                                                                                   | After backend changes      |
+| `pnpm --filter @aip/web test`    | Frontend tests only                                                                                                                                                                                                                  | After frontend changes     |
+| `pnpm test:e2e`                  | Playwright end-to-end (needs`pnpm dev` and `pnpm seed` running)                                                                                                                                                                      | Feature validation         |
+| `pnpm seed`                      | **Deletes every collection**, including accounts created through signup, then repopulates demo data. Refused when `NODE_ENV=production`, and refused for a non-local `MONGODB_URI` unless you pass `--force` (or set `SEED_FORCE=1`) | After a DB reset           |
+| `pnpm start:api`                 | Runs compiled`apps/api/dist/server.js`                                                                                                                                                                                               | Production API             |
+| `pnpm --filter @aip/web preview` | Serves built`apps/web/dist/`                                                                                                                                                                                                         | Production build check     |
+| `pnpm clean`                     | Removes all`dist/` and `node_modules/`                                                                                                                                                                                               | Full reset                 |
 
 **Utility scripts:**
 
-| Script | Command | What it does |
-|---|---|---|
-| `setup.sh` | `bash scripts/setup.sh` | macOS/Linux bootstrap: Node check, pnpm install, `.env` copy, gen-secrets |
-| `setup.ps1` | `powershell -ExecutionPolicy Bypass -File scripts\setup.ps1` | Windows equivalent |
-| `gen-secrets.mjs` | `node scripts/gen-secrets.mjs` | Prints two 96-char hex secrets for JWT vars |
-| `check-env.mjs` | `node scripts/check-env.mjs` | Validates `.env` completeness and minimum secret length; exits non-zero on failure |
+| Script            | Command                                                      | What it does                                                                      |
+| ----------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| `setup.sh`        | `bash scripts/setup.sh`                                      | macOS/Linux bootstrap: Node check, pnpm install,`.env` copy, gen-secrets          |
+| `setup.ps1`       | `powershell -ExecutionPolicy Bypass -File scripts\setup.ps1` | Windows equivalent                                                                |
+| `gen-secrets.mjs` | `node scripts/gen-secrets.mjs`                               | Prints two 96-char hex secrets for JWT vars                                       |
+| `check-env.mjs`   | `node scripts/check-env.mjs`                                 | Validates`.env` completeness and minimum secret length; exits non-zero on failure |
 
 ---
 
@@ -1219,14 +1225,14 @@ Resume storage mode is controlled by the `RESUME_STORAGE` environment variable.
 
 ### Trade-offs
 
-| | DATABASE | CLOUDINARY |
-|---|---|---|
-| Setup effort | None | Requires account and 3 env vars |
-| Binary in MongoDB | Yes — counts against Atlas storage quota | No — Mongo stays lean |
-| CDN delivery | No — streams through your API server | Yes — global CDN, instant load |
-| Max file size | 5 MB (controlled by `MAX_FILE_SIZE_MB`) | Same 5 MB limit |
-| Best for | Development, small deployments | Production with many users |
-| Main gotcha | 512 MB Atlas free tier fills up with many resumes | API key needs `upload` AND `read` permissions — provisioning-only keys return 403 |
+|                   | DATABASE                                          | CLOUDINARY                                                                       |
+| ----------------- | ------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Setup effort      | None                                              | Requires account and 3 env vars                                                  |
+| Binary in MongoDB | Yes — counts against Atlas storage quota          | No — Mongo stays lean                                                            |
+| CDN delivery      | No — streams through your API server              | Yes — global CDN, instant load                                                   |
+| Max file size     | 5 MB (controlled by`MAX_FILE_SIZE_MB`)            | Same 5 MB limit                                                                  |
+| Best for          | Development, small deployments                    | Production with many users                                                       |
+| Main gotcha       | 512 MB Atlas free tier fills up with many resumes | API key needs`upload` AND `read` permissions — provisioning-only keys return 403 |
 
 > **Cloudinary permission gotcha:** If the backend log shows a Cloudinary error mentioning `actions=[create]`, your API key was provisioned without upload permissions. Go to Cloudinary Console → Settings → Access Keys and generate a full-access key, or set `RESUME_STORAGE=DATABASE` for development.
 
@@ -1236,38 +1242,38 @@ Resume storage mode is controlled by the `RESUME_STORAGE` environment variable.
 
 Access is enforced via `requireRole(...)` middleware on every protected route. Institution analytics are additionally scoped server-side to the requesting user's linked institution — they cannot query data from other institutions.
 
-| Action | STUDENT | COMPANY | ADMIN | FACULTY | INSTITUTION |
-|---|:---:|:---:|:---:|:---:|:---:|
-| Self-register | Yes | Yes | No (seed only) | Yes | No (admin-invite only) |
-| Login | Yes | Yes | Yes | Yes | Yes |
-| Edit own profile | Yes | Yes | No | Yes | Yes |
-| Post Job / Internship | No | Yes (own) | Yes | No | No |
-| Post FDP / Consultancy / Research / Faculty Internship | No | Yes | Yes | No | Yes |
-| Apply to Job / Internship | Yes | No | No | No | No |
-| Apply to FDP / Faculty Internship / Consultancy / Research | No | No | No | Yes | No |
-| Register for Collaboration Event | Yes | No | No | Yes | No |
-| Create Collaboration Event | No | Yes | Yes | No | Yes |
-| Upload Document | Yes (own) | No | No | Yes (own) | No |
-| Verify Document | No | Yes (own applicants) | Yes (all) | No | Yes (own institution) |
-| View Public Portfolio (`/portfolio/:studentId`) | Anyone | Anyone | Anyone | Anyone | Anyone |
-| Request Mentorship | Yes | No | No | Yes | No |
-| Publish MentorProfile | No | Yes | No | Yes (senior faculty) | No |
-| Accept / Decline Mentorship Request | No | Yes (own) | No | Yes (own) | No |
-| Generate AI Assessment | Yes | No | No | No | No |
-| Take Aptitude Test | Yes | No | No | No | No |
-| Manage Aptitude Question Bank | No | No | Yes | No | No |
-| View Institution Analytics | No | No | Yes (all) | No | Yes (own institution) |
-| Verify Institution | No | No | Yes | No | No |
-| Manage Institutions (CRUD) | No | No | Yes | No | No |
-| View All Audit Logs | No | No | Yes | No | No |
-| Schedule Interview | No | Yes (own applicants) | Yes | No | No |
-| Download PDF Certificate | Yes (own SELECTED) | No | Yes | Yes (own SELECTED) | No |
-| Submit Interim Report | Yes (own SELECTED) | No | No | No | No |
-| Review Interim Report / Add Feedback | No | Yes (own applicants) | No | Yes (active mentees) | No |
-| Manage Skills Catalog | No | No | Yes | No | No |
-| Manage Training Programs | No | No | Yes | No | No |
-| Trigger LMS Webhook | No | No | No | No | No (external LMS only) |
-| Trigger ERP Webhook | No | No | No | No | No (external ERP only) |
+| Action                                                     |      STUDENT       |       COMPANY        |     ADMIN      |       FACULTY        |      INSTITUTION       |
+| ---------------------------------------------------------- | :----------------: | :------------------: | :------------: | :------------------: | :--------------------: |
+| Self-register                                              |        Yes         |         Yes          | No (seed only) |         Yes          | No (admin-invite only) |
+| Login                                                      |        Yes         |         Yes          |      Yes       |         Yes          |          Yes           |
+| Edit own profile                                           |        Yes         |         Yes          |       No       |         Yes          |          Yes           |
+| Post Job / Internship                                      |         No         |      Yes (own)       |      Yes       |          No          |           No           |
+| Post FDP / Consultancy / Research / Faculty Internship     |         No         |         Yes          |      Yes       |          No          |          Yes           |
+| Apply to Job / Internship                                  |        Yes         |          No          |       No       |          No          |           No           |
+| Apply to FDP / Faculty Internship / Consultancy / Research |         No         |          No          |       No       |         Yes          |           No           |
+| Register for Collaboration Event                           |        Yes         |          No          |       No       |         Yes          |           No           |
+| Create Collaboration Event                                 |         No         |         Yes          |      Yes       |          No          |          Yes           |
+| Upload Document                                            |     Yes (own)      |          No          |       No       |      Yes (own)       |           No           |
+| Verify Document                                            |         No         | Yes (own applicants) |   Yes (all)    |          No          | Yes (own institution)  |
+| View Public Portfolio (`/portfolio/:studentId`)            |       Anyone       |        Anyone        |     Anyone     |        Anyone        |         Anyone         |
+| Request Mentorship                                         |        Yes         |          No          |       No       |         Yes          |           No           |
+| Publish MentorProfile                                      |         No         |         Yes          |       No       | Yes (senior faculty) |           No           |
+| Accept / Decline Mentorship Request                        |         No         |      Yes (own)       |       No       |      Yes (own)       |           No           |
+| Generate AI Assessment                                     |        Yes         |          No          |       No       |          No          |           No           |
+| Take Aptitude Test                                         |        Yes         |          No          |       No       |          No          |           No           |
+| Manage Aptitude Question Bank                              |         No         |          No          |      Yes       |          No          |           No           |
+| View Institution Analytics                                 |         No         |          No          |   Yes (all)    |          No          | Yes (own institution)  |
+| Verify Institution                                         |         No         |          No          |      Yes       |          No          |           No           |
+| Manage Institutions (CRUD)                                 |         No         |          No          |      Yes       |          No          |           No           |
+| View All Audit Logs                                        |         No         |          No          |      Yes       |          No          |           No           |
+| Schedule Interview                                         |         No         | Yes (own applicants) |      Yes       |          No          |           No           |
+| Download PDF Certificate                                   | Yes (own SELECTED) |          No          |      Yes       |  Yes (own SELECTED)  |           No           |
+| Submit Interim Report                                      | Yes (own SELECTED) |          No          |       No       |          No          |           No           |
+| Review Interim Report / Add Feedback                       |         No         | Yes (own applicants) |       No       | Yes (active mentees) |           No           |
+| Manage Skills Catalog                                      |         No         |          No          |      Yes       |          No          |           No           |
+| Manage Training Programs                                   |         No         |          No          |      Yes       |          No          |           No           |
+| Trigger LMS Webhook                                        |         No         |          No          |       No       |          No          | No (external LMS only) |
+| Trigger ERP Webhook                                        |         No         |          No          |       No       |          No          | No (external ERP only) |
 
 ---
 
@@ -1275,64 +1281,67 @@ Access is enforced via `requireRole(...)` middleware on every protected route. I
 
 Base URL: `http://localhost:4000/api/v1`
 
-| Prefix | Module | Description |
-|---|---|---|
-| `/health` | health | Service health check — no auth required |
-| `/auth` | auth | Register, login, logout, token refresh, `/me` |
-| `/students` | students | Student profile CRUD, summary, skills |
-| `/companies` | companies | Company profile CRUD, verification |
-| `/skills` | skills | Shared skill catalog |
-| `/jobs` | jobs | Job posting CRUD and listing |
-| `/internships` | internships | Internship posting CRUD and listing |
-| `/applications` | applications | Application lifecycle, status transitions; `POST /:id/certificate` streams PDF via pdfkit |
-| `/interviews` | interviews | Interview scheduling and management |
-| `/recommendations` | recommendations | Opportunity and training recommendations |
-| `/notifications` | notifications | In-app notifications |
-| `/training` | training | Training program catalog |
-| `/saved-opportunities` | saved-opportunities | Bookmarked opportunities |
-| `/analytics` | analytics | Admin dashboard aggregation queries |
-| `/resumes` | resumes | Resume upload and download |
-| `/ai` | ai | Gemini-powered career assistant |
-| `/admin` | admin | Admin management operations |
-| `/audit-logs` | audit | Audit log queries and filtering |
-| `/assessments` | assessments | AI assessment generate, answer, submit, evaluate |
-| `/institutions` | institutions | Public institution catalog; admin CRUD and verification |
-| `/faculty` | faculty | Faculty profile CRUD |
-| `/faculty-opportunities` | faculty-opportunities | FDP / consultancy / research / faculty internship CRUD and listing |
-| `/documents` | documents | Multipart upload, metadata list, delete; `PATCH /:id/verify` for verification queue |
-| `/portfolio/:studentId` | portfolio | Public student portfolio — no auth required |
-| `/institution-analytics/dashboard` | institution-analytics | Scoped summary metrics for the requesting institution |
-| `/institution-analytics/students` | institution-analytics | Student list and stats scoped to institution |
-| `/institution-analytics/faculty` | institution-analytics | Faculty list and stats scoped to institution |
-| `/institution-analytics/skill-gaps` | institution-analytics | Skill gap analysis for institution's students |
-| `/institution-analytics/placements` | institution-analytics | Placement breakdown for institution |
-| `/institution-analytics/fdps` | institution-analytics | FDP participation report for institution's faculty |
-| `/mentorship/profiles` | mentorship | MentorProfile CRUD — create, update, deactivate |
-| `/mentorship/requests` | mentorship | Request lifecycle: create, accept, decline, list |
-| `/mentorship/messages` | mentorship | Threaded inbox for accepted mentorship pairs |
-| `/aptitude/questions` | aptitude | Question bank CRUD (admin); student list omits `correctIndex` |
-| `/aptitude/tests` | aptitude | Test lifecycle: start, answer, submit, result |
-| `/collaboration/events` | collaboration | Collaboration event CRUD and listing |
-| `/collaboration/registrations` | events | Event registration and unregistration |
-| `/interim-reports` | interim-reports | Submit report (student), add feedback and rating (mentor) |
-| `/webhooks/lms/certificate` | webhooks | `POST` — HMAC-SHA256 verified; creates a `VERIFIED` Document from LMS course completion |
-| `/webhooks/erp/students` | webhooks | `POST` — HMAC-SHA256 verified; upserts student profiles from institutional ERP sync |
+| Prefix                              | Module                | Description                                                                              |
+| ----------------------------------- | --------------------- | ---------------------------------------------------------------------------------------- |
+| `/health`                           | health                | Service health check — no auth required                                                  |
+| `/auth`                             | auth                  | Register, login, logout, token refresh,`/me`                                             |
+| `/students`                         | students              | Student profile CRUD, summary, skills                                                    |
+| `/companies`                        | companies             | Company profile CRUD, verification                                                       |
+| `/skills`                           | skills                | Shared skill catalog                                                                     |
+| `/jobs`                             | jobs                  | Job posting CRUD and listing                                                             |
+| `/internships`                      | internships           | Internship posting CRUD and listing                                                      |
+| `/applications`                     | applications          | Application lifecycle, status transitions;`POST /:id/certificate` streams PDF via pdfkit |
+| `/interviews`                       | interviews            | Interview scheduling and management                                                      |
+| `/recommendations`                  | recommendations       | Opportunity and training recommendations                                                 |
+| `/notifications`                    | notifications         | In-app notifications                                                                     |
+| `/training`                         | training              | Training program catalog                                                                 |
+| `/saved-opportunities`              | saved-opportunities   | Bookmarked opportunities                                                                 |
+| `/analytics`                        | analytics             | Admin dashboard aggregation queries                                                      |
+| `/resumes`                          | resumes               | Resume upload and download                                                               |
+| `/ai`                               | ai                    | Gemini-powered career assistant                                                          |
+| `/admin`                            | admin                 | Admin management operations                                                              |
+| `/audit-logs`                       | audit                 | Audit log queries and filtering                                                          |
+| `/assessments`                      | assessments           | AI assessment generate, answer, submit, evaluate                                         |
+| `/institutions`                     | institutions          | Public institution catalog; admin CRUD and verification                                  |
+| `/faculty`                          | faculty               | Faculty profile CRUD                                                                     |
+| `/faculty-opportunities`            | faculty-opportunities | FDP / consultancy / research / faculty internship CRUD and listing                       |
+| `/documents`                        | documents             | Multipart upload, metadata list, delete;`PATCH /:id/verify` for verification queue       |
+| `/portfolio/:studentId`             | portfolio             | Public student portfolio — no auth required                                              |
+| `/institution-analytics/dashboard`  | institution-analytics | Scoped summary metrics for the requesting institution                                    |
+| `/institution-analytics/students`   | institution-analytics | Student list and stats scoped to institution                                             |
+| `/institution-analytics/faculty`    | institution-analytics | Faculty list and stats scoped to institution                                             |
+| `/institution-analytics/skill-gaps` | institution-analytics | Skill gap analysis for institution's students                                            |
+| `/institution-analytics/placements` | institution-analytics | Placement breakdown for institution                                                      |
+| `/institution-analytics/fdps`       | institution-analytics | FDP participation report for institution's faculty                                       |
+| `/mentorship/profiles`              | mentorship            | MentorProfile CRUD — create, update, deactivate                                          |
+| `/mentorship/requests`              | mentorship            | Request lifecycle: create, accept, decline, list                                         |
+| `/mentorship/messages`              | mentorship            | Threaded inbox for accepted mentorship pairs                                             |
+| `/aptitude/questions`               | aptitude              | Question bank CRUD (admin); student list omits`correctIndex`                             |
+| `/aptitude/tests`                   | aptitude              | Test lifecycle: start, answer, submit, result                                            |
+| `/collaboration/events`             | collaboration         | Collaboration event CRUD and listing                                                     |
+| `/collaboration/registrations`      | events                | Event registration and unregistration                                                    |
+| `/interim-reports`                  | interim-reports       | Submit report (student), add feedback and rating (mentor)                                |
+| `/webhooks/lms/certificate`         | webhooks              | `POST` — HMAC-SHA256 verified; creates a `VERIFIED` Document from LMS course completion  |
+| `/webhooks/erp/students`            | webhooks              | `POST` — HMAC-SHA256 verified; upserts student profiles from institutional ERP sync      |
 
 For detailed request/response schemas, see [`docs/api.md`](./docs/api.md).
 
 ### Standard response envelopes
 
 **Success:**
+
 ```json
 { "success": true, "data": {}, "message": "Operation successful" }
 ```
 
 **Error:**
+
 ```json
 { "success": false, "error": { "code": "VALIDATION_ERROR", "message": "...", "details": [] } }
 ```
 
 **Paginated list:**
+
 ```json
 { "items": [], "page": 1, "pageSize": 12, "total": 42, "totalPages": 4 }
 ```
@@ -1341,14 +1350,14 @@ For detailed request/response schemas, see [`docs/api.md`](./docs/api.md).
 
 ## Testing
 
-| Command | Coverage area | Notes |
-|---|---|---|
-| `pnpm --filter @aip/api test` | Backend unit + integration | Matching algorithm (deterministic), auth flows, job CRUD, application lifecycle, RBAC. Set `TEST_MONGO_URI` to run integration tests against a real DB |
-| `pnpm --filter @aip/web test` | Frontend unit | Vitest + React Testing Library — Button, Modal, Pagination, form components |
-| `pnpm test` | All workspaces | Runs both above |
-| `pnpm test:e2e` | End-to-end | Playwright — requires `pnpm dev` and `pnpm seed` running first |
-| `pnpm --filter @aip/api test:coverage` | Backend coverage report | Output in `apps/api/coverage/` |
-| `pnpm --filter @aip/web test:coverage` | Frontend coverage report | Output in `apps/web/coverage/` |
+| Command                                | Coverage area              | Notes                                                                                                                                                 |
+| -------------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm --filter @aip/api test`          | Backend unit + integration | Matching algorithm (deterministic), auth flows, job CRUD, application lifecycle, RBAC. Set`TEST_MONGO_URI` to run integration tests against a real DB |
+| `pnpm --filter @aip/web test`          | Frontend unit              | Vitest + React Testing Library — Button, Modal, Pagination, form components                                                                           |
+| `pnpm test`                            | All workspaces             | Runs both above                                                                                                                                       |
+| `pnpm test:e2e`                        | End-to-end                 | Playwright — requires`pnpm dev` and `pnpm seed` running first                                                                                         |
+| `pnpm --filter @aip/api test:coverage` | Backend coverage report    | Output in`apps/api/coverage/`                                                                                                                         |
+| `pnpm --filter @aip/web test:coverage` | Frontend coverage report   | Output in`apps/web/coverage/`                                                                                                                         |
 
 See [`docs/testing.md`](./docs/testing.md) for test architecture and how to write new tests.
 
@@ -1364,12 +1373,12 @@ pnpm --filter @aip/web preview   # serves built apps/web/dist/
 
 **Deployment targets:**
 
-| Layer | Recommended hosts |
-|---|---|
-| Frontend (`apps/web/dist/`) | Vercel, Netlify, Cloudflare Pages |
-| Backend (`apps/api/`) | Render, Railway, Fly.io, any VPS with Node 20 |
-| Database | MongoDB Atlas M0 free for dev, M10+ for production |
-| File storage | Cloudinary free tier for dev, paid plan for production traffic |
+| Layer                       | Recommended hosts                                              |
+| --------------------------- | -------------------------------------------------------------- |
+| Frontend (`apps/web/dist/`) | Vercel, Netlify, Cloudflare Pages                              |
+| Backend (`apps/api/`)       | Render, Railway, Fly.io, any VPS with Node 20                  |
+| Database                    | MongoDB Atlas M0 free for dev, M10+ for production             |
+| File storage                | Cloudinary free tier for dev, paid plan for production traffic |
 
 In production, set `NODE_ENV=production`, `COOKIE_SECURE=true`, and `COOKIE_DOMAIN` to your actual domain. All `VITE_*` vars must be set at build time in your CI environment.
 
@@ -1379,90 +1388,90 @@ In production, set `NODE_ENV=production`, `COOKIE_SECURE=true`, and `COOKIE_DOMA
 
 ### Installation
 
-| Symptom | Platform | Fix |
-|---|---|---|
-| `pnpm: command not found` | Both | `npm install -g pnpm@9` — reopen terminal after install |
-| `corepack: command not found` | Both | Corepack ships with Node ≥16.9 but some Homebrew builds omit it — use `npm install -g pnpm@9` directly |
-| `pnpm install` runs for 3+ minutes | Both | Normal on first install (~748 packages). Subsequent runs hit the pnpm content-addressed cache and finish in seconds |
-| `cannot be loaded because running scripts is disabled` | Windows | Use `powershell -ExecutionPolicy Bypass -File scripts\setup.ps1` — no permanent system policy change needed |
-| Zip extraction fails with a path-too-long error | Windows | Enable long paths: PowerShell as admin: `New-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name 'LongPathsEnabled' -Value 1 -PropertyType DWORD -Force` |
+| Symptom                                                | Platform | Fix                                                                                                                                                                              |
+| ------------------------------------------------------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm: command not found`                              | Both     | `npm install -g pnpm@9` — reopen terminal after install                                                                                                                          |
+| `corepack: command not found`                          | Both     | Corepack ships with Node ≥16.9 but some Homebrew builds omit it — use`npm install -g pnpm@9` directly                                                                            |
+| `pnpm install` runs for 3+ minutes                     | Both     | Normal on first install (~748 packages). Subsequent runs hit the pnpm content-addressed cache and finish in seconds                                                              |
+| `cannot be loaded because running scripts is disabled` | Windows  | Use`powershell -ExecutionPolicy Bypass -File scripts\setup.ps1` — no permanent system policy change needed                                                                       |
+| Zip extraction fails with a path-too-long error        | Windows  | Enable long paths: PowerShell as admin:`New-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name 'LongPathsEnabled' -Value 1 -PropertyType DWORD -Force` |
 
 ### Backend startup
 
-| Symptom | Platform | Fix |
-|---|---|---|
-| `Error: listen EADDRINUSE :::4000` | Both | Kill the old process. macOS: `lsof -iTCP:4000 -sTCP:LISTEN -P` then `kill -9 <pid>`. Windows: `netstat -ano \| findstr :4000` then `taskkill /F /PID <pid>` |
-| Backend hangs at "Connecting to MongoDB..." | Both | Verify `MONGODB_URI` in `.env`. Whitelist your IP in Atlas → Network Access. For a rotating IP use `0.0.0.0/0` (development only) |
-| `Missing required env var: MONGODB_URI` | Both | Run `node scripts/check-env.mjs` to see all missing vars. Confirm `.env` exists at repo root |
-| Backend crashes with missing JWT secret | Both | Run `node scripts/gen-secrets.mjs`, paste both outputs into `.env` as `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` (≥32 chars each) |
-| Env not loaded — "Cannot find MONGODB_URI" | macOS | `dotenv` resolves from `process.cwd()`. Run: `ln -sf ../../.env apps/api/.env && ln -sf ../../.env apps/web/.env` |
+| Symptom                                     | Platform | Fix                                                                                                                                                        |
+| ------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Error: listen EADDRINUSE :::4000`          | Both     | Kill the old process. macOS:`lsof -iTCP:4000 -sTCP:LISTEN -P` then `kill -9 <pid>`. Windows: `netstat -ano \| findstr :4000` then `taskkill /F /PID <pid>` |
+| Backend hangs at "Connecting to MongoDB..." | Both     | Verify`MONGODB_URI` in `.env`. Whitelist your IP in Atlas → Network Access. For a rotating IP use `0.0.0.0/0` (development only)                           |
+| `Missing required env var: MONGODB_URI`     | Both     | Run`node scripts/check-env.mjs` to see all missing vars. Confirm `.env` exists at repo root                                                                |
+| Backend crashes with missing JWT secret     | Both     | Run`node scripts/gen-secrets.mjs`, paste both outputs into `.env` as `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` (≥32 chars each)                         |
+| Env not loaded — "Cannot find MONGODB_URI"  | macOS    | `dotenv` resolves from `process.cwd()`. Run: `ln -sf ../../.env apps/api/.env && ln -sf ../../.env apps/web/.env`                                          |
 
 ### Frontend
 
-| Symptom | Platform | Fix |
-|---|---|---|
-| `Access to XMLHttpRequest blocked by CORS policy` in browser console | Both | Verify `FRONTEND_URL=http://localhost:5173` (not `127.0.0.1`) in backend `.env` and `VITE_API_URL=http://localhost:4000/api/v1` in frontend env. Restart both servers after editing |
-| Login succeeds but subsequent API calls return 401 | Both | Cookies are not being attached. Ensure both servers use `http://` not `https://`. Hard-reload: Cmd+Shift+R (macOS) or Ctrl+F5 (Windows) |
-| Vite HMR stops updating the page | Both | Restart: `pnpm --filter @aip/web dev` |
-| Infinite spinner after login | Both | Auth hydration issue — `useHydrateAuth` calls `/auth/me` on mount; `isBooting` should flip to `false` after the request settles. Clear browser cookies and retry. Check `apps/web/src/store/auth.ts` if it persists |
+| Symptom                                                              | Platform | Fix                                                                                                                                                                                                                |
+| -------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Access to XMLHttpRequest blocked by CORS policy` in browser console | Both     | Verify`FRONTEND_URL=http://localhost:5173` (not `127.0.0.1`) in backend `.env` and `VITE_API_URL=http://localhost:4000/api/v1` in frontend env. Restart both servers after editing                                 |
+| Login succeeds but subsequent API calls return 401                   | Both     | Cookies are not being attached. Ensure both servers use`http://` not `https://`. Hard-reload: Cmd+Shift+R (macOS) or Ctrl+F5 (Windows)                                                                             |
+| Vite HMR stops updating the page                                     | Both     | Restart:`pnpm --filter @aip/web dev`                                                                                                                                                                               |
+| Infinite spinner after login                                         | Both     | Auth hydration issue —`useHydrateAuth` calls `/auth/me` on mount; `isBooting` should flip to `false` after the request settles. Clear browser cookies and retry. Check `apps/web/src/store/auth.ts` if it persists |
 
 ### Resume upload
 
-| Symptom | Platform | Fix |
-|---|---|---|
-| "Internal server error" toast on upload | Both | Check backend logs. If you see a Cloudinary error mentioning `actions=[create]`, your API key lacks upload permissions. Either generate a full-access key in Cloudinary Console or set `RESUME_STORAGE=DATABASE` (the default) |
-| "Resume file is required" validation error | Both | The Axios instance must not set a global `Content-Type: application/json` header on multipart requests — the browser needs to auto-set the `multipart/form-data` boundary. Hard-reload to clear any stale interceptors |
+| Symptom                                    | Platform | Fix                                                                                                                                                                                                                           |
+| ------------------------------------------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "Internal server error" toast on upload    | Both     | Check backend logs. If you see a Cloudinary error mentioning`actions=[create]`, your API key lacks upload permissions. Either generate a full-access key in Cloudinary Console or set `RESUME_STORAGE=DATABASE` (the default) |
+| "Resume file is required" validation error | Both     | The Axios instance must not set a global`Content-Type: application/json` header on multipart requests — the browser needs to auto-set the `multipart/form-data` boundary. Hard-reload to clear any stale interceptors         |
 
 ### AI Assessment
 
-| Symptom | Platform | Fix |
-|---|---|---|
-| `500` — model not found on generate | Both | `gemini-1.5-flash` was deprecated by Google in 2025. Set `GEMINI_MODEL=gemini-2.5-flash` in `.env` and restart the API. The API also prints a `[env] GEMINI_MODEL=… has been retired` warning at startup whenever a key is configured alongside a retired model id, so check the first few lines of the backend log |
-| "AI service returned invalid response" | Both | Gemini occasionally wraps JSON in markdown fences. The `extractJson()` helper strips them automatically — if this error persists, check the raw Gemini response in backend logs and retry. Usually self-resolving |
-| `429 Too Many Requests` on generate | Both | Rate limit of 5 generations per hour per IP is enforced for cost control. Wait an hour. For local dev you can raise `RATE_LIMIT_MAX_REQUESTS` in `.env` temporarily |
-| Assessment score not showing on dashboard | Both | The summary endpoint returns `latestScore` only for `EVALUATED` assessments. If the student submitted but evaluation failed (Gemini timeout), the status stays `SUBMITTED` — re-submit or generate a new assessment |
+| Symptom                                   | Platform | Fix                                                                                                                                                                                                                                                                                                                 |
+| ----------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `500` — model not found on generate       | Both     | `gemini-1.5-flash` was deprecated by Google in 2025. Set `GEMINI_MODEL=gemini-2.5-flash` in `.env` and restart the API. The API also prints a `[env] GEMINI_MODEL=… has been retired` warning at startup whenever a key is configured alongside a retired model id, so check the first few lines of the backend log |
+| "AI service returned invalid response"    | Both     | Gemini occasionally wraps JSON in markdown fences. The`extractJson()` helper strips them automatically — if this error persists, check the raw Gemini response in backend logs and retry. Usually self-resolving                                                                                                    |
+| `429 Too Many Requests` on generate       | Both     | Rate limit of 5 generations per hour per IP is enforced for cost control. Wait an hour. For local dev you can raise`RATE_LIMIT_MAX_REQUESTS` in `.env` temporarily                                                                                                                                                  |
+| Assessment score not showing on dashboard | Both     | The summary endpoint returns`latestScore` only for `EVALUATED` assessments. If the student submitted but evaluation failed (Gemini timeout), the status stays `SUBMITTED` — re-submit or generate a new assessment                                                                                                  |
 
 ### PDF certificates and documents
 
-| Symptom | Platform | Fix |
-|---|---|---|
-| PDF certificate download returns 503 | Both | `pdfkit` is declared in `apps/api/package.json` but may not be installed if `pnpm install` was skipped. Run `pnpm install` from the repo root and restart the API |
-| "Cannot download certificate — no interim reports" error | Both | At least one interim report must be submitted (and not rejected) for a `SELECTED` application before the certificate endpoint will stream a PDF |
+| Symptom                                                  | Platform | Fix                                                                                                                                                               |
+| -------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PDF certificate download returns 503                     | Both     | `pdfkit` is declared in `apps/api/package.json` but may not be installed if `pnpm install` was skipped. Run `pnpm install` from the repo root and restart the API |
+| "Cannot download certificate — no interim reports" error | Both     | At least one interim report must be submitted (and not rejected) for a`SELECTED` application before the certificate endpoint will stream a PDF                    |
 
 ### Webhooks
 
-| Symptom | Platform | Fix |
-|---|---|---|
-| LMS or ERP webhook returns `401 Unauthorized` | Both | HMAC signature mismatch. Verify that `WEBHOOK_LMS_SECRET` or `WEBHOOK_ERP_SECRET` in `.env` matches the shared secret configured on the sender's side. Restart the API after changing secrets |
-| LMS or ERP webhook returns `503` | Both | The feature is disabled when the matching secret env var is absent. Set `WEBHOOK_LMS_SECRET` (for LMS) or `WEBHOOK_ERP_SECRET` (for ERP) in `.env` and restart the API |
+| Symptom                                      | Platform | Fix                                                                                                                                                                                          |
+| -------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LMS or ERP webhook returns`401 Unauthorized` | Both     | HMAC signature mismatch. Verify that`WEBHOOK_LMS_SECRET` or `WEBHOOK_ERP_SECRET` in `.env` matches the shared secret configured on the sender's side. Restart the API after changing secrets |
+| LMS or ERP webhook returns`503`              | Both     | The feature is disabled when the matching secret env var is absent. Set`WEBHOOK_LMS_SECRET` (for LMS) or `WEBHOOK_ERP_SECRET` (for ERP) in `.env` and restart the API                        |
 
 ### Institution dashboard
 
-| Symptom | Platform | Fix |
-|---|---|---|
-| Institution dashboard shows zero students or faculty | Both | The institution user must be linked to a verified institution. After login, confirm the user's profile contains a valid institution ObjectId. Re-run `pnpm seed` to restore default linkage for `registrar@demo.edu` |
-| Institution user cannot see documents from another institution's students | Both | Intentional — document verification is scoped to the institution's own students and faculty. Only ADMIN users can verify documents cross-institution |
+| Symptom                                                                   | Platform | Fix                                                                                                                                                                                                                 |
+| ------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Institution dashboard shows zero students or faculty                      | Both     | The institution user must be linked to a verified institution. After login, confirm the user's profile contains a valid institution ObjectId. Re-run`pnpm seed` to restore default linkage for `registrar@demo.edu` |
+| Institution user cannot see documents from another institution's students | Both     | Intentional — document verification is scoped to the institution's own students and faculty. Only ADMIN users can verify documents cross-institution                                                                |
 
 ### Role restrictions
 
-| Symptom | Platform | Fix |
-|---|---|---|
-| Faculty receives 403 when applying to a Job posting | Both | Intentional — faculty can only apply to opportunities with `opportunityType` in FACULTY_INTERNSHIP, FDP, CONSULTANCY, COLLABORATIVE_RESEARCH. Regular JOB and INTERNSHIP postings are restricted to students |
-| INSTITUTION user cannot self-register | Both | Intentional — institution accounts are created by an admin who creates the institution record, verifies it, then sends an invite. There is no self-registration path for the INSTITUTION role |
+| Symptom                                             | Platform | Fix                                                                                                                                                                                                         |
+| --------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Faculty receives 403 when applying to a Job posting | Both     | Intentional — faculty can only apply to opportunities with`opportunityType` in FACULTY_INTERNSHIP, FDP, CONSULTANCY, COLLABORATIVE_RESEARCH. Regular JOB and INTERNSHIP postings are restricted to students |
+| INSTITUTION user cannot self-register               | Both     | Intentional — institution accounts are created by an admin who creates the institution record, verifies it, then sends an invite. There is no self-registration path for the INSTITUTION role               |
 
 ### Windows-specific
 
-| Symptom | Fix |
-|---|---|
-| `warning: LF will be replaced by CRLF` during install | Harmless. Optionally: `git config --global core.autocrlf true` |
-| `winget` not found | Update Windows or install from the Microsoft Store. Alternative: download Node from [nodejs.org](https://nodejs.org) directly |
+| Symptom                                               | Fix                                                                                                                          |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `warning: LF will be replaced by CRLF` during install | Harmless. Optionally:`git config --global core.autocrlf true`                                                                |
+| `winget` not found                                    | Update Windows or install from the Microsoft Store. Alternative: download Node from[nodejs.org](https://nodejs.org) directly |
 
 ### macOS-specific
 
-| Symptom | Fix |
-|---|---|
-| `which node` or `which pnpm` points to the wrong version | Ensure your shell PATH prioritizes Homebrew or nvm: add `eval "$(brew shellenv)"` or the nvm init snippet to `~/.zshrc`, then `source ~/.zshrc` |
-| `sed: illegal option -- i` inside scripts | macOS `sed` requires `-i ''`. Not relevant unless you are modifying the setup scripts themselves |
+| Symptom                                                  | Fix                                                                                                                                            |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `which node` or `which pnpm` points to the wrong version | Ensure your shell PATH prioritizes Homebrew or nvm: add`eval "$(brew shellenv)"` or the nvm init snippet to `~/.zshrc`, then `source ~/.zshrc` |
+| `sed: illegal option -- i` inside scripts                | macOS`sed` requires `-i ''`. Not relevant unless you are modifying the setup scripts themselves                                                |
 
 ---
 
@@ -1470,21 +1479,21 @@ In production, set `NODE_ENV=production`, `COOKIE_SECURE=true`, and `COOKIE_DOMA
 
 Populated by `pnpm seed`. All passwords are `Demo@1234`.
 
-| Role | Email | Password | Notes |
-|---|---|---|---|
-| Admin | `admin@aip.demo` | `Demo@1234` | Full platform access |
-| Company | `hr@demotech.demo` | `Demo@1234` | Demo Technologies |
-| Company | `careers@democloud.demo` | `Demo@1234` | Demo Cloud |
-| Company | `hiring@demofintech.demo` | `Demo@1234` | Demo Fintech |
-| Student | `arya@demo.edu` | `Demo@1234` | Demo University |
-| Student | `rohan@demo.edu` | `Demo@1234` | Demo University |
-| Student | `priya@demo.edu` | `Demo@1234` | Demo University |
-| Student | `sneha@demo.edu` | `Demo@1234` | Demo University |
-| Student | `karan@demo.edu` | `Demo@1234` | Demo University |
-| Student | `divya@demo.edu` | `Demo@1234` | Demo University |
-| Faculty | `dr.sharma@demo.edu` | `Demo@1234` | Prof, CSE — Demo University |
-| Faculty | `dr.iyer@demo.edu` | `Demo@1234` | Assoc Prof, Mechanical — Demo University |
-| Institution | `registrar@demo.edu` | `Demo@1234` | Demo University registrar |
+| Role        | Email                     | Password    | Notes                                    |
+| ----------- | ------------------------- | ----------- | ---------------------------------------- |
+| Admin       | `admin@aip.demo`          | `Demo@1234` | Full platform access                     |
+| Company     | `hr@demotech.demo`        | `Demo@1234` | Demo Technologies                        |
+| Company     | `careers@democloud.demo`  | `Demo@1234` | Demo Cloud                               |
+| Company     | `hiring@demofintech.demo` | `Demo@1234` | Demo Fintech                             |
+| Student     | `arya@demo.edu`           | `Demo@1234` | Demo University                          |
+| Student     | `rohan@demo.edu`          | `Demo@1234` | Demo University                          |
+| Student     | `priya@demo.edu`          | `Demo@1234` | Demo University                          |
+| Student     | `sneha@demo.edu`          | `Demo@1234` | Demo University                          |
+| Student     | `karan@demo.edu`          | `Demo@1234` | Demo University                          |
+| Student     | `divya@demo.edu`          | `Demo@1234` | Demo University                          |
+| Faculty     | `dr.sharma@demo.edu`      | `Demo@1234` | Prof, CSE — Demo University              |
+| Faculty     | `dr.iyer@demo.edu`        | `Demo@1234` | Assoc Prof, Mechanical — Demo University |
+| Institution | `registrar@demo.edu`      | `Demo@1234` | Demo University registrar                |
 
 > All seed records are labeled "Demo" — not real companies, not real people. Do not deploy to a public environment without changing or removing these accounts and rotating all secrets.
 
@@ -1492,12 +1501,12 @@ Populated by `pnpm seed`. All passwords are `Demo@1234`.
 
 ## Repo Scripts
 
-| Script | Command | What it does |
-|---|---|---|
-| `setup.sh` | `bash scripts/setup.sh` | macOS/Linux bootstrap: verifies Node 20+, installs pnpm@9, runs `pnpm install`, copies `.env.example` to `.env`, and calls `gen-secrets` |
-| `setup.ps1` | `powershell -ExecutionPolicy Bypass -File scripts\setup.ps1` | Windows equivalent of `setup.sh` |
-| `gen-secrets.mjs` | `node scripts/gen-secrets.mjs` | Prints two independent 96-char hex strings — paste them as `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` in `.env` |
-| `check-env.mjs` | `node scripts/check-env.mjs` | Reads `.env`, verifies all required variables are present and that JWT secrets meet the 32-char minimum. Exits non-zero on failure so it can gate CI |
+| Script            | Command                                                      | What it does                                                                                                                                        |
+| ----------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `setup.sh`        | `bash scripts/setup.sh`                                      | macOS/Linux bootstrap: verifies Node 20+, installs pnpm@9, runs`pnpm install`, copies `.env.example` to `.env`, and calls `gen-secrets`             |
+| `setup.ps1`       | `powershell -ExecutionPolicy Bypass -File scripts\setup.ps1` | Windows equivalent of`setup.sh`                                                                                                                     |
+| `gen-secrets.mjs` | `node scripts/gen-secrets.mjs`                               | Prints two independent 96-char hex strings — paste them as`JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` in `.env`                                    |
+| `check-env.mjs`   | `node scripts/check-env.mjs`                                 | Reads`.env`, verifies all required variables are present and that JWT secrets meet the 32-char minimum. Exits non-zero on failure so it can gate CI |
 
 ---
 
@@ -1505,18 +1514,18 @@ Populated by `pnpm seed`. All passwords are `Demo@1234`.
 
 Deep-dive documentation lives in [`docs/`](./docs/):
 
-| File | Contents |
-|---|---|
-| [`docs/architecture.md`](./docs/architecture.md) | Full backend and frontend architecture, middleware stack, module patterns, and design decisions |
-| [`docs/api.md`](./docs/api.md) | Detailed request/response schemas for every endpoint |
-| [`docs/data-model.md`](./docs/data-model.md) | Extended ER diagram, index strategy, and data evolution notes |
-| [`docs/frontend.md`](./docs/frontend.md) | Component structure, routing, state management, and TanStack Query patterns |
-| [`docs/matching.md`](./docs/matching.md) | Skill-matching algorithm: scoring formula, gap analysis, and edge cases |
-| [`docs/testing.md`](./docs/testing.md) | Test architecture, how to write new tests, and CI configuration |
-| [`docs/ai.md`](./docs/ai.md) | Gemini integration details, exact prompt templates, error handling, and cost controls |
-| [`docs/CHANGING_AI_MODEL.md`](./docs/CHANGING_AI_MODEL.md) | How to switch Gemini models via env only — no code changes required |
-| [`docs/GETTING_STARTED_WINDOWS.md`](./docs/GETTING_STARTED_WINDOWS.md) | Step-by-step Windows onboarding with Atlas, Cloudinary, and Gemini setup walkthroughs |
-| [`docs/GETTING_STARTED_MAC.md`](./docs/GETTING_STARTED_MAC.md) | Step-by-step macOS onboarding |
+| File                                                                   | Contents                                                                                        |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| [`docs/architecture.md`](./docs/architecture.md)                       | Full backend and frontend architecture, middleware stack, module patterns, and design decisions |
+| [`docs/api.md`](./docs/api.md)                                         | Detailed request/response schemas for every endpoint                                            |
+| [`docs/data-model.md`](./docs/data-model.md)                           | Extended ER diagram, index strategy, and data evolution notes                                   |
+| [`docs/frontend.md`](./docs/frontend.md)                               | Component structure, routing, state management, and TanStack Query patterns                     |
+| [`docs/matching.md`](./docs/matching.md)                               | Skill-matching algorithm: scoring formula, gap analysis, and edge cases                         |
+| [`docs/testing.md`](./docs/testing.md)                                 | Test architecture, how to write new tests, and CI configuration                                 |
+| [`docs/ai.md`](./docs/ai.md)                                           | Gemini integration details, exact prompt templates, error handling, and cost controls           |
+| [`docs/CHANGING_AI_MODEL.md`](./docs/CHANGING_AI_MODEL.md)             | How to switch Gemini models via env only — no code changes required                             |
+| [`docs/GETTING_STARTED_WINDOWS.md`](./docs/GETTING_STARTED_WINDOWS.md) | Step-by-step Windows onboarding with Atlas, Cloudinary, and Gemini setup walkthroughs           |
+| [`docs/GETTING_STARTED_MAC.md`](./docs/GETTING_STARTED_MAC.md)         | Step-by-step macOS onboarding                                                                   |
 
 ---
 
@@ -1527,11 +1536,13 @@ Deep-dive documentation lives in [`docs/`](./docs/):
 **Commits:** Conventional commit style is preferred (`feat:`, `fix:`, `chore:`, `docs:`, `refactor:`) but not enforced by CI hooks.
 
 **PR checklist before opening:**
+
 - `pnpm typecheck` — all workspaces must pass with zero errors
 - `pnpm test` — all unit and integration tests must pass
 - `pnpm lint` — zero ESLint warnings (the `--max-warnings 0` flag is enforced)
 
 **Code style:**
+
 - No `any` — use explicit types or `unknown`
 - ESM only — no `require()` or `module.exports`
 - Comments only for non-obvious constraints, subtle invariants, or third-party workarounds — not for explaining what the code does

@@ -11,12 +11,7 @@ vi.mock('../../../models', () => ({
   TrainingProgram: { find: vi.fn() },
 }));
 
-import {
-  Application,
-  Job,
-  StudentProfile,
-  StudentSkill,
-} from '../../../models';
+import { Application, Job, StudentProfile, StudentSkill } from '../../../models';
 import { recommendJobs } from '../recommendations.service';
 
 interface Chain<T> {
@@ -83,9 +78,18 @@ function mockProfile(overrides: Partial<typeof DEFAULT_PROFILE> = {}): void {
   );
 }
 
-function mockStudentSkills(skillIds: string[]): void {
+function mockStudentSkills(
+  skillIds: string[],
+  proficiencies?: Array<{ skillId: string; proficiency: string }>,
+): void {
+  const profMap = new Map((proficiencies ?? []).map((p) => [p.skillId, p.proficiency]));
   vi.mocked(StudentSkill.find).mockReturnValue(
-    query(skillIds.map((s) => ({ skill: s }))) as never,
+    query(
+      skillIds.map((s) => ({
+        skill: s,
+        proficiency: profMap.get(s) ?? 'INTERMEDIATE',
+      })),
+    ) as never,
   );
 }
 
@@ -138,12 +142,8 @@ describe('recommendJobs', () => {
     const result = await recommendJobs(USER_ID, {});
     const titles = result.items.map((r) => r.job.title);
     expect(titles).toEqual(['High', 'Mid', 'Low']);
-    expect(result.items[0]!.matchResult.score).toBeGreaterThan(
-      result.items[1]!.matchResult.score,
-    );
-    expect(result.items[1]!.matchResult.score).toBeGreaterThan(
-      result.items[2]!.matchResult.score,
-    );
+    expect(result.items[0]!.matchResult.score).toBeGreaterThan(result.items[1]!.matchResult.score);
+    expect(result.items[1]!.matchResult.score).toBeGreaterThan(result.items[2]!.matchResult.score);
   });
 
   it('marks eligible=false when student CGPA is below minCgpa', async () => {
@@ -306,9 +306,7 @@ describe('recommendJobs', () => {
     it('omits a skill that has no resolvable name rather than showing its id', async () => {
       const orphan = objId();
       mockStudentSkills([]);
-      mockJobs([
-        { ...makeJob(), requiredSkills: [{ _id: orphan }] } as unknown as JobRow,
-      ]);
+      mockJobs([{ ...makeJob(), requiredSkills: [{ _id: orphan }] } as unknown as JobRow]);
       const result = await recommendJobs(USER_ID, {});
       expect(result.items[0]!.missingSkills).toEqual([]);
       // The score is still computed from the id, so the gap is not hidden.
@@ -328,6 +326,71 @@ describe('recommendJobs', () => {
       const item = result.items[0]!;
       const names = [...item.matchedSkills, ...item.missingSkills].map((s) => s.name);
       expect(names).toEqual(['typescript']);
+    });
+  });
+
+  // Phase 4: per-skill proficiency gaps. The recommendation card uses these
+  // to show "Level up" warnings without an additional round trip.
+  describe('proficiencyGaps', () => {
+    it('reports a missing gap when the student has not added the required skill', async () => {
+      const missing = objId();
+      mockStudentSkills([]);
+      mockJobs([
+        {
+          ...makeJob(),
+          requiredSkills: [{ _id: missing, name: 'kubernetes' }],
+        } as unknown as JobRow,
+      ]);
+      const result = await recommendJobs(USER_ID, {});
+      const item = result.items[0]!;
+      expect(item.proficiencyGaps).toHaveLength(1);
+      expect(item.proficiencyGaps[0]).toMatchObject({
+        id: missing,
+        name: 'kubernetes',
+        studentLevel: null,
+        missing: true,
+      });
+    });
+
+    it('reports a level-up gap when student proficiency is below the inferred required level', async () => {
+      const skillId = objId();
+      mockStudentSkills([skillId], [{ skillId, proficiency: 'BEGINNER' }]);
+      mockJobs([
+        {
+          ...makeJob(),
+          requiredSkills: [{ _id: skillId, name: 'Python' }],
+        } as unknown as JobRow,
+      ]);
+      const result = await recommendJobs(USER_ID, {});
+      const item = result.items[0]!;
+      expect(item.proficiencyGaps).toHaveLength(1);
+      expect(item.proficiencyGaps[0]).toMatchObject({
+        id: skillId,
+        name: 'Python',
+        studentLevel: 'BEGINNER',
+        missing: false,
+        gapLevels: 2, // BEGINNER (1) → ADVANCED (3)
+      });
+    });
+
+    it('reports no gap when the student is at EXPERT level', async () => {
+      const skillId = objId();
+      mockStudentSkills([skillId], [{ skillId, proficiency: 'EXPERT' }]);
+      mockJobs([
+        {
+          ...makeJob(),
+          requiredSkills: [{ _id: skillId, name: 'Rust' }],
+        } as unknown as JobRow,
+      ]);
+      const result = await recommendJobs(USER_ID, {});
+      expect(result.items[0]!.proficiencyGaps).toEqual([]);
+    });
+
+    it('returns an empty gaps list when the opportunity has no required skills', async () => {
+      mockStudentSkills([objId()], []);
+      mockJobs([makeJob({ requiredSkills: [] })]);
+      const result = await recommendJobs(USER_ID, {});
+      expect(result.items[0]!.proficiencyGaps).toEqual([]);
     });
   });
 });

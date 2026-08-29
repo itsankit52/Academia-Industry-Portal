@@ -396,6 +396,7 @@ interface StudentSeed {
   preferredRoles: string[];
   preferredLocations: string[];
   skills: Array<{ name: string; proficiency: Proficiency; years: number }>;
+  institutionCode: string;
 }
 
 const STUDENT_SEEDS: StudentSeed[] = [
@@ -413,6 +414,7 @@ const STUDENT_SEEDS: StudentSeed[] = [
     bio: 'Frontend-heavy full-stack engineer who enjoys building fast, accessible React apps with strong type safety and clean API design.',
     preferredRoles: ['Frontend Engineer', 'Full-Stack Developer'],
     preferredLocations: ['Bengaluru, India', 'Remote'],
+    institutionCode: 'DEMOUNIV',
     skills: [
       { name: 'React', proficiency: 'ADVANCED', years: 3 },
       { name: 'TypeScript', proficiency: 'ADVANCED', years: 3 },
@@ -437,6 +439,7 @@ const STUDENT_SEEDS: StudentSeed[] = [
     bio: 'Backend developer focused on Node.js and Python APIs, with hands-on experience running services in Docker and AWS.',
     preferredRoles: ['Backend Engineer', 'Platform Engineer'],
     preferredLocations: ['Pune, India', 'Hyderabad, India'],
+    institutionCode: 'DEMOUNIV',
     skills: [
       { name: 'Node.js', proficiency: 'ADVANCED', years: 3 },
       { name: 'Express', proficiency: 'ADVANCED', years: 2 },
@@ -462,6 +465,7 @@ const STUDENT_SEEDS: StudentSeed[] = [
     bio: 'Aspiring ML engineer with strong math foundations and applied experience in signal processing and computer vision projects.',
     preferredRoles: ['ML Engineer', 'Data Scientist'],
     preferredLocations: ['Chennai, India', 'Bengaluru, India', 'Remote'],
+    institutionCode: 'DEMONIT',
     skills: [
       { name: 'Python', proficiency: 'ADVANCED', years: 3 },
       { name: 'TensorFlow', proficiency: 'INTERMEDIATE', years: 2 },
@@ -487,6 +491,7 @@ const STUDENT_SEEDS: StudentSeed[] = [
     bio: 'Full-stack developer with recent experience building internal tools using Django and React.',
     preferredRoles: ['Full-Stack Developer', 'Backend Engineer'],
     preferredLocations: ['Hyderabad, India'],
+    institutionCode: 'DEMOUNIV',
     skills: [
       { name: 'Django', proficiency: 'ADVANCED', years: 2 },
       { name: 'Python', proficiency: 'ADVANCED', years: 3 },
@@ -510,6 +515,7 @@ const STUDENT_SEEDS: StudentSeed[] = [
     bio: 'Mechanical design engineer with hands-on experience in CAD tools and simulation, complemented by scripting in C++ and Python.',
     preferredRoles: ['Mechanical Design Engineer', 'CAD Engineer'],
     preferredLocations: ['Ahmedabad, India', 'Pune, India'],
+    institutionCode: 'DEMOENG',
     skills: [
       { name: 'C++', proficiency: 'INTERMEDIATE', years: 2 },
       { name: 'Python', proficiency: 'BEGINNER', years: 1 },
@@ -533,6 +539,7 @@ const STUDENT_SEEDS: StudentSeed[] = [
     bio: 'Data science undergraduate building strong foundations in statistics, SQL, and Python-based data pipelines.',
     preferredRoles: ['Data Scientist', 'Data Analyst'],
     preferredLocations: ['Kochi, India', 'Bengaluru, India', 'Remote'],
+    institutionCode: 'DEMOUNIV',
     skills: [
       { name: 'Python', proficiency: 'ADVANCED', years: 2 },
       { name: 'Pandas', proficiency: 'ADVANCED', years: 2 },
@@ -542,6 +549,54 @@ const STUDENT_SEEDS: StudentSeed[] = [
       { name: 'MySQL', proficiency: 'INTERMEDIATE', years: 1 },
       { name: 'Git', proficiency: 'INTERMEDIATE', years: 2 },
       { name: 'Communication', proficiency: 'ADVANCED', years: 2 },
+    ],
+  },
+  {
+    email: 'isha@demo.edu',
+    fullName: 'Demo Isha Verma',
+    branch: 'Information Technology',
+    graduationYear: 2025,
+    cgpa: 8.4,
+    degree: 'B.Tech',
+    semester: 7,
+    college: 'Demo National Institute',
+    city: 'Delhi',
+    state: 'Delhi',
+    bio: 'Cloud and DevOps focused engineer with strong foundations in containerization and CI/CD.',
+    preferredRoles: ['DevOps Engineer', 'Cloud Engineer'],
+    preferredLocations: ['Delhi, India', 'Remote'],
+    institutionCode: 'DEMONIT',
+    skills: [
+      { name: 'AWS', proficiency: 'ADVANCED', years: 2 },
+      { name: 'Docker', proficiency: 'ADVANCED', years: 2 },
+      { name: 'Kubernetes', proficiency: 'INTERMEDIATE', years: 1 },
+      { name: 'CI/CD', proficiency: 'ADVANCED', years: 2 },
+      { name: 'Python', proficiency: 'INTERMEDIATE', years: 2 },
+      { name: 'Git', proficiency: 'ADVANCED', years: 3 },
+    ],
+  },
+  {
+    email: 'rahul@demo.edu',
+    fullName: 'Demo Rahul Singh',
+    branch: 'Computer Science',
+    graduationYear: 2026,
+    cgpa: 7.9,
+    degree: 'B.Tech',
+    semester: 5,
+    college: 'Demo Business School of Tech',
+    city: 'Jaipur',
+    state: 'Rajasthan',
+    bio: 'Mobile-first developer with a strong product sense and hands-on experience in cross-platform frameworks.',
+    preferredRoles: ['Mobile Developer', 'Frontend Developer'],
+    preferredLocations: ['Jaipur, India', 'Remote'],
+    institutionCode: 'DEMOBST',
+    skills: [
+      { name: 'React Native', proficiency: 'ADVANCED', years: 2 },
+      { name: 'Flutter', proficiency: 'INTERMEDIATE', years: 1 },
+      { name: 'JavaScript', proficiency: 'ADVANCED', years: 3 },
+      { name: 'TypeScript', proficiency: 'INTERMEDIATE', years: 2 },
+      { name: 'Git', proficiency: 'INTERMEDIATE', years: 2 },
+      { name: 'Teamwork', proficiency: 'ADVANCED', years: 3 },
     ],
   },
 ];
@@ -982,6 +1037,7 @@ interface FacultySeed {
   bio: string;
   city: string;
   state: string;
+  institutionCode: string;
 }
 
 const FACULTY_SEEDS: FacultySeed[] = [
@@ -989,23 +1045,61 @@ const FACULTY_SEEDS: FacultySeed[] = [
     email: 'dr.sharma@demo.edu',
     fullName: 'Dr. Anita Sharma',
     designation: 'Professor',
-    department: 'CSE',
+    department: 'Computer Science',
     qualifications: ['Ph.D. Computer Science', 'M.Tech CSE'],
     researchInterests: ['Distributed Systems', 'Machine Learning', 'Databases'],
     bio: 'Professor of Computer Science with 15+ years of teaching and industry-linked research experience.',
     city: 'Bengaluru',
     state: 'Karnataka',
+    institutionCode: 'DEMOUNIV',
   },
   {
     email: 'dr.iyer@demo.edu',
     fullName: 'Dr. Rajesh Iyer',
     designation: 'Associate Professor',
-    department: 'Mechanical',
+    department: 'Mechanical Engineering',
     qualifications: ['Ph.D. Mechanical Engineering', 'M.E. Design Engineering'],
     researchInterests: ['Robotics', 'Manufacturing Systems', 'CAD Automation'],
     bio: 'Associate Professor with an active research agenda in robotics and manufacturing systems.',
     city: 'Bengaluru',
     state: 'Karnataka',
+    institutionCode: 'DEMOUNIV',
+  },
+  {
+    email: 'dr.mehta@nit.edu',
+    fullName: 'Dr. Priya Mehta',
+    designation: 'Associate Professor',
+    department: 'Information Technology',
+    qualifications: ['Ph.D. Computer Science', 'M.Tech IT'],
+    researchInterests: ['Cloud Computing', 'Big Data', 'IoT'],
+    bio: 'Associate Professor specializing in cloud infrastructure and distributed computing systems.',
+    city: 'Delhi',
+    state: 'Delhi',
+    institutionCode: 'DEMONIT',
+  },
+  {
+    email: 'dr.kapoor@nit.edu',
+    fullName: 'Dr. Vikram Kapoor',
+    designation: 'Professor',
+    department: 'Electronics & Communication',
+    qualifications: ['Ph.D. Signal Processing', 'M.Tech ECE'],
+    researchInterests: ['Signal Processing', 'Wireless Communication', 'Embedded Systems'],
+    bio: 'Professor with expertise in signal processing and embedded systems, mentoring 50+ student projects.',
+    city: 'Delhi',
+    state: 'Delhi',
+    institutionCode: 'DEMONIT',
+  },
+  {
+    email: 'dr.rao@eng.edu',
+    fullName: 'Dr. Sunita Rao',
+    designation: 'Professor',
+    department: 'Computer Science',
+    qualifications: ['Ph.D. Computer Science', 'M.S. Software Engineering'],
+    researchInterests: ['Software Engineering', 'Agile Practices', 'DevOps'],
+    bio: 'Professor of Practice focused on bridging academic curriculum with industry software engineering.',
+    city: 'Jaipur',
+    state: 'Rajasthan',
+    institutionCode: 'DEMOBST',
   },
 ];
 
@@ -1013,8 +1107,31 @@ interface CreatedFaculty extends CreatedUser {
   facultyProfileId: Types.ObjectId;
 }
 
-async function seedInstitution(): Promise<Types.ObjectId> {
-  const doc = await Institution.create({
+interface InstitutionSeed {
+  name: string;
+  code: string;
+  domain: string;
+  address: string;
+  city: string;
+  state: string;
+  contactEmail: string;
+  registrarEmail: string;
+}
+
+/**
+ * Four demo institutions cover the multi-tenant paths the dashboard exercises:
+ *   - DEMOUNIV: the primary institution used by the existing flows (faculty
+ *     demo data, registrar account, faculty opportunities). Most students and
+ *     faculty continue to live here so demo content stays realistic.
+ *   - DEMONIT: second nationally-known institution with its own registrar and
+ *     faculty, exercising the cross-tenant isolation paths.
+ *   - DEMOENG: engineering college used to show smaller department sizes in
+ *     the dashboard charts.
+ *   - DEMOBST: business-school-style institution with a distinct prefix so the
+ *     "institution filter" exercises in the UI have more than one option.
+ */
+const INSTITUTION_SEEDS: InstitutionSeed[] = [
+  {
     name: 'Demo University',
     code: 'DEMOUNIV',
     domain: 'demo.edu',
@@ -1022,21 +1139,69 @@ async function seedInstitution(): Promise<Types.ObjectId> {
     city: 'Bengaluru',
     state: 'Karnataka',
     contactEmail: 'registrar@demo.edu',
-    verificationStatus: 'VERIFIED',
-    verifiedAt: new Date(),
-  });
-  return doc._id as Types.ObjectId;
+    registrarEmail: 'registrar@demo.edu',
+  },
+  {
+    name: 'Demo National Institute of Technology',
+    code: 'DEMONIT',
+    domain: 'nit.demo',
+    address: 'NIT Campus, Sector 12',
+    city: 'Delhi',
+    state: 'Delhi',
+    contactEmail: 'registrar@nit.demo',
+    registrarEmail: 'registrar@nit.demo',
+  },
+  {
+    name: 'Demo Engineering College',
+    code: 'DEMOENG',
+    domain: 'eng.demo',
+    address: 'Engineering College Road',
+    city: 'Ahmedabad',
+    state: 'Gujarat',
+    contactEmail: 'registrar@eng.demo',
+    registrarEmail: 'registrar@eng.demo',
+  },
+  {
+    name: 'Demo Business School of Technology',
+    code: 'DEMOBST',
+    domain: 'bst.demo',
+    address: 'Tech Park Phase 2',
+    city: 'Jaipur',
+    state: 'Rajasthan',
+    contactEmail: 'registrar@bst.demo',
+    registrarEmail: 'registrar@bst.demo',
+  },
+];
+
+async function seedInstitutions(): Promise<Map<string, Types.ObjectId>> {
+  const ids = new Map<string, Types.ObjectId>();
+  for (const seed of INSTITUTION_SEEDS) {
+    const doc = await Institution.create({
+      name: seed.name,
+      code: seed.code,
+      domain: seed.domain,
+      address: seed.address,
+      city: seed.city,
+      state: seed.state,
+      contactEmail: seed.contactEmail,
+      verificationStatus: 'VERIFIED',
+      verifiedAt: new Date(),
+    });
+    ids.set(seed.code, doc._id as Types.ObjectId);
+  }
+  return ids;
 }
 
 async function seedUsers(
   passwordHash: string,
-  institutionId: Types.ObjectId,
+  institutionIds: Map<string, Types.ObjectId>,
 ): Promise<{
   admin: CreatedUser;
   companies: CreatedCompany[];
   students: CreatedStudent[];
   faculty: CreatedFaculty[];
-  institutionUser: CreatedUser;
+  institutionUsers: CreatedUser[];
+  primaryInstitutionId: Types.ObjectId;
 }> {
   const admin = await User.create({
     email: 'admin@aip.demo',
@@ -1073,11 +1238,18 @@ async function seedUsers(
 
   const students: CreatedStudent[] = [];
   for (const seed of STUDENT_SEEDS) {
+    const institutionId = institutionIds.get(seed.institutionCode);
+    if (!institutionId) {
+      throw new Error(
+        `Student ${seed.email} references unknown institution code: ${seed.institutionCode}`,
+      );
+    }
     const user = await User.create({
       email: seed.email,
       passwordHash,
       role: 'STUDENT',
       isActive: true,
+      institution: institutionId,
     });
     const profile = await StudentProfile.create({
       user: user._id,
@@ -1095,6 +1267,12 @@ async function seedUsers(
 
   const faculty: CreatedFaculty[] = [];
   for (const seed of FACULTY_SEEDS) {
+    const institutionId = institutionIds.get(seed.institutionCode);
+    if (!institutionId) {
+      throw new Error(
+        `Faculty ${seed.email} references unknown institution code: ${seed.institutionCode}`,
+      );
+    }
     const user = await User.create({
       email: seed.email,
       passwordHash,
@@ -1121,23 +1299,38 @@ async function seedUsers(
     });
   }
 
-  const institutionUser = await User.create({
-    email: 'registrar@demo.edu',
-    passwordHash,
-    role: 'INSTITUTION',
-    isActive: true,
-    institution: institutionId,
-  });
+  // One institution user per institution, each linked to its own institution.
+  // The primary "registrar@demo.edu" account is preserved so existing demo
+  // documentation and login cards keep working.
+  const institutionUsers: CreatedUser[] = [];
+  for (const seed of INSTITUTION_SEEDS) {
+    const institutionId = institutionIds.get(seed.code);
+    if (!institutionId) continue;
+    const user = await User.create({
+      email: seed.registrarEmail,
+      passwordHash,
+      role: 'INSTITUTION',
+      isActive: true,
+      institution: institutionId,
+    });
+    institutionUsers.push({
+      userId: user._id as Types.ObjectId,
+      email: user.email as string,
+    });
+  }
+
+  const primaryInstitutionId = institutionIds.get('DEMOUNIV');
+  if (!primaryInstitutionId) {
+    throw new Error('Primary institution (DEMOUNIV) was not seeded');
+  }
 
   return {
     admin: { userId: admin._id as Types.ObjectId, email: admin.email as string },
     companies,
     students,
     faculty,
-    institutionUser: {
-      userId: institutionUser._id as Types.ObjectId,
-      email: institutionUser.email as string,
-    },
+    institutionUsers,
+    primaryInstitutionId,
   };
 }
 
@@ -1163,6 +1356,110 @@ async function seedStudentSkills(students: CreatedStudent[], skills: SkillMap): 
     s.skillIds = owned;
   }
   await StudentSkill.insertMany(rows);
+}
+
+/**
+ * Phase 3 — Skill Profile demo data.
+ *
+ * - Seed a single resume per student carrying the same `parsedSkills` as their
+ *   declared skills, so `buildSkillProfile` reports at least one source as
+ *   "resume" for every demo student.
+ * - Seed a single completed technical assessment per student so the
+ *   `assessment.evaluation.skillBreakdown` join returns evidence in the
+ *   profile. The scores are picked so they leave at least one skill below
+ *   70%, so the page's "skills to improve" list is non-empty for the demo.
+ *
+ * Re-runnable: every helper below uses `deleteMany` upstream so this just
+ * re-creates rows.
+ */
+async function seedResumesAndAssessments(
+  students: CreatedStudent[],
+  skills: SkillMap,
+): Promise<void> {
+  for (const s of students) {
+    const parsedSkills = s.seed.skills.map((sk) => sk.name);
+    await Resume.create({
+      student: s.studentId,
+      storageMode: 'DATABASE',
+      filename: `${s.seed.fullName.replace(/\s+/g, '_')}_Resume.pdf`,
+      mimeType: 'application/pdf',
+      sizeBytes: 124_000,
+      parsedSkills,
+      version: 1,
+    });
+
+    // Build a per-skill score: keep 2 skills strong (>=85%), one mid (60%),
+    // and one weak (40%) so the profile renders a meaningful assessment
+    // breakdown.
+    const skillRows = s.seed.skills.map((sk, idx) => {
+      const score: number = idx === 0 ? 90 : idx === 1 ? 88 : idx === 2 ? 60 : idx === 3 ? 40 : 75;
+      const maxMarks = 10;
+      return {
+        skillId: String(skillId(skills, sk.name)),
+        skillName: sk.name,
+        category: 'OTHER' as SkillCategory,
+        score,
+        maxScore: maxMarks,
+        questionCount: 1,
+        answeredCount: 1,
+      };
+    });
+
+    const totalRawScore = skillRows.reduce((sum, r) => sum + r.score, 0);
+    const totalMaxScore = skillRows.reduce((sum, r) => sum + r.maxScore, 0);
+    const totalScore = totalMaxScore > 0 ? Math.round((totalRawScore / totalMaxScore) * 100) : 0;
+
+    const evaluatedAt = daysAgo(3);
+    const skillObjectIds = s.seed.skills.map((sk) => skillId(skills, sk.name));
+    const skillNames = s.seed.skills.map((sk) => sk.name);
+
+    await Assessment.create({
+      student: s.studentId,
+      status: 'EVALUATED',
+      skills: skillObjectIds,
+      skillNames,
+      questions: s.seed.skills.map((sk, idx) => ({
+        id: `q-${idx + 1}`,
+        text: `Describe a project where you applied ${sk.name}.`,
+        targetSkills: [sk.name],
+        expectedConcepts: [],
+        maxMarks: 10,
+      })),
+      answers: s.seed.skills.map((sk, idx) => ({
+        questionId: `q-${idx + 1}`,
+        text: `Used ${sk.name} in academic + personal projects covering core concepts.`,
+        updatedAt: evaluatedAt,
+      })),
+      evaluation: {
+        perQuestion: s.seed.skills.map((sk, idx) => {
+          const score: number =
+            idx === 0 ? 9 : idx === 1 ? 8.8 : idx === 2 ? 6 : idx === 3 ? 4 : 7.5;
+          return {
+            questionId: `q-${idx + 1}`,
+            score,
+            feedback: `Demonstrated practical understanding of ${sk.name}.`,
+          };
+        }),
+        skillBreakdown: skillRows,
+        totalScore,
+        rawScore: totalRawScore,
+        maxScore: totalMaxScore,
+        overallFeedback: 'Solid grasp of core concepts across declared skills.',
+        strengths: s.seed.skills
+          .slice(0, 2)
+          .map((sk) => sk.name)
+          .join(', '),
+        weaknesses: s.seed.skills.length > 3 ? s.seed.skills[3]!.name : '',
+        evaluatedAt,
+      },
+      durationMinutes: 30,
+      questionCount: s.seed.skills.length,
+      startedAt: daysAgo(4),
+      expiresAt: daysAgo(3),
+      submittedAt: evaluatedAt,
+      generatedByModel: 'seed',
+    });
+  }
 }
 
 interface CreatedJob {
@@ -2152,20 +2449,21 @@ async function run(): Promise<void> {
     logger.info('Hashing demo password');
     const passwordHash = await hashPassword(DEMO_PASSWORD);
 
-    logger.info('Seeding institution');
-    const institutionId = await seedInstitution();
+    logger.info('Seeding institutions');
+    const institutionIds = await seedInstitutions();
 
     logger.info('Seeding skills');
     const skills = await seedSkills();
 
     logger.info('Seeding users and profiles');
-    const { admin, companies, students, faculty, institutionUser } = await seedUsers(
-      passwordHash,
-      institutionId,
-    );
+    const { admin, companies, students, faculty, institutionUsers, primaryInstitutionId } =
+      await seedUsers(passwordHash, institutionIds);
 
     logger.info('Seeding student skills');
     await seedStudentSkills(students, skills);
+
+    logger.info('Seeding resumes and assessments for skill profile demo');
+    await seedResumesAndAssessments(students, skills);
 
     logger.info('Seeding jobs');
     const jobs = await seedJobs(companies, skills);
@@ -2194,14 +2492,29 @@ async function run(): Promise<void> {
     logger.info('Seeding interim reports');
     await seedInterimReports(applications, students);
 
+    // Collaboration events and faculty opportunities live on the primary institution.
+    const primaryInstitutionUser = institutionUsers.find((u) => u.email === 'registrar@demo.edu');
+    if (!primaryInstitutionUser) {
+      throw new Error('Primary institution user registrar@demo.edu was not seeded');
+    }
+
     logger.info('Seeding collaboration events');
-    const events = await seedCollaborationEvents(admin, companies, institutionId, institutionUser);
+    const events = await seedCollaborationEvents(
+      admin,
+      companies,
+      primaryInstitutionId,
+      primaryInstitutionUser,
+    );
 
     logger.info('Seeding event registrations');
     await seedEventRegistrations(events, students);
 
     logger.info('Seeding faculty opportunities');
-    const facultyOpps = await seedFacultyOpportunities(companies, institutionId, institutionUser);
+    const facultyOpps = await seedFacultyOpportunities(
+      companies,
+      primaryInstitutionId,
+      primaryInstitutionUser,
+    );
 
     logger.info('Seeding faculty applications');
     await seedFacultyApplications(facultyOpps, faculty);

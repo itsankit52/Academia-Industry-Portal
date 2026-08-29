@@ -42,3 +42,5 @@ lerna-debug.log*
 
 # Uploads (local dev)
 apps/api/uploads/
+
+.claude

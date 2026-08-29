@@ -1,11 +1,23 @@
-import { FiBriefcase, FiCalendar, FiStar, FiAlertCircle, FiZap } from 'react-icons/fi';
-import { useNavigate } from 'react-router-dom';
+import {
+  FiBriefcase,
+  FiCalendar,
+  FiStar,
+  FiAlertCircle,
+  FiZap,
+  FiActivity,
+  FiTarget,
+  FiTrendingUp,
+  FiBookOpen,
+} from 'react-icons/fi';
+import { Link, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import PageHeader from '@/components/ui/PageHeader';
 import StatCard from '@/components/ui/StatCard';
 import Badge from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import ProgressBar from '@/components/ui/ProgressBar';
+import SkillChip from '@/components/ui/SkillChip';
 import EmptyState from '@/components/ui/EmptyState';
 import ErrorState from '@/components/ui/ErrorState';
 import { SkeletonCard } from '@/components/ui/Skeleton';
@@ -13,6 +25,7 @@ import ApplicationCard from '@/components/cards/ApplicationCard';
 import InterviewCard from '@/components/cards/InterviewCard';
 import { useStudentDashboard } from '@/hooks/queries/useStudentDashboard';
 import { useAssessmentSummary } from '@/hooks/queries/useAssessmentSummary';
+import { useSkillProfile } from '@/hooks/queries/useSkillProfile';
 import { useAuthStore } from '@/store/auth';
 
 type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info';
@@ -36,6 +49,7 @@ export default function StudentDashboard() {
   const user = useAuthStore((s) => s.user);
   const { data, isLoading, isError, refetch } = useStudentDashboard();
   const { data: assessmentSummary } = useAssessmentSummary();
+  const { data: skillProfile, isLoading: skillProfileLoading } = useSkillProfile();
 
   const firstName = user?.email.split('@')[0] ?? 'Student';
 
@@ -81,8 +95,113 @@ export default function StudentDashboard() {
             />
           </div>
 
-          {assessmentSummary && (
-            assessmentSummary.totalCount === 0 ? (
+          {/* Skill Readiness Snapshot */}
+          <Card>
+            <Card.Header>
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
+                  <FiActivity /> Skill Snapshot
+                </h2>
+                <Link
+                  to="/student/skill-profile"
+                  className="text-xs font-medium text-indigo-600 dark:text-indigo-400 no-underline hover:underline"
+                >
+                  View full profile →
+                </Link>
+              </div>
+            </Card.Header>
+            <Card.Body>
+              {skillProfileLoading ? (
+                <SkeletonCard />
+              ) : skillProfile && skillProfile.totals.totalSkills > 0 ? (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">
+                      Skill Readiness
+                    </p>
+                    <p className="text-3xl font-bold text-slate-900 dark:text-slate-100 mt-1">
+                      {skillProfile.totals.readinessScore}%
+                    </p>
+                    <ProgressBar value={skillProfile.totals.readinessScore} className="mt-2" />
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                      {skillProfile.totals.technicalCount} technical ·{' '}
+                      {skillProfile.totals.softSkillsCount} soft ·{' '}
+                      {skillProfile.totals.assessedSkillsCount} verified
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide flex items-center gap-1.5">
+                      <FiTarget /> Top Strengths
+                    </p>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {skillProfile.strengths.slice(0, 3).map((s) => (
+                        <SkillChip
+                          key={s.skill.id}
+                          name={s.skill.name}
+                          proficiency={s.proficiency}
+                          className="bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                        />
+                      ))}
+                      {skillProfile.strengths.length === 0 && (
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                          No strengths yet.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
+                      <FiTrendingUp /> Skills to Improve
+                    </p>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {(skillProfile.gaps.length > 0
+                        ? skillProfile.gaps
+                        : skillProfile.industry.topMissing
+                      )
+                        .slice(0, 3)
+                        .map((s) => {
+                          const isGap = 'proficiency' in s;
+                          const name = isGap ? s.skill.name : s.name;
+                          return (
+                            <SkillChip
+                              key={isGap ? s.skill.id : s.id}
+                              name={name}
+                              proficiency={isGap ? s.proficiency : undefined}
+                              className="bg-amber-50 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                            />
+                          );
+                        })}
+                      {skillProfile.gaps.length === 0 &&
+                        skillProfile.industry.topMissing.length === 0 && (
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                            All caught up.
+                          </span>
+                        )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                      Build your skill profile
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      Add skills, take an assessment, or upload a resume to see your readiness.
+                    </p>
+                  </div>
+                  <Link to="/student/skills">
+                    <Button size="sm" iconLeft={<FiBookOpen />}>
+                      Add skills
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </Card.Body>
+          </Card>
+
+          {assessmentSummary &&
+            (assessmentSummary.totalCount === 0 ? (
               <Card>
                 <Card.Body className="flex flex-col items-center text-center py-8 space-y-3">
                   <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-xl">
@@ -110,15 +229,23 @@ export default function StudentDashboard() {
                 </Card.Header>
                 <Card.Body className="space-y-3">
                   <div className="flex items-center justify-between gap-3">
-                    <div className={`text-4xl font-bold tabular-nums ${assessmentScoreColor(assessmentSummary.latestScore)}`}>
+                    <div
+                      className={`text-4xl font-bold tabular-nums ${assessmentScoreColor(assessmentSummary.latestScore)}`}
+                    >
                       {assessmentSummary.latestScore ?? '—'}
-                      <span className="text-base font-normal text-slate-400 dark:text-slate-500">/100</span>
+                      <span className="text-base font-normal text-slate-400 dark:text-slate-500">
+                        /100
+                      </span>
                     </div>
                     {assessmentSummary.latestStatus && (
                       <Badge
-                        variant={assessmentStatusConfig[assessmentSummary.latestStatus]?.variant ?? 'default'}
+                        variant={
+                          assessmentStatusConfig[assessmentSummary.latestStatus]?.variant ??
+                          'default'
+                        }
                       >
-                        {assessmentStatusConfig[assessmentSummary.latestStatus]?.label ?? assessmentSummary.latestStatus}
+                        {assessmentStatusConfig[assessmentSummary.latestStatus]?.label ??
+                          assessmentSummary.latestStatus}
                       </Badge>
                     )}
                   </div>
@@ -136,7 +263,9 @@ export default function StudentDashboard() {
                   )}
                   {assessmentSummary.latestDate && (
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {formatDistanceToNow(new Date(assessmentSummary.latestDate), { addSuffix: true })}
+                      {formatDistanceToNow(new Date(assessmentSummary.latestDate), {
+                        addSuffix: true,
+                      })}
                     </p>
                   )}
                   <div className="flex gap-2 pt-1">
@@ -161,8 +290,7 @@ export default function StudentDashboard() {
                   </p>
                 </Card.Footer>
               </Card>
-            )
-          )}
+            ))}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>

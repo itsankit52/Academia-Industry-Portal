@@ -7,7 +7,7 @@
  */
 
 import { Types } from 'mongoose';
-import type { OpportunityType } from '@aip/config';
+import type { OpportunityType, Proficiency } from '@aip/config';
 import type { FullMatchResult } from '@aip/types';
 import { Internship, Job, Skill, StudentProfile, StudentSkill } from '../../models';
 import { AppError } from '../../utils/AppError';
@@ -47,13 +47,19 @@ interface OpportunityDocShape {
   eligibleGradYears?: number[];
 }
 
+interface StudentSkillWithProficiency {
+  id: string;
+  name: string;
+  proficiency: Proficiency | null;
+}
+
 /**
  * Loads a student's profile + skills from MongoDB. Throws 404 if no profile
  * exists, mirroring the pattern used by the other matching endpoints.
  */
 async function loadStudentContext(userId: string): Promise<{
   profile: StudentProfileShape;
-  skills: { id: string; name: string }[];
+  skills: StudentSkillWithProficiency[];
 }> {
   // Use the same non-lean pattern as loadStudentSkillIds so that test mocks
   // (which return plain objects) keep working without needing to add .lean().
@@ -62,18 +68,20 @@ async function loadStudentContext(userId: string): Promise<{
   const profile = profileDoc as unknown as StudentProfileShape;
 
   const studentSkillRows = await StudentSkill.find({ student: profile._id })
-    .select('skill')
+    .select('skill proficiency')
     .populate({ path: 'skill', select: 'name' })
     .lean();
 
-  const skills: { id: string; name: string }[] = [];
+  const skills: StudentSkillWithProficiency[] = [];
   for (const row of studentSkillRows) {
     const skill = (row as unknown as { skill: unknown }).skill;
     if (skill && typeof skill === 'object' && 'name' in (skill as Record<string, unknown>)) {
       const id = (skill as { _id?: unknown })._id;
+      const rawProf = (row as { proficiency?: unknown }).proficiency;
       skills.push({
         id: id !== null && id !== undefined ? String(id) : '',
         name: String((skill as { name: unknown }).name ?? ''),
+        proficiency: typeof rawProf === 'string' ? (rawProf as Proficiency) : null,
       });
     }
   }
@@ -87,7 +95,9 @@ async function loadStudentContext(userId: string): Promise<{
  * row was deleted are filtered out — they have no name to show and would
  * otherwise appear as ghost entries in the gap list.
  */
-async function loadOpportunitySkills(ids: unknown[]): Promise<{ id: string; name: string }[]> {
+async function loadOpportunitySkills(
+  ids: unknown[],
+): Promise<{ id: string; name: string; proficiency?: null }[]> {
   const validIds = ids
     .map((value) => {
       if (value instanceof Types.ObjectId) return value.toHexString();
@@ -105,14 +115,14 @@ async function loadOpportunitySkills(ids: unknown[]): Promise<{ id: string; name
   const rows = await Skill.find({ _id: { $in: validIds.map((id) => new Types.ObjectId(id)) } })
     .select('_id name')
     .lean();
-  return rows.map((r) => ({ id: String(r._id), name: String(r.name) }));
+  return rows.map((r) => ({ id: String(r._id), name: String(r.name), proficiency: undefined }));
 }
 
 interface OpportunityShape {
   id: string;
   title: string;
-  required: { id: string; name: string }[];
-  preferred: { id: string; name: string }[];
+  required: { id: string; name: string; proficiency?: null }[];
+  preferred: { id: string; name: string; proficiency?: null }[];
   minCgpa: number | undefined;
   eligibleBranches: string[];
   eligibleGradYears: number[];
@@ -211,6 +221,44 @@ function splitCareerInterests(text: string | undefined | null): string[] {
 }
 
 /**
+ * Loads industry demand signals: how many currently-published opportunities
+ * require each skill.  Limited to the required skill ids of this opportunity
+ * so the query stays bounded as the catalogue grows.
+ */
+async function loadIndustryDemand(
+  skillIds: string[],
+): Promise<Array<{ skillId: string; demandCount: number }>> {
+  const validIds = skillIds.filter((id) => Types.ObjectId.isValid(id));
+  if (validIds.length === 0) return [];
+  const oids = validIds.map((id) => new Types.ObjectId(id));
+  // Single aggregation over both jobs and internships, filtered to PUBLISHED,
+  // returns a flat list of skill ids plus their demand count.
+  const [jobDemand, internDemand] = await Promise.all([
+    Job.aggregate<{ _id: Types.ObjectId; count: number }>([
+      { $match: { status: 'PUBLISHED' } },
+      { $unwind: '$requiredSkills' },
+      { $match: { requiredSkills: { $in: oids } } },
+      { $group: { _id: '$requiredSkills', count: { $sum: 1 } } },
+    ]),
+    Internship.aggregate<{ _id: Types.ObjectId; count: number }>([
+      { $match: { status: 'PUBLISHED' } },
+      { $unwind: '$requiredSkills' },
+      { $match: { requiredSkills: { $in: oids } } },
+      { $group: { _id: '$requiredSkills', count: { $sum: 1 } } },
+    ]),
+  ]);
+  const combined = new Map<string, number>();
+  for (const row of [...jobDemand, ...internDemand]) {
+    const id = String(row._id);
+    combined.set(id, (combined.get(id) ?? 0) + Number(row.count ?? 0));
+  }
+  return Array.from(combined.entries()).map(([skillId, demandCount]) => ({
+    skillId,
+    demandCount,
+  }));
+}
+
+/**
  * Main entry point: load everything, normalise, compute the match.
  *
  * Throws AppError.notFound if the student has no profile or the opportunity
@@ -231,6 +279,15 @@ export async function analyzeFullMatch(
     throw AppError.notFound(notFound);
   }
 
+  // Collect all skill ids needed for the industry demand query.
+  const allSkillIds = [
+    ...studentSkills.map((s) => s.id),
+    ...opportunity.required.map((s) => s.id),
+    ...opportunity.preferred.map((s) => s.id),
+  ];
+
+  const industryDemand = await loadIndustryDemand(allSkillIds);
+
   const input: FullMatchInput = {
     studentSkills,
     requiredSkills: opportunity.required,
@@ -250,6 +307,7 @@ export async function analyzeFullMatch(
     studentCareerInterests: splitCareerInterests(profile.careerInterests),
     opportunityPreferredRoles: opportunity.preferredRoles,
     opportunityPreferredLocations: opportunity.preferredLocations,
+    industryDemand,
   };
 
   const result = computeFullMatch(input);

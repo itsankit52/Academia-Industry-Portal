@@ -14,10 +14,7 @@ async function studentIdForUser(userId: string): Promise<Types.ObjectId> {
   return profile._id;
 }
 
-function uploadBufferToCloudinary(
-  buffer: Buffer,
-  folder: string,
-): Promise<UploadApiResponse> {
+function uploadBufferToCloudinary(buffer: Buffer, folder: string): Promise<UploadApiResponse> {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       { folder, resource_type: 'auto' },
@@ -46,7 +43,9 @@ export interface UploadResumeInputExtended extends UploadResumeInput {
 
 export async function uploadResumeForStudent(input: UploadResumeInputExtended): Promise<ResumeDoc> {
   const studentId = await studentIdForUser(input.userId);
-  const latest = await Resume.findOne({ student: studentId }).sort({ version: -1 }).select('version');
+  const latest = await Resume.findOne({ student: studentId })
+    .sort({ version: -1 })
+    .select('version');
   const nextVersion = ((latest?.version as number | undefined) ?? 0) + 1;
   const safeName = (input.filename ?? 'resume.pdf').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 128);
 
@@ -179,4 +178,13 @@ export async function deleteCurrentResume(userId: string): Promise<void> {
   }
 
   await doc.deleteOne();
+}
+
+export async function setParsedSkills(userId: string, skills: string[]): Promise<ResumeDoc> {
+  const studentId = await studentIdForUser(userId);
+  const doc = await Resume.findOne({ student: studentId }).sort({ version: -1 });
+  if (!doc) throw AppError.notFound('No resume uploaded yet');
+  doc.parsedSkills = skills;
+  await doc.save();
+  return doc;
 }

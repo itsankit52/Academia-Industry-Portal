@@ -1,4 +1,4 @@
-import type { MatchLevel } from '@aip/config';
+import type { MatchLevel, Proficiency } from '@aip/config';
 
 export interface MatchResult {
   score: number;
@@ -24,9 +24,22 @@ export interface FullMatchCareerInterests {
 
 export interface FullMatchBreakdown {
   technical: number;
+  /** Proficiency-based score (0-100) measuring how well student's proficiency level meets required levels. */
+  proficiency: number;
   soft: number;
   career: number;
+  /** Industry demand alignment (0-100) — how much of the required demand the student covers. */
+  industryDemand: number;
   eligibility: number;
+}
+
+export interface ProficiencyGapSkill extends GapSkill {
+  requiredLevel: Proficiency;
+  studentLevel: Proficiency | null;
+  /** 0 = no gap, 1-4 = number of proficiency steps below the required level. */
+  gapLevels: number;
+  /** True if the student hasn't added this skill at all. */
+  missing: boolean;
 }
 
 export interface FullMatchResult {
@@ -43,9 +56,30 @@ export interface FullMatchResult {
     technical: GapSkill[];
     soft: string[];
   };
+  /** Skills the student holds but below the required proficiency level. */
+  proficiencyGaps: ProficiencyGapSkill[];
   preferredMatched: GapSkill[];
   careerInterestsMatch: FullMatchCareerInterests;
   breakdown: FullMatchBreakdown;
+  /** Structured explanation: "why this matches you" — built from real data, not hardcoded. */
+  explanation: MatchExplanation;
+}
+
+export interface MatchExplanation {
+  reasons: MatchReason[];
+  warnings: MatchWarning[];
+  /** The matched/total ratio expressed as "X/Y required skills" for display. */
+  skillRatio: { matched: number; total: number };
+}
+
+export interface MatchReason {
+  kind: 'SKILL_MATCH' | 'CAREER_INTEREST' | 'ELIGIBILITY' | 'PROFICIENCY' | 'PREFERRED' | 'DEMAND';
+  message: string;
+}
+
+export interface MatchWarning {
+  kind: 'PROFICIENCY_GAP' | 'MISSING_SKILL' | 'INELIGIBLE';
+  message: string;
 }
 
 /**

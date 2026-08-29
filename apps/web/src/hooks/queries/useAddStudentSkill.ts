@@ -18,7 +18,11 @@ export function useAddStudentSkill() {
   return useMutation({
     mutationFn: (data: AddSkillInput) => apiPost<StudentSkill>('/students/me/skills', data),
     onSuccess: () => {
+      // Invalidate all dependent queries so the skill profile, timeline, and
+      // skill lists stay in sync after adding a skill.
       queryClient.invalidateQueries({ queryKey: queryKeys.studentSkills() });
+      queryClient.invalidateQueries({ queryKey: ['skillProfile'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.studentDashboard() });
       toast.success('Skill added.');
     },
     onError: (err: Error) => {

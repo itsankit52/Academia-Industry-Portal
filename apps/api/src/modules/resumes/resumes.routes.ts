@@ -13,6 +13,7 @@ router.use(requireAuth, requireRole('STUDENT'));
 router.post('/me', uploadResume.single('resume'), controller.uploadMine);
 router.get('/me', controller.getMine);
 router.get('/me/history', controller.historyMine);
+router.post('/me/parsed-skills', controller.confirmSkills);
 router.delete('/:id', validate(idParamSchema, 'params'), controller.remove);
 
 export default router;

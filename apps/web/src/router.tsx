@@ -48,6 +48,7 @@ const StudentInterviews = lazy(() => import('@/pages/student/StudentInterviews')
 const StudentInterviewDetails = lazy(() => import('@/pages/student/StudentInterviewDetails'));
 const StudentNotifications = lazy(() => import('@/pages/student/StudentNotifications'));
 const StudentSkillGap = lazy(() => import('@/pages/student/StudentSkillGap'));
+const StudentSkillProfile = lazy(() => import('@/pages/student/StudentSkillProfile'));
 const StudentTraining = lazy(() => import('@/pages/student/StudentTraining'));
 const StudentLearning = lazy(() => import('@/pages/student/StudentLearning'));
 const StudentSettings = lazy(() => import('@/pages/student/StudentSettings'));
@@ -219,6 +220,7 @@ export const router = createBrowserRouter([
           { path: 'interviews/:id', element: s(StudentInterviewDetails) },
           { path: 'notifications', element: s(StudentNotifications) },
           { path: 'skill-gap', element: s(StudentSkillGap) },
+          { path: 'skill-profile', element: s(StudentSkillProfile) },
           { path: 'assessments', element: s(StudentAssessments) },
           { path: 'assessments/:id/take', element: s(StudentAssessmentTake) },
           { path: 'assessments/:id', element: s(StudentAssessmentResult) },

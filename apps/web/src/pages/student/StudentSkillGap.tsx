@@ -1,6 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FiSearch, FiTarget, FiTrendingUp, FiBookOpen, FiZap } from 'react-icons/fi';
+import {
+  FiSearch,
+  FiTarget,
+  FiTrendingUp,
+  FiBookOpen,
+  FiZap,
+  FiCheckCircle,
+  FiAlertCircle,
+} from 'react-icons/fi';
+import type { Proficiency } from '@aip/config';
 import PageHeader from '@/components/ui/PageHeader';
 import Card from '@/components/ui/Card';
 import Select from '@/components/ui/Select';
@@ -11,6 +20,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import ErrorState from '@/components/ui/ErrorState';
 import { SkeletonCard } from '@/components/ui/Skeleton';
 import { useSkillGap } from '@/hooks/queries/useSkillGap';
+import { useFullMatch, type FullMatchAnalysis } from '@/hooks/queries/useFullMatch';
 import { useJobs } from '@/hooks/queries/useJobs';
 import { useInternships } from '@/hooks/queries/useInternships';
 
@@ -19,11 +29,28 @@ const opportunityTypeOptions = [
   { value: 'INTERNSHIP', label: 'Internship' },
 ];
 
+const PROFICIENCY_LABEL: Record<Proficiency, string> = {
+  BEGINNER: 'Beginner',
+  INTERMEDIATE: 'Intermediate',
+  ADVANCED: 'Advanced',
+  EXPERT: 'Expert',
+};
+
+const BREAKDOWN_LABELS: Record<string, string> = {
+  technical: 'Skill Match',
+  proficiency: 'Proficiency',
+  soft: 'Soft Skills',
+  career: 'Career Alignment',
+  industryDemand: 'Industry Demand',
+  eligibility: 'Eligibility',
+};
+
 export default function StudentSkillGap() {
   const [opportunityType, setOpportunityType] = useState<'JOB' | 'INTERNSHIP'>('JOB');
   const [opportunityId, setOpportunityId] = useState('');
 
   const skillGap = useSkillGap();
+  const fullMatch = useFullMatch(opportunityType, opportunityId);
   const jobs = useJobs({ status: 'PUBLISHED', pageSize: 100 });
   const internships = useInternships({ status: 'PUBLISHED', pageSize: 100 });
 
@@ -44,6 +71,7 @@ export default function StudentSkillGap() {
   }
 
   const result = skillGap.data;
+  const fullResult = fullMatch.data;
 
   return (
     <div className="container-page py-8 space-y-6">
@@ -281,6 +309,12 @@ export default function StudentSkillGap() {
             </Card.Body>
           </Card>
 
+          {/* Phase 4: deterministic multi-dimensional match breakdown powered by
+              GET /recommendations/full-match/:type/:id. Always present (no AI
+              dependency) so the student sees exactly how their match was scored. */}
+          {fullResult && <MatchBreakdownPanel full={fullResult} />}
+          {fullResult && <ProficiencyGapPanel full={fullResult} />}
+
           {result.missingSkills.length > 0 && (
             <Card>
               <Card.Header>
@@ -318,5 +352,194 @@ export default function StudentSkillGap() {
         />
       )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Phase 4: deterministic match breakdown panel
+// ---------------------------------------------------------------------------
+
+function MatchBreakdownPanel({ full }: { full: FullMatchAnalysis }) {
+  const { breakdown, recommendation, eligibility } = full;
+  const entries = (Object.entries(breakdown) as [keyof typeof breakdown, number][]).filter(
+    ([key]) => key !== 'eligibility',
+  );
+
+  return (
+    <Card>
+      <Card.Header>
+        <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
+          <FiBarChart2 className="w-4 h-4" /> Match Breakdown
+        </h2>
+      </Card.Header>
+      <Card.Body className="space-y-4">
+        {/* Weighted dimension bars */}
+        <div className="space-y-3">
+          {entries.map(([key, score]) => (
+            <div key={key}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                  {BREAKDOWN_LABELS[key] ?? key}
+                </span>
+                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 tabular-nums">
+                  {score}%
+                </span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400 transition-all"
+                  style={{ width: `${score}%` }}
+                />
+              </div>
+            </div>
+          ))}
+
+          {/* Eligibility is binary, shown separately */}
+          <div className="flex items-center gap-2 p-2 rounded-lg border border-slate-100 dark:border-slate-800">
+            {eligibility.passed ? (
+              <FiCheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+            ) : (
+              <FiAlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                Eligibility: {eligibility.passed ? 'You qualify' : 'Does not qualify'}
+              </p>
+              {!eligibility.passed && eligibility.failures.length > 0 && (
+                <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5">
+                  {eligibility.failures[0]}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Recommendation */}
+        <div className="rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 p-3">
+          <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1 uppercase tracking-wide">
+            Recommendation
+          </p>
+          <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+            {recommendation}
+          </p>
+        </div>
+      </Card.Body>
+    </Card>
+  );
+}
+
+function FiBarChart2({ className }: { className?: string }) {
+  // Inline icon to avoid extra import
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <line x1="18" y1="20" x2="18" y2="10" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="6" y1="20" x2="6" y2="14" />
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Phase 4: proficiency gap table — shows student's level vs required level
+// ---------------------------------------------------------------------------
+
+function ProficiencyGapPanel({ full }: { full: FullMatchAnalysis }) {
+  const { proficiencyGaps } = full;
+  if (proficiencyGaps.length === 0) return null;
+
+  return (
+    <Card>
+      <Card.Header>
+        <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
+          <FiTrendingUp className="w-4 h-4" /> Proficiency Gaps
+        </h2>
+      </Card.Header>
+      <Card.Body>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+          Skills where you need to level up to meet the opportunity&apos;s requirements.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-100 dark:border-slate-800">
+                <th className="text-left pb-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                  Skill
+                </th>
+                <th className="text-center pb-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                  Your Level
+                </th>
+                <th className="text-center pb-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                  Required
+                </th>
+                <th className="text-center pb-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                  Gap
+                </th>
+                <th className="text-right pb-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                  Action
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+              {proficiencyGaps.map((gap) => (
+                <tr
+                  key={gap.id}
+                  className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                >
+                  <td className="py-2.5">
+                    <SkillChip name={gap.name} />
+                  </td>
+                  <td className="py-2.5 text-center">
+                    {gap.studentLevel !== null ? (
+                      <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                        {PROFICIENCY_LABEL[gap.studentLevel]}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-400 dark:text-slate-500 italic">
+                        Not added
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-2.5 text-center">
+                    <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400">
+                      {PROFICIENCY_LABEL[gap.requiredLevel]}
+                    </span>
+                  </td>
+                  <td className="py-2.5 text-center">
+                    {gap.missing ? (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 uppercase tracking-wide">
+                        Missing
+                      </span>
+                    ) : (
+                      <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
+                        +{gap.gapLevels} level{gap.gapLevels > 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-2.5 text-right">
+                    <Link
+                      to={`/student/training?skill=${encodeURIComponent(gap.name)}`}
+                      className="inline-flex items-center gap-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+                    >
+                      Find training <FiSearch className="w-3 h-3" />
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card.Body>
+    </Card>
   );
 }
