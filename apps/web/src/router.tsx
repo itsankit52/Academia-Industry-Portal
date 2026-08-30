@@ -130,6 +130,8 @@ const InstitutionVerifications = lazy(() => import('@/pages/institution/Institut
 
 const StudentMentorship = lazy(() => import('@/pages/student/StudentMentorship'));
 const StudentMentorshipDetails = lazy(() => import('@/pages/student/StudentMentorshipDetails'));
+const StudentMyTrainings = lazy(() => import('@/pages/student/StudentMyTrainings'));
+const StudentMyTrainingDetails = lazy(() => import('@/pages/student/StudentMyTrainingDetails'));
 const StudentInterimReports = lazy(() => import('@/pages/student/StudentInterimReports'));
 const StudentEvents = lazy(() => import('@/pages/student/StudentEvents'));
 const StudentMyRegistrations = lazy(() => import('@/pages/student/StudentMyRegistrations'));
@@ -233,6 +235,8 @@ export const router = createBrowserRouter([
           { path: 'aptitude/tests/:id', element: s(StudentAptitudeTake) },
           { path: 'aptitude/tests/:id/result', element: s(StudentAptitudeResult) },
           { path: 'training', element: s(StudentTraining) },
+          { path: 'my-trainings', element: s(StudentMyTrainings) },
+          { path: 'my-trainings/:enrollmentId', element: s(StudentMyTrainingDetails) },
           { path: 'learning', element: s(StudentLearning) },
           { path: 'mentorship', element: s(StudentMentorship) },
           { path: 'mentorship/:requestId', element: s(StudentMentorshipDetails) },

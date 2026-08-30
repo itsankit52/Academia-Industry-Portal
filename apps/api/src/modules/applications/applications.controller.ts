@@ -337,3 +337,69 @@ export const getOfferLetter = asyncHandler(async (req: Request, res: Response) =
   });
   return ok(res, data);
 });
+
+// --- Phase 7B: Placement completion, recruitment source, verification ---
+
+const setRecruitmentSourceSchema = z.object({
+  source: z.enum([
+    'CAMPUS_DRIVE',
+    'JOB_PORTAL',
+    'REFERRAL',
+    'INTERNSHIP_CONVERSION',
+    'COMPANY_WEBSITE',
+    'COLLEGE_REFERENCE',
+    'OTHER',
+  ]),
+});
+
+export const putRecruitmentSource = asyncHandler(async (req: Request, res: Response) => {
+  const parsed = setRecruitmentSourceSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Invalid input', details: parsed.error.errors });
+  }
+  const data = await service.setRecruitmentSource(
+    req.user!.id,
+    req.user!.role as Role,
+    req.params.id!,
+    parsed.data,
+  );
+  return ok(res, data);
+});
+
+const completePlacementBodySchema = z.object({
+  placedAt: z.string().datetime().optional(),
+  notes: z.string().max(2000).optional(),
+});
+
+export const completePlacement = asyncHandler(async (req: Request, res: Response) => {
+  const parsed = completePlacementBodySchema.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Invalid input', details: parsed.error.errors });
+  }
+  const data = await service.completePlacementForApplication(
+    req.user!.id,
+    req.user!.role as Role,
+    req.params.id!,
+    parsed.data,
+  );
+  return ok(res, data);
+});
+
+const verifyPlacementBodySchema = z.object({
+  status: z.enum(['PENDING', 'VERIFIED', 'REJECTED']).default('VERIFIED'),
+  note: z.string().max(2000).optional(),
+});
+
+export const verifyPlacement = asyncHandler(async (req: Request, res: Response) => {
+  const parsed = verifyPlacementBodySchema.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Invalid input', details: parsed.error.errors });
+  }
+  const data = await service.verifyPlacement(
+    req.user!.id,
+    req.user!.role as Role,
+    req.params.id!,
+    parsed.data,
+  );
+  return ok(res, data);
+});

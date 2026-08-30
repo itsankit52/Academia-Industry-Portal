@@ -6,6 +6,7 @@ import type {
   ListEventsQuery,
   ListMyRegistrationsQuery,
   ListEventRegistrationsQuery,
+  SubmitFeedbackInput,
 } from '@aip/validation';
 import { AppError } from '../../utils/AppError';
 import { applyPagination, buildPaginated } from '../../utils/pagination';
@@ -15,6 +16,8 @@ import {
   CompanyProfile,
   Institution,
   User,
+  StudentProfile,
+  FacultyProfile,
 } from '../../models';
 import { createNotification } from '../notifications/notifications.service';
 
@@ -323,4 +326,160 @@ export async function markAttended(
     '/student/events/registrations',
   );
   return reg.toJSON();
+}
+
+// Phase 8 — Event feedback
+
+/**
+ * Resolve a display name for a user via the appropriate profile model.
+ * Mirrors the helper in mentorship.service.ts but kept local to avoid coupling.
+ */
+async function resolveEventUserName(userId: string): Promise<string> {
+  const user = await User.findById(userId).select('email role').lean();
+  if (!user) return 'Unknown';
+  const role = user.role as Role;
+  if (role === 'STUDENT') {
+    const p = await StudentProfile.findOne({ user: userId }).select('fullName').lean();
+    if (p?.fullName) return String(p.fullName);
+  } else if (role === 'FACULTY') {
+    const p = await FacultyProfile.findOne({ user: userId }).select('fullName').lean();
+    if (p?.fullName) return String(p.fullName);
+  } else if (role === 'COMPANY') {
+    const p = await CompanyProfile.findOne({ user: userId }).select('companyName').lean();
+    if (p?.companyName) return String(p.companyName);
+  }
+  return String(user.email ?? 'Unknown').split('@')[0] ?? 'Unknown';
+}
+
+/**
+ * Submit (or update) feedback for a single registration.
+ *
+ * Rules:
+ *   - Only the registered user may submit feedback for their own registration.
+ *   - Feedback is allowed only after the registration has been marked as
+ *     attended (or the event is past its end date).
+ *   - One feedback per registration. Re-submitting overwrites the previous
+ *     entry to keep the model simple, but the comment timestamp is updated.
+ */
+export async function submitEventFeedback(
+  userId: string,
+  eventId: string,
+  input: SubmitFeedbackInput,
+) {
+  const reg = await EventRegistration.findOne({ event: eventId, user: userId });
+  if (!reg) throw AppError.notFound('Registration not found');
+
+  // Authorization: only the registrant can submit feedback
+  if (String(reg.user) !== userId) {
+    throw AppError.forbidden('Not your registration');
+  }
+
+  // Validate rating
+  if (input.rating < 1 || input.rating > 5) {
+    throw AppError.badRequest('Rating must be between 1 and 5');
+  }
+
+  // Only attendees (or past events) can submit
+  const event = await CollaborationEvent.findById(eventId).select('endAt startAt');
+  if (!event) throw AppError.notFound('Event not found');
+  if (!reg.attendedAt) {
+    const isPast = event.endAt ? event.endAt < new Date() : event.startAt < new Date();
+    if (!isPast) {
+      throw AppError.badRequest(
+        'Feedback is only available after attending the event',
+      );
+    }
+  }
+
+  reg.rating = input.rating;
+  reg.feedback = input.comment?.trim() || undefined;
+  await reg.save();
+
+  // Notify the host so they see fresh feedback.
+  const hostUserId = await resolveEventHostUserId(eventId);
+  if (hostUserId && hostUserId !== userId) {
+    await createNotification(
+      hostUserId,
+      'EVENT_FEEDBACK_SUBMITTED',
+      'New event feedback',
+      `A participant submitted ${input.rating}-star feedback for your event.`,
+      `/events/${eventId}/registrations`,
+    );
+  }
+
+  return reg.toJSON();
+}
+
+/**
+ * Resolve the userId of the host (the user who posted the event).
+ */
+async function resolveEventHostUserId(eventId: string): Promise<string | null> {
+  const event = await CollaborationEvent.findById(eventId).select('postedBy host hostType');
+  if (!event) return null;
+  return String(event.postedBy);
+}
+
+export interface EventFeedbackSummary {
+  eventId: string;
+  averageRating: number;
+  totalFeedback: number;
+  ratings: { 5: number; 4: number; 3: number; 2: number; 1: number };
+  recentComments: Array<{
+    id: string;
+    rating: number;
+    comment: string;
+    submittedAt: string;
+    attendeeName: string;
+  }>;
+}
+
+/**
+ * Aggregate feedback for an event. Visible to the host and admins only.
+ */
+export async function getEventFeedbackSummary(
+  eventId: string,
+  requesterUserId: string,
+  requesterRole: Role,
+): Promise<EventFeedbackSummary> {
+  await assertHostOrAdmin(eventId, requesterUserId, requesterRole);
+
+  const rows = await EventRegistration.find({
+    event: new Types.ObjectId(eventId),
+    rating: { $exists: true, $ne: null },
+  })
+    .sort({ updatedAt: -1 })
+    .lean();
+
+  const ratings = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  let total = 0;
+  let sum = 0;
+  for (const r of rows) {
+    if (typeof r.rating === 'number' && r.rating >= 1 && r.rating <= 5) {
+      ratings[r.rating as 1 | 2 | 3 | 4 | 5] += 1;
+      sum += r.rating;
+      total += 1;
+    }
+  }
+  const averageRating = total > 0 ? Math.round((sum / total) * 10) / 10 : 0;
+
+  // Recent comments (with text) — up to 10
+  const commented = rows.filter((r) => typeof r.feedback === 'string' && r.feedback.length > 0);
+  const recent = commented.slice(0, 10);
+  const recentComments = await Promise.all(
+    recent.map(async (r) => ({
+      id: String(r._id),
+      rating: r.rating as number,
+      comment: String(r.feedback),
+      submittedAt: r.updatedAt ? r.updatedAt.toISOString() : r.createdAt.toISOString(),
+      attendeeName: await resolveEventUserName(String(r.user)),
+    })),
+  );
+
+  return {
+    eventId,
+    averageRating,
+    totalFeedback: total,
+    ratings,
+    recentComments,
+  };
 }

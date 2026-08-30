@@ -7,8 +7,11 @@ import {
   createTrainingSchema,
   idParamSchema,
   updateTrainingSchema,
+  enrollmentQuerySchema,
+  updateProgressSchema,
 } from '@aip/validation';
 import * as controller from './training.controller';
+import * as enrollmentController from './trainingEnrollment.controller';
 
 const router = Router();
 
@@ -51,6 +54,80 @@ router.delete(
     resolveEntityId: (req) => req.params.id,
   }),
   controller.remove,
+);
+
+// Phase 8 — Training enrollment endpoints
+router.post(
+  '/:id/enroll',
+  requireAuth,
+  requireRole('STUDENT'),
+  validate(idParamSchema, 'params'),
+  auditLog({
+    action: 'TRAINING_ENROLLED',
+    entity: 'TrainingProgram',
+    resolveEntityId: (req) => req.params.id,
+  }),
+  enrollmentController.enroll,
+);
+
+router.get(
+  '/:id/enrollments',
+  requireAuth,
+  requireRole('ADMIN'),
+  validate(idParamSchema, 'params'),
+  validate(enrollmentQuerySchema, 'query'),
+  enrollmentController.listTrainingEnrollments,
+);
+
+router.get(
+  '/enrollments/mine',
+  requireAuth,
+  requireRole('STUDENT'),
+  validate(enrollmentQuerySchema, 'query'),
+  enrollmentController.listMine,
+);
+
+router.get(
+  '/enrollments/:enrollmentId',
+  requireAuth,
+  requireRole('STUDENT'),
+  validate(idParamSchema, 'params'),
+  enrollmentController.getMyEnrollment,
+);
+
+router.patch(
+  '/enrollments/:enrollmentId/progress',
+  requireAuth,
+  requireRole('STUDENT'),
+  validate(idParamSchema, 'params'),
+  validate(updateProgressSchema),
+  auditLog({
+    action: 'TRAINING_PROGRESS_UPDATED',
+    entity: 'TrainingEnrollment',
+    resolveEntityId: (req) => req.params.enrollmentId,
+  }),
+  enrollmentController.updateProgress,
+);
+
+router.post(
+  '/enrollments/:enrollmentId/complete',
+  requireAuth,
+  requireRole('STUDENT'),
+  validate(idParamSchema, 'params'),
+  auditLog({
+    action: 'TRAINING_COMPLETED',
+    entity: 'TrainingEnrollment',
+    resolveEntityId: (req) => req.params.enrollmentId,
+  }),
+  enrollmentController.complete,
+);
+
+router.delete(
+  '/enrollments/:enrollmentId',
+  requireAuth,
+  requireRole('STUDENT'),
+  validate(idParamSchema, 'params'),
+  enrollmentController.drop,
 );
 
 export default router;

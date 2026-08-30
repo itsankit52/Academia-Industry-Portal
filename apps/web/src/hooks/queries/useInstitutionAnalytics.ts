@@ -60,6 +60,12 @@ export interface DashboardStats {
     offerAcceptanceRate: number;
     interviewConversionRate: number;
     placementRate: number;
+    // Phase 7B: Placement completion and verification
+    placementsCompleted: number;
+    placementsPendingVerification: number;
+    placementsVerified: number;
+    verificationRate: number;
+    recruitmentSources: { source: string; count: number }[];
   };
 }
 

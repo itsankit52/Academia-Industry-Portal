@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { FiSearch, FiSend, FiUsers } from 'react-icons/fi';
+import { FiSearch, FiSend, FiUsers, FiStar } from 'react-icons/fi';
 import PageHeader from '@/components/ui/PageHeader';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -17,6 +17,7 @@ import {
   useMentors,
   useMyRequestsAsMentee,
   useRequestMentorship,
+  useRecommendedMentors,
   type RequestMentorshipInput,
 } from '@/hooks/queries/useMentorship';
 import type { MentorshipStatus } from '@aip/config';
@@ -40,7 +41,7 @@ interface StudentMentorshipProps {
 }
 
 export default function StudentMentorship({ basePath = '/student/mentorship' }: StudentMentorshipProps = {}) {
-  const [tab, setTab] = useState<'find' | 'requests' | 'active'>('find');
+  const [tab, setTab] = useState<'find' | 'recommended' | 'requests' | 'active'>('find');
   const [search, setSearch] = useState('');
   const [expertise, setExpertise] = useState('');
   const [selectedMentor, setSelectedMentor] = useState<{ userId: string; fullName: string } | null>(null);
@@ -48,6 +49,7 @@ export default function StudentMentorship({ basePath = '/student/mentorship' }: 
   const { register, handleSubmit, reset, formState } = useForm<RequestFormValues>();
 
   const mentors = useMentors({ search: search || undefined, expertise: expertise || undefined });
+  const recommended = useRecommendedMentors();
   const mineAll = useMyRequestsAsMentee({ pageSize: 50 });
   const active = useMyRequestsAsMentee({ status: 'ACTIVE', pageSize: 50 });
 
@@ -76,6 +78,7 @@ export default function StudentMentorship({ basePath = '/student/mentorship' }: 
       <Tabs value={tab} onChange={(v) => setTab(v as typeof tab)}>
         <Tabs.List>
           <Tabs.Tab value="find" label="Find Mentor" />
+          <Tabs.Tab value="recommended" label="Recommended" />
           <Tabs.Tab value="requests" label="My Requests" />
           <Tabs.Tab value="active" label="Active Mentorships" />
         </Tabs.List>
@@ -147,6 +150,83 @@ export default function StudentMentorship({ basePath = '/student/mentorship' }: 
               </div>
             ) : (
               <EmptyState icon={<FiUsers />} title="No mentors match" description="Try adjusting your filters." />
+            )}
+          </Tabs.Panel>
+
+          <Tabs.Panel value="recommended">
+            {recommended.isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <SkeletonCard />
+                <SkeletonCard />
+              </div>
+            ) : recommended.isError ? (
+              <ErrorState onRetry={() => void recommended.refetch()} />
+            ) : recommended.data && recommended.data.length > 0 ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                  <FiStar className="w-4 h-4 text-amber-500" />
+                  <span>Ranked by relevance to your skills and interests.</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {recommended.data.map((m) => (
+                    <Card key={m.id}>
+                      <Card.Body className="space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{m.fullName}</h3>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                              {typeof m.yearsExperience === 'number' ? `${m.yearsExperience} yrs experience` : '—'}
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge variant="info" size="sm" className="font-mono">
+                              {Math.round(m.score)} pts
+                            </Badge>
+                            <Badge variant={m.availability === 'AVAILABLE' ? 'success' : 'default'} size="sm">
+                              {m.availability}
+                            </Badge>
+                          </div>
+                        </div>
+                        {m.bio && (
+                          <p className="text-sm text-slate-700 dark:text-slate-300 line-clamp-2">{m.bio}</p>
+                        )}
+                        {m.expertise.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {m.expertise.slice(0, 6).map((tag) => (
+                              <Badge key={tag} variant="info" size="sm">{tag}</Badge>
+                            ))}
+                          </div>
+                        )}
+                        {m.reasons.length > 0 && (
+                          <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-0.5 pl-3 list-disc">
+                            {m.reasons.slice(0, 3).map((r, i) => (
+                              <li key={i}>{r}</li>
+                            ))}
+                          </ul>
+                        )}
+                        <div className="flex items-center justify-between pt-2">
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                            {m.activeCount ?? 0} / {m.mentorshipCapacity} active
+                          </span>
+                          <Button
+                            size="sm"
+                            onClick={() => setSelectedMentor({ userId: m.userId, fullName: m.fullName })}
+                            disabled={m.availability !== 'AVAILABLE'}
+                          >
+                            Request Mentorship
+                          </Button>
+                        </div>
+                      </Card.Body>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <EmptyState
+                icon={<FiStar />}
+                title="No recommendations yet"
+                description="Add skills and interests to your profile to see mentor matches."
+              />
             )}
           </Tabs.Panel>
 

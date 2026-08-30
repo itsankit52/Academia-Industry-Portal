@@ -31,12 +31,12 @@ describe.skipIf(!hasTestDb)('candidate-details', () => {
     const applyRes = await request(app)
       .post('/api/v1/applications')
       .set('Cookie', student.cookie)
-      .send({ opportunityType: 'JOB', opportunityId: job.id });
+      .send({ opportunityType: 'JOB', opportunityId: String(job._id) });
     return {
       company,
       student,
       applicationId: applyRes.body.data.id as string,
-      jobId: job.id,
+      jobId: String(job._id),
       skillId: String(skill._id),
     };
   }

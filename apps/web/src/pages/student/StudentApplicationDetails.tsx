@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { FiArrowLeft, FiExternalLink, FiUser, FiAward, FiMessageCircle, FiCheck, FiX, FiClock, FiDollarSign, FiCalendar, FiFileText, FiDownload } from 'react-icons/fi';
+import { FiArrowLeft, FiExternalLink, FiUser, FiAward, FiMessageCircle, FiCheck, FiX, FiClock, FiDollarSign, FiCalendar, FiFileText, FiDownload, FiCheckCircle } from 'react-icons/fi';
 import { format } from 'date-fns';
 import PageHeader from '@/components/ui/PageHeader';
 import Card from '@/components/ui/Card';
@@ -86,7 +86,7 @@ export default function StudentApplicationDetails() {
   const now = new Date();
   const offerExpired =
     application.status === 'SELECTED' &&
-    application.offerExpiresAt != null &&
+    application.offerExpiresAt !== null &&
     new Date(application.offerExpiresAt).getTime() < now.getTime();
   const canRespondToOffer = application.status === 'SELECTED' && !offerExpired;
   const canWithdrawOffer = application.status === 'OFFER_ACCEPTED';
@@ -97,10 +97,10 @@ export default function StudentApplicationDetails() {
     ['ONGOING', 'COMPLETED'].includes(application.status) &&
     (reportsQ.data?.items.length ?? 0) > 0;
   const hasOfferDetails =
-    application.offerDetails != null &&
+    application.offerDetails !== null &&
     (application.offerDetails.offeredSalary !== undefined ||
       application.offerDetails.joiningDate !== undefined);
-  const hasOfferLetter = application.offerLetter != null;
+  const hasOfferLetter = application.offerLetter !== null;
 
   return (
     <div className="container-page py-8 space-y-6">
@@ -532,6 +532,68 @@ export default function StudentApplicationDetails() {
                     </p>
                   )}
                 </div>
+              </Card.Body>
+            </Card>
+          )}
+
+          {/* Phase 7B: Placement completion / verification status */}
+          {application.placedAt && (
+            <Card>
+              <Card.Header>
+                <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide flex items-center gap-2">
+                  <FiCheck className="w-4 h-4" /> Placement
+                </h2>
+              </Card.Header>
+              <Card.Body>
+                <p className="text-sm text-slate-700 dark:text-slate-300">
+                  You have been placed on{' '}
+                  <span className="font-semibold">
+                    {format(new Date(application.placedAt), 'MMM d, yyyy')}
+                  </span>
+                  .
+                </p>
+                {application.placementVerification && (
+                  <div className="mt-3 rounded-lg p-3 border">
+                    {application.placementVerification.status === 'VERIFIED' ? (
+                      <div className="bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 rounded-lg p-3">
+                        <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                          ✅ Placement verified by your institution
+                        </p>
+                        {application.placementVerification.verifiedAt && (
+                          <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                            Verified on{' '}
+                            {format(
+                              new Date(application.placementVerification.verifiedAt),
+                              'MMM d, yyyy',
+                            )}
+                          </p>
+                        )}
+                        {application.placementVerification.note && (
+                          <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                            {application.placementVerification.note}
+                          </p>
+                        )}
+                      </div>
+                    ) : application.placementVerification.status === 'REJECTED' ? (
+                      <div className="bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 rounded-lg p-3">
+                        <p className="text-sm font-medium text-red-700 dark:text-red-300">
+                          ❌ Placement verification was rejected
+                        </p>
+                        {application.placementVerification.note && (
+                          <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                            {application.placementVerification.note}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                        <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                          ⏳ Awaiting institution verification
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </Card.Body>
             </Card>
           )}

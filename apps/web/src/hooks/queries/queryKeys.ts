@@ -15,6 +15,13 @@ export const queryKeys = {
   internships: (filters?: object) => ['internships', filters] as const,
   trainings: (filters?: object) => ['trainings', 'list', filters] as const,
   recommendedTrainings: () => ['trainings', 'recommended'] as const,
+  training: {
+    detail: (id: string) => ['trainings', 'detail', id] as const,
+    enrollments: (filters?: object) => ['training', 'enrollments', filters] as const,
+    enrollment: (id: string) => ['training', 'enrollments', 'detail', id] as const,
+    eventEnrollments: (trainingId: string, filters?: object) =>
+      ['training', 'event-enrollments', trainingId, filters] as const,
+  },
   learningRecommendations: (params?: object) =>
     ['recommendations', 'learning', params ?? {}] as const,
   fullMatch: (type: string, id: string) => ['recommendations', 'full-match', type, id] as const,
@@ -102,6 +109,7 @@ export const queryKeys = {
   mentorship: {
     mentors: (filters?: object) => ['mentorship', 'mentors', filters] as const,
     mentor: (userId: string) => ['mentorship', 'mentor', userId] as const,
+    recommended: () => ['mentorship', 'recommended'] as const,
     requestsAsMentee: (filters?: object) => ['mentorship', 'requests', 'mentee', filters] as const,
     requestsAsMentor: (filters?: object) => ['mentorship', 'requests', 'mentor', filters] as const,
     request: (id: string) => ['mentorship', 'request', id] as const,
@@ -121,5 +129,6 @@ export const queryKeys = {
     myRegistrations: (filters?: object) => ['events', 'mine', 'registrations', filters] as const,
     registrations: (eventId: string, filters?: object) =>
       ['events', 'registrations', eventId, filters] as const,
+    feedbackSummary: (eventId: string) => ['events', 'feedback', 'summary', eventId] as const,
   },
 };

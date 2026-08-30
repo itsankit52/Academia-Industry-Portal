@@ -453,7 +453,8 @@ describe('setOfferDetails', () => {
     await setOfferDetails(COMPANY_USER, 'COMPANY', String(app._id), {
       offeredSalary: 900000,
     });
-    const addedEntry = app.timeline.find(
+    const tl = app.timeline as Array<Record<string, unknown>>;
+    const addedEntry = tl.find(
       (e: Record<string, unknown>) => e.note === 'Offer details updated',
     );
     expect(addedEntry).toBeDefined();

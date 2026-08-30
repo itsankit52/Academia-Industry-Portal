@@ -62,9 +62,11 @@ describe.skipIf(!hasTestDb)('recommendations', () => {
       matchResult: { score: number };
     }>;
     expect(items.length).toBeGreaterThanOrEqual(2);
-    expect(items[0]!.job.title).toBe(String(highJob.title));
+    expect(items[0]!.job.title).toBe((highJob as unknown as { title: string }).title);
     expect(items[0]!.matchResult.score).toBeGreaterThanOrEqual(items[1]!.matchResult.score);
     const titles = items.map((i) => i.job.title);
-    expect(titles.indexOf(String(highJob.title))).toBeLessThan(titles.indexOf(String(lowJob.title)));
+    expect(titles.indexOf((highJob as unknown as { title: string }).title)).toBeLessThan(
+      titles.indexOf((lowJob as unknown as { title: string }).title),
+    );
   });
 });

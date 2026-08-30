@@ -1,7 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { apiGet, apiPost, apiPatch, apiDelete } from '@/lib/api';
-import type { Paginated, CollaborationEvent, EventRegistration } from '@aip/types';
+import type {
+  Paginated,
+  CollaborationEvent,
+  EventRegistration,
+  EventFeedbackSummary,
+} from '@aip/types';
 import type { CollabEventType, Role } from '@aip/config';
 import { queryKeys } from './queryKeys';
 
@@ -186,5 +191,32 @@ export function useMarkAttended(eventId: string) {
       toast.success('Attendance marked.');
     },
     onError: (err: Error) => toast.error(err.message ?? 'Failed to mark attendance.'),
+  });
+}
+
+// Phase 8 — Event feedback
+export interface SubmitFeedbackInput {
+  rating: number;
+  comment?: string;
+}
+
+export function useSubmitEventFeedback(eventId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SubmitFeedbackInput) =>
+      apiPost<EventRegistration>(`/events/${eventId}/feedback`, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.events.feedbackSummary(eventId) });
+      toast.success('Feedback submitted. Thank you!');
+    },
+    onError: (err: Error) => toast.error(err.message ?? 'Failed to submit feedback.'),
+  });
+}
+
+export function useEventFeedbackSummary(eventId: string) {
+  return useQuery({
+    queryKey: queryKeys.events.feedbackSummary(eventId),
+    queryFn: () => apiGet<EventFeedbackSummary>(`/events/${eventId}/feedback/summary`),
+    enabled: !!eventId,
   });
 }

@@ -7,7 +7,9 @@ import {
   type FullMatchInput,
 } from '../fullMatch';
 
-function tSkill(id: string, name: string, proficiency?: string | null) {
+type SkillProficiency = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
+
+function tSkill(id: string, name: string, proficiency?: SkillProficiency | null) {
   return { id, name, proficiency };
 }
 
@@ -880,9 +882,9 @@ describe('scoreProficiencyGaps', () => {
   });
 
   it('reports a proficiency gap when student level is below required', () => {
-    const student = new Map([['python', { id: '1', name: 'Python', proficiency: 'BEGINNER' }]]);
+    const student = new Map([['python', { id: '1', name: 'Python', proficiency: 'BEGINNER' as const }]]);
     const required = new Map([
-      ['python', { id: '1', name: 'Python', proficiency: 'INTERMEDIATE' }],
+      ['python', { id: '1', name: 'Python', proficiency: 'INTERMEDIATE' as const }],
     ]);
     const result = scoreProficiencyGaps(student, required);
     // Beginner (1) vs Intermediate (2): gap = 1, score = 1/2 * 100 = 50
@@ -901,7 +903,7 @@ describe('scoreProficiencyGaps', () => {
   it('reports missing skill when student does not have the skill', () => {
     const student = new Map();
     const required = new Map([
-      ['docker', { id: '2', name: 'Docker', proficiency: 'INTERMEDIATE' }],
+      ['docker', { id: '2', name: 'Docker', proficiency: 'INTERMEDIATE' as const }],
     ]);
     const result = scoreProficiencyGaps(student, required);
     // Missing skill: gap = 2 (Intermediate rank), score = 0
@@ -916,7 +918,7 @@ describe('scoreProficiencyGaps', () => {
   });
 
   it('skips proficiency check when required has no proficiency', () => {
-    const student = new Map([['python', { id: '1', name: 'Python', proficiency: 'BEGINNER' }]]);
+    const student = new Map([['python', { id: '1', name: 'Python', proficiency: 'BEGINNER' as const }]]);
     const required = new Map([['python', { id: '1', name: 'Python', proficiency: undefined }]]);
     const result = scoreProficiencyGaps(student, required);
     // No proficiency required → full credit

@@ -1,14 +1,18 @@
 import type { TrainingProgram } from '@aip/types';
-import { FiExternalLink, FiCalendar, FiClock } from 'react-icons/fi';
+import { FiExternalLink, FiCalendar, FiClock, FiCheckCircle } from 'react-icons/fi';
 import SkillChip from '@/components/ui/SkillChip';
 import Badge from '@/components/ui/Badge';
+import Button from '@/components/ui/Button';
 import { format } from 'date-fns';
 
 interface Props {
   training: TrainingProgram;
+  onEnroll?: (id: string) => void;
+  isEnrolling?: boolean;
+  isEnrolled?: boolean;
 }
 
-export default function TrainingCard({ training }: Props) {
+export default function TrainingCard({ training, onEnroll, isEnrolling, isEnrolled }: Props) {
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 dark:bg-slate-900 dark:border-slate-800">
       <div className="flex items-start justify-between gap-3 mb-2">
@@ -45,14 +49,34 @@ export default function TrainingCard({ training }: Props) {
             </span>
           )}
         </div>
-        <a
-          href={training.registrationUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium no-underline dark:text-indigo-400 dark:hover:text-indigo-300"
-        >
-          Register <FiExternalLink className="w-3 h-3" />
-        </a>
+        <div className="flex items-center gap-2">
+          {onEnroll && training.status === 'ACTIVE' && (
+            isEnrolled ? (
+              <Badge variant="info" size="sm" className="flex items-center gap-1">
+                <FiCheckCircle className="w-3 h-3" /> Enrolled
+              </Badge>
+            ) : (
+              <Button
+                size="sm"
+                variant="primary"
+                loading={isEnrolling}
+                onClick={() => onEnroll(training.id)}
+              >
+                Enroll
+              </Button>
+            )
+          )}
+          {!onEnroll && (
+            <a
+              href={training.registrationUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium no-underline dark:text-indigo-400 dark:hover:text-indigo-300"
+            >
+              Register <FiExternalLink className="w-3 h-3" />
+            </a>
+          )}
+        </div>
       </div>
     </div>
   );

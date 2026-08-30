@@ -1,6 +1,16 @@
 import { z } from 'zod';
-import { APPLICATION_STATUSES, OPPORTUNITY_TYPES } from '@aip/config';
-import type { ApplicationStatus, OpportunityType } from '@aip/config';
+import {
+  APPLICATION_STATUSES,
+  OPPORTUNITY_TYPES,
+  RECRUITMENT_SOURCES,
+  VERIFICATION_STATUSES,
+} from '@aip/config';
+import type {
+  ApplicationStatus,
+  OpportunityType,
+  RecruitmentSource,
+  VerificationStatus,
+} from '@aip/config';
 import { objectIdSchema } from './common';
 
 const applicationStatusEnum = z.enum(
@@ -8,6 +18,12 @@ const applicationStatusEnum = z.enum(
 );
 const opportunityTypeEnum = z.enum(
   OPPORTUNITY_TYPES as unknown as [OpportunityType, ...OpportunityType[]],
+);
+const recruitmentSourceEnum = z.enum(
+  RECRUITMENT_SOURCES as unknown as [RecruitmentSource, ...RecruitmentSource[]],
+);
+const verificationStatusEnum = z.enum(
+  VERIFICATION_STATUSES as unknown as [VerificationStatus, ...VerificationStatus[]],
 );
 
 export const createApplicationSchema = z
@@ -75,3 +91,38 @@ export const withdrawOfferSchema = z
   .strict();
 
 export type WithdrawOfferInput = z.infer<typeof withdrawOfferSchema>;
+
+// Phase 7B: Recruitment source input — company sets/updates how the candidate
+// was sourced for this specific application.
+export const setRecruitmentSourceSchema = z
+  .object({
+    source: recruitmentSourceEnum,
+  })
+  .strict();
+
+export type SetRecruitmentSourceInput = z.infer<typeof setRecruitmentSourceSchema>;
+
+// Phase 7B: Placement completion (company marks candidate as placed/joined).
+// Distinct from OFFER_ACCEPTED — that records the student accepting the offer;
+// this records the candidate actually joining the role.
+export const completePlacementSchema = z
+  .object({
+    placedAt: z.string().datetime().optional(),
+    notes: z.string().max(2000).optional(),
+  })
+  .strict();
+
+export type CompletePlacementInput = z.infer<typeof completePlacementSchema>;
+
+// Phase 7B: Placement verification (institution/admin). Status is the explicit
+// new state (PENDING/VERIFIED/REJECTED); institutions are expected to verify
+// genuine placements, so the API defaults to VERIFIED when no status is sent
+// for a normal verification call.
+export const verifyPlacementSchema = z
+  .object({
+    status: verificationStatusEnum.default('VERIFIED'),
+    note: z.string().max(2000).optional(),
+  })
+  .strict();
+
+export type VerifyPlacementInput = z.infer<typeof verifyPlacementSchema>;

@@ -74,6 +74,16 @@ export const markAttendedSchema = z
   })
   .strict();
 
+// Phase 8 — Event feedback
+export const submitFeedbackSchema = z
+  .object({
+    rating: z.number().int().min(1).max(5),
+    comment: z.string().trim().max(2000).optional(),
+  })
+  .strict();
+
+export type SubmitFeedbackInput = z.infer<typeof submitFeedbackSchema>;
+
 export type CreateEventInput = z.infer<typeof createEventSchema>;
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;
 export type ListEventsQuery = z.infer<typeof listEventsQuerySchema>;

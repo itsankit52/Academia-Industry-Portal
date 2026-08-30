@@ -30,6 +30,7 @@ export const APPLICATION_STATUSES = [
   'OFFER_ACCEPTED',
   'OFFER_REJECTED',
   'WITHDRAWAL_REQUESTED',
+  'OFFER_EXPIRED',
 ] as const;
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 
@@ -61,6 +62,12 @@ export const NOTIFICATION_TYPES = [
   'OFFER_EXPIRED',
   'WITHDRAWAL_REQUESTED',
   'WITHDRAWAL_REJECTED',
+  'PLACEMENT_COMPLETED',
+  'PLACEMENT_VERIFIED',
+  'TRAINING_ENROLLED',
+  'TRAINING_COMPLETED',
+  'TRAINING_CERTIFICATE_AVAILABLE',
+  'EVENT_FEEDBACK_SUBMITTED',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -118,8 +125,19 @@ export const AUDIT_ACTIONS = [
   'WEBHOOK_LMS_CERTIFICATE',
   'WEBHOOK_ERP_SYNC',
   'OFFER_DETAILS_UPDATED',
+  'OFFER_EXPIRED',
   'WITHDRAWAL_REQUEST',
   'WITHDRAWAL_DECISION',
+  'PLACEMENT_COMPLETED',
+  'PLACEMENT_VERIFIED',
+  'RECRUITMENT_SOURCE_UPDATED',
+  'TRAINING_ENROLLED',
+  'TRAINING_COMPLETED',
+  'TRAINING_CERTIFICATE_AVAILABLE',
+  'EVENT_FEEDBACK_SUBMITTED',
+  'TRAINING_PROGRESS_UPDATED',
+  'TRAINING_CERTIFICATE_GENERATED',
+  'MENTORSHIP_RECOMMENDATIONS_GENERATED',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
@@ -172,6 +190,20 @@ export type DocumentType = (typeof DOCUMENT_TYPES)[number];
 export const VERIFICATION_STATUSES = ['PENDING', 'VERIFIED', 'REJECTED'] as const;
 export type VerificationStatus = (typeof VERIFICATION_STATUSES)[number];
 
+// Phase 7B — how the candidate was sourced for this application. Owned by the
+// application record (not the company) so each candidate can be attributed
+// independently and the source can be corrected by the company after the fact.
+export const RECRUITMENT_SOURCES = [
+  'CAMPUS_DRIVE',
+  'JOB_PORTAL',
+  'REFERRAL',
+  'INTERNSHIP_CONVERSION',
+  'COMPANY_WEBSITE',
+  'COLLEGE_REFERENCE',
+  'OTHER',
+] as const;
+export type RecruitmentSource = (typeof RECRUITMENT_SOURCES)[number];
+
 export const APTITUDE_CATEGORIES = ['QUANT', 'LOGIC', 'VERBAL', 'ENGLISH'] as const;
 export type AptitudeCategory = (typeof APTITUDE_CATEGORIES)[number];
 
@@ -197,3 +229,12 @@ export type CollabEventType = (typeof COLLAB_EVENT_TYPES)[number];
 
 export const INSTITUTION_VERIFICATION_STATUSES = ['PENDING', 'VERIFIED', 'REJECTED'] as const;
 export type InstitutionVerificationStatus = (typeof INSTITUTION_VERIFICATION_STATUSES)[number];
+
+// Phase 8 — Training enrollment lifecycle
+export const TRAINING_ENROLLMENT_STATUSES = [
+  'ENROLLED',
+  'IN_PROGRESS',
+  'COMPLETED',
+  'DROPPED',
+] as const;
+export type TrainingEnrollmentStatus = (typeof TRAINING_ENROLLMENT_STATUSES)[number];

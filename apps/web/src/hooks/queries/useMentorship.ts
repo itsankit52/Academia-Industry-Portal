@@ -7,6 +7,7 @@ import type {
   MentorProfile,
   MentorshipRequest,
   MentorshipMessage,
+  RecommendedMentor,
 } from '@aip/types';
 import type { MentorshipStatus } from '@aip/config';
 import { queryKeys } from './queryKeys';
@@ -44,6 +45,14 @@ export function useMentor(userId: string) {
       `/mentorship/mentors/${userId}`,
     ),
     enabled: !!userId,
+  });
+}
+
+// Phase 8 — Recommended mentors for students
+export function useRecommendedMentors() {
+  return useQuery({
+    queryKey: queryKeys.mentorship.recommended(),
+    queryFn: () => apiGet<RecommendedMentor[]>('/mentorship/mentors/recommended/me'),
   });
 }
 

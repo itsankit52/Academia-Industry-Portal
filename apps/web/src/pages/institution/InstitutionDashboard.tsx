@@ -14,6 +14,7 @@ import {
   FiStar,
   FiUserCheck,
   FiX,
+  FiClock,
 } from 'react-icons/fi';
 import {
   ResponsiveContainer,
@@ -80,6 +81,7 @@ const APPLICATION_STATUSES = [
   'COMPLETED',
   'OFFER_ACCEPTED',
   'OFFER_REJECTED',
+  'OFFER_EXPIRED',
 ];
 
 export default function InstitutionDashboard() {
@@ -351,7 +353,46 @@ export default function InstitutionDashboard() {
         )}
       </div>
 
-      {/* Phase 6B: Placement Pipeline Metrics Row */}
+      {/* Phase 7B: Placement Verification & Recruitment Source Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {statsLoading ? (
+          Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
+        ) : (
+          <>
+            <StatCard
+              label="Placements Completed"
+              value={stats?.placementMetrics?.placementsCompleted ?? 0}
+              icon={<FiCheckCircle />}
+            />
+            <StatCard
+              label="Pending Verification"
+              value={stats?.placementMetrics?.placementsPendingVerification ?? 0}
+              icon={<FiClock />}
+            />
+            <StatCard
+              label="Verified Placements"
+              value={stats?.placementMetrics?.placementsVerified ?? 0}
+              icon={<FiAward />}
+            />
+            <StatCard
+              label="Verification Rate"
+              value={stats?.placementMetrics?.verificationRate !== undefined
+                ? `${stats.placementMetrics.verificationRate}%`
+                : '—'}
+              icon={<FiTrendingUp />}
+            />
+            <StatCard
+              label="Offer Acceptance Rate"
+              value={stats?.placementMetrics?.offerAcceptanceRate !== undefined
+                ? `${stats.placementMetrics.offerAcceptanceRate}%`
+                : '—'}
+              icon={<FiTrendingUp />}
+            />
+          </>
+        )}
+      </div>
+
+      {/* Phase 6B / 7A: Placement Pipeline Metrics Row */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {statsLoading ? (
           Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
@@ -375,6 +416,11 @@ export default function InstitutionDashboard() {
             <StatCard
               label="Offers Declined"
               value={stats?.placementMetrics?.offerRejected ?? 0}
+              icon={<FiX />}
+            />
+            <StatCard
+              label="Offers Expired"
+              value={stats?.placementMetrics?.offerExpired ?? 0}
               icon={<FiX />}
             />
             <StatCard
@@ -554,6 +600,39 @@ export default function InstitutionDashboard() {
                 <YAxis tick={{ fontSize: 11, fill: axisColor }} unit="%" />
                 <Tooltip formatter={(val: number) => [`${val}%`, 'Demand %']} />
                 <Bar dataKey="percentage" fill="#06b6d4" name="Demand %" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
+
+        {/* Phase 7B: Recruitment Source Breakdown */}
+        <ChartCard title="Placements by Recruitment Source">
+          {statsLoading ? (
+            <ChartSkeleton />
+          ) : !stats?.placementMetrics?.recruitmentSources?.length ? (
+            <div className="h-[300px] flex items-center justify-center text-sm text-slate-400 dark:text-slate-500">
+              No recruitment source data yet.
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart
+                data={stats.placementMetrics.recruitmentSources.map((r) => ({
+                  name: r.source.replace(/_/g, ' '),
+                  count: r.count,
+                }))}
+                margin={{ left: 16, right: 16 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 10, fill: axisColor }}
+                  angle={-30}
+                  textAnchor="end"
+                  interval={0}
+                />
+                <YAxis tick={{ fontSize: 11, fill: axisColor }} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#6366f1" name="Placements" />
               </BarChart>
             </ResponsiveContainer>
           )}

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { objectIdSchema } from './common';
 
 const trainingStatusEnum = z.enum(['ACTIVE', 'ARCHIVED']);
+const enrollmentStatusEnum = z.enum(['ENROLLED', 'IN_PROGRESS', 'COMPLETED', 'DROPPED']);
 
 export const createTrainingSchema = z
   .object({
@@ -22,3 +23,21 @@ export const updateTrainingSchema = createTrainingSchema.partial();
 
 export type CreateTrainingInput = z.infer<typeof createTrainingSchema>;
 export type UpdateTrainingInput = z.infer<typeof updateTrainingSchema>;
+
+// Phase 8 — Training enrollment
+export const enrollmentQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(20),
+    status: enrollmentStatusEnum.optional(),
+  })
+  .strict();
+
+export const updateProgressSchema = z
+  .object({
+    progress: z.number().int().min(0).max(100),
+  })
+  .strict();
+
+export type EnrollmentQuery = z.infer<typeof enrollmentQuerySchema>;
+export type UpdateProgressInput = z.infer<typeof updateProgressSchema>;

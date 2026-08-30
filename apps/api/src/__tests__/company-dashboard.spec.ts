@@ -36,7 +36,7 @@ describe.skipIf(!hasTestDb)('company-dashboard', () => {
     const applyRes = await request(app)
       .post('/api/v1/applications')
       .set('Cookie', student.cookie)
-      .send({ opportunityType: 'JOB', opportunityId: job1.id });
+      .send({ opportunityType: 'JOB', opportunityId: String(job1._id) });
     expect(applyRes.status).toBe(201);
 
     const res = await request(app)

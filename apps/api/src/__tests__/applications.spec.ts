@@ -36,7 +36,7 @@ describe.skipIf(!hasTestDb)('applications', () => {
     const res = await request(app)
       .post('/api/v1/applications')
       .set('Cookie', student.cookie)
-      .send({ opportunityType: 'JOB', opportunityId: job.id });
+      .send({ opportunityType: 'JOB', opportunityId: String(job._id) });
     expect(res.status).toBe(201);
     expect(res.body.data.status).toBe('APPLIED');
     expect(typeof res.body.data.matchScore).toBe('number');
@@ -47,15 +47,16 @@ describe.skipIf(!hasTestDb)('applications', () => {
   it('POST /applications duplicate returns 409', async () => {
     const { job } = await setupCompanyWithJob();
     const student = await createUserAndLogin(app, 'STUDENT', { email: 'app-dup@t.demo' });
+    const jobId = String(job._id);
     const first = await request(app)
       .post('/api/v1/applications')
       .set('Cookie', student.cookie)
-      .send({ opportunityType: 'JOB', opportunityId: job.id });
+      .send({ opportunityType: 'JOB', opportunityId: jobId });
     expect(first.status).toBe(201);
     const dup = await request(app)
       .post('/api/v1/applications')
       .set('Cookie', student.cookie)
-      .send({ opportunityType: 'JOB', opportunityId: job.id });
+      .send({ opportunityType: 'JOB', opportunityId: jobId });
     expect(dup.status).toBe(409);
   });
 
@@ -65,7 +66,7 @@ describe.skipIf(!hasTestDb)('applications', () => {
     const created = await request(app)
       .post('/api/v1/applications')
       .set('Cookie', student.cookie)
-      .send({ opportunityType: 'JOB', opportunityId: job.id });
+      .send({ opportunityType: 'JOB', opportunityId: String(job._id) });
     const appId = created.body.data.id as string;
 
     const res = await request(app)

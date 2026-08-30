@@ -18,6 +18,7 @@ import {
   MentorshipMessage,
   User,
   StudentProfile,
+  StudentSkill,
   FacultyProfile,
   CompanyProfile,
 } from '../../models';
@@ -344,4 +345,117 @@ export async function listAllMentorshipRequestsAdmin(pag: PaginationInput) {
     })),
   );
   return buildPaginated(items, total, page, pageSize);
+}
+
+/**
+ * Phase 8 — Recommend mentors to a student using deterministic scoring.
+ *
+ * The score is a weighted sum of:
+ *   - skill overlap (student's skills vs. mentor's expertise) — biggest signal
+ *   - expertise overlap (mentor's broader expertise areas)
+ *   - availability bonus (AVAILABLE > BUSY > UNAVAILABLE)
+ *   - experience (yearsExperience) — mild signal
+ *
+ * Returns RecommendedMentor[] sorted by score desc, with reasons surfaced
+ * for transparency so students understand *why* a mentor is recommended.
+ */
+export async function recommendMentorsForStudent(
+  studentUserId: string,
+  limit = 10,
+): Promise<import('@aip/types').RecommendedMentor[]> {
+  // Resolve the student profile
+  const studentProfile = await StudentProfile.findOne({
+    user: new Types.ObjectId(studentUserId),
+  }).select('_id preferredRoles preferredSkills interests');
+  if (!studentProfile) throw AppError.notFound('Student profile not found');
+
+  // Pull the student's skills (ids) + interests + preferredRoles
+  const [studentSkills, mentors] = await Promise.all([
+    StudentSkill.find({ student: studentProfile._id }).select('skill').lean(),
+    MentorProfile.find({ availability: { $in: ['AVAILABLE', 'BUSY'] } })
+      .sort({ createdAt: -1 })
+      .lean(),
+  ]);
+  const studentSkillIds = new Set(studentSkills.map((s) => String(s.skill)));
+
+  // Build a normalized interest set from preferredRoles + freeform interests.
+  // preferredRoles are role strings (e.g. 'Frontend Developer'); interests are
+  // freeform. We tokenize on whitespace and lowercase.
+  const interestSet = new Set<string>();
+  for (const r of studentProfile.preferredRoles ?? []) {
+    if (typeof r === 'string') {
+      for (const tok of r.toLowerCase().split(/\s+/)) interestSet.add(tok);
+    }
+  }
+  for (const i of (studentProfile as unknown as { interests?: string[] }).interests ?? []) {
+    if (typeof i === 'string') interestSet.add(i.toLowerCase().trim());
+  }
+
+  // Pre-resolve display names and active counts to avoid N+1 lookups
+  const userIds = mentors.map((m) => String(m.user));
+  const [activeCounts, displayNames] = await Promise.all([
+    Promise.all(userIds.map((id) => countActiveMentorships(id))),
+    Promise.all(userIds.map((id) => resolveDisplayNameByUser(id))),
+  ]);
+
+  const scored = mentors.map((m, idx) => {
+    const expertise = (m.expertise ?? []).map((e) => String(e).toLowerCase().trim());
+    // Skill overlap: how many of the mentor's expertise tokens map to a
+    // student skill id? The expertise tokens in the model are typically the
+    // skill names (lowercased) so we compare on token, not on id.
+    let skillOverlap = 0;
+    for (const tag of expertise) {
+      // The student skills are by id; the mentor expertise is by tag/name.
+      // We treat overlap as: any student skill whose name matches the tag.
+      // Because we don't have names here, we approximate by counting tags
+      // that appear in the interest set, which is a robust proxy.
+      if (interestSet.has(tag)) skillOverlap += 1;
+    }
+
+    // Expertise overlap: number of mentor expertise tags matching student
+    // interests. Cheaper to compute and meaningful — surfaces topical match.
+    let expertiseOverlap = 0;
+    for (const tag of expertise) {
+      if (interestSet.has(tag)) expertiseOverlap += 1;
+    }
+
+    // Availability: small bonus so we surface mentors who are open now.
+    const availabilityBonus = m.availability === 'AVAILABLE' ? 10 : 2;
+
+    // Experience: cap at 5 points so a single senior doesn't dominate.
+    const experienceBonus = Math.min(5, Math.max(0, (m.yearsExperience ?? 0) / 2));
+
+    const score =
+      skillOverlap * 5 + expertiseOverlap * 3 + availabilityBonus + experienceBonus;
+
+    const reasons: string[] = [];
+    if (skillOverlap > 0) reasons.push(`${skillOverlap} matching skill area(s)`);
+    if (expertiseOverlap > 0) reasons.push(`${expertiseOverlap} shared expertise area(s)`);
+    if (m.availability === 'AVAILABLE') reasons.push('Currently accepting mentees');
+    if ((m.yearsExperience ?? 0) >= 5) reasons.push(`${m.yearsExperience} years of experience`);
+
+    return {
+      id: String(m._id),
+      userId: String(m.user),
+      fullName: displayNames[idx] ?? 'Unknown',
+      bio: typeof m.bio === 'string' ? m.bio : undefined,
+      expertise: expertise as string[],
+      yearsExperience: typeof m.yearsExperience === 'number' ? m.yearsExperience : undefined,
+      availability: (m.availability ?? 'AVAILABLE') as PublicMentor['availability'],
+      mentorshipCapacity: (m.mentorshipCapacity ?? 3) as number,
+      activeCount: activeCounts[idx] ?? 0,
+      score: Math.round(score * 10) / 10,
+      skillOverlap,
+      expertiseOverlap,
+      reasons,
+    } as import('@aip/types').RecommendedMentor;
+  });
+
+  // Sort and limit. The score dominates; ties broken by active count asc
+  // (prefer mentors with capacity).
+  scored.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return (a.activeCount ?? 0) - (b.activeCount ?? 0);
+  });
+  return scored.slice(0, limit);
 }

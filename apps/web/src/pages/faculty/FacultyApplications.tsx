@@ -31,6 +31,7 @@ const statusConfig: Record<ApplicationStatus, { label: string; variant: BadgeVar
   OFFER_ACCEPTED: { label: 'Offer Accepted', variant: 'success' },
   OFFER_REJECTED: { label: 'Offer Declined', variant: 'danger' },
   WITHDRAWAL_REQUESTED: { label: 'Withdrawal Requested', variant: 'warning' },
+  OFFER_EXPIRED: { label: 'Offer Expired', variant: 'danger' },
 };
 
 const statusLabels: Record<ApplicationStatus, string> = {
@@ -47,6 +48,7 @@ const statusLabels: Record<ApplicationStatus, string> = {
   COMPLETED: 'Completed',
   OFFER_ACCEPTED: 'Offer Accepted',
   OFFER_REJECTED: 'Offer Declined',
+  OFFER_EXPIRED: 'Offer Expired',
 };
 
 export default function FacultyApplications() {

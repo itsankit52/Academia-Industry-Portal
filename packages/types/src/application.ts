@@ -1,4 +1,9 @@
-import type { ApplicationStatus, OpportunityType } from '@aip/config';
+import type {
+  ApplicationStatus,
+  OpportunityType,
+  RecruitmentSource,
+  VerificationStatus,
+} from '@aip/config';
 
 export interface TimelineEntry {
   status: ApplicationStatus;
@@ -55,6 +60,24 @@ export interface Application {
   // Phase 6B: withdrawal
   withdrawalRequestedAt?: string;
   withdrawalReason?: string;
+  // Phase 7B: recruitment source — owned by the application so each candidate
+  // is attributed independently. Optional for backward compatibility with
+  // pre-Phase 7B records.
+  recruitmentSource?: RecruitmentSource;
+  recruitmentSourceUpdatedAt?: string;
+  // Phase 7B: company-confirmed placement completion (JOB or INTERNSHIP after
+  // OFFER_ACCEPTED). Distinct from completedAt which is the generic lifecycle
+  // timestamp.
+  placedAt?: string;
+  placementCompletedBy?: string;
+  placementCompletionNotes?: string;
+  // Phase 7B: institution/admin verification of the placement.
+  placementVerification?: {
+    status: VerificationStatus;
+    verifiedBy?: string;
+    verifiedAt?: string;
+    note?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }

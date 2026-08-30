@@ -1,6 +1,13 @@
 import type { CreateApplicationInput, UpdateApplicationStatusInput } from '@aip/validation';
-import type { ApplicationStatus, OpportunityType, Role } from '@aip/config';
+import type {
+  ApplicationStatus,
+  OpportunityType,
+  RecruitmentSource,
+  Role,
+  VerificationStatus,
+} from '@aip/config';
 import type { TimelineEntry } from '@aip/types';
+
 import { AppError } from '../../utils/AppError';
 import {
   Application,
@@ -28,6 +35,9 @@ import {
   parseDate,
   isInternshipStatus,
 } from '../internships/internshipLifecycle';
+import { processExpiredOffers } from './offerExpiry.service';
+
+export { processExpiredOffers };
 
 const STUDENT_OPP_TYPES = new Set<OpportunityType>([
   'JOB',
@@ -748,6 +758,7 @@ export async function countByStatus(
     OFFER_ACCEPTED: 0,
     OFFER_REJECTED: 0,
     WITHDRAWAL_REQUESTED: 0,
+    OFFER_EXPIRED: 0,
   };
   for (const r of rows) base[r._id] = r.n;
   return base;
@@ -808,6 +819,16 @@ export interface CandidateDetailsView {
     offerLetter?: { id: string; filename: string; mimeType: string };
     offerRespondedAt?: string;
     withdrawalRequestedAt?: string;
+    // Phase 7B
+    recruitmentSource?: RecruitmentSource;
+    placedAt?: string;
+    placementCompletionNotes?: string;
+    placementVerification?: {
+      status: VerificationStatus;
+      verifiedBy?: string;
+      verifiedAt?: string;
+      note?: string;
+    };
   };
   aiNarrative?: string;
 }
@@ -929,8 +950,41 @@ export async function getCandidateDetails(
       ...buildOfferLetterRef(app as unknown as Record<string, unknown>),
       ...buildOfferResponseRef(app as unknown as Record<string, unknown>),
       ...buildWithdrawalRef(app as unknown as Record<string, unknown>),
+      ...buildPlacementRef(app as unknown as Record<string, unknown>),
     } as CandidateDetailsView['application'],
   };
+}
+
+/** Phase 7B — pull recruitment source, placedAt, placement notes, verification. */
+function buildPlacementRef(app: Record<string, unknown>) {
+  const out: Record<string, unknown> = {};
+  const source = app['recruitmentSource'];
+  if (typeof source === 'string' && source) {
+    out.recruitmentSource = source;
+  }
+  const placedAt = app['placedAt'];
+  if (placedAt) out.placedAt = String(placedAt);
+  const notes = app['placementCompletionNotes'];
+  if (typeof notes === 'string' && notes) {
+    out.placementCompletionNotes = notes;
+  }
+  const verification = app['placementVerification'] as
+    | {
+        status?: VerificationStatus;
+        verifiedBy?: unknown;
+        verifiedAt?: Date;
+        note?: string;
+      }
+    | undefined;
+  if (verification && verification.status) {
+    out.placementVerification = {
+      status: verification.status,
+      ...(verification.verifiedBy ? { verifiedBy: String(verification.verifiedBy) } : {}),
+      ...(verification.verifiedAt ? { verifiedAt: String(verification.verifiedAt) } : {}),
+      ...(verification.note ? { note: verification.note } : {}),
+    };
+  }
+  return out;
 }
 
 /** Pulls offer details out of the app document (inline subdocument). */
@@ -939,7 +993,7 @@ function buildOfferDetails(app: Record<string, unknown>) {
   if (!od) return {};
   return {
     offerDetails: {
-      ...(od.offeredSalary != null ? { offeredSalary: od.offeredSalary } : {}),
+      ...(od.offeredSalary !== null ? { offeredSalary: od.offeredSalary } : {}),
       ...(od.currency ? { currency: String(od.currency) } : {}),
       ...(od.joiningDate ? { joiningDate: String(od.joiningDate) } : {}),
       ...(od.offerTerms ? { offerTerms: String(od.offerTerms) } : {}),
@@ -1288,7 +1342,12 @@ export function isOfferExpired(application: {
   // The only status that still cares about expiry is SELECTED — once the
   // student has accepted/rejected or the company has withdrawn the offer,
   // the deadline is moot. Also: a missing deadline means "no deadline".
-  if (application.status !== 'SELECTED') return false;
+  // OFFER_EXPIRED is also treated as expired for read-time checks.
+  if (
+    application.status !== 'SELECTED' &&
+    application.status !== 'OFFER_EXPIRED'
+  )
+    return false;
   const deadline = application.offerExpiresAt;
   if (!deadline) return false;
   return deadline.getTime() < Date.now();
@@ -2205,4 +2264,276 @@ export async function getOfferLetterForApplication(
     mimeType: doc.mimeType,
     sizeBytes: doc.sizeBytes,
   };
+}
+
+/* ============================================================
+   Phase 7B — Placement completion, recruitment source, verification
+   ============================================================ */
+
+async function assertInstitutionOwnsStudent(
+  userId: string,
+  studentId: unknown,
+): Promise<void> {
+  const user = await User.findById(userId).select('institution').lean();
+  if (!user?.institution) {
+    throw AppError.forbidden('No institution linked to your account');
+  }
+  const student = await StudentProfile.findById(studentId)
+    .select('institution')
+    .lean();
+  if (!student) throw AppError.notFound('Student not found');
+  if (String(student.institution) !== String(user.institution)) {
+    throw AppError.forbidden('Student belongs to a different institution');
+  }
+}
+
+export interface SetRecruitmentSourceInput {
+  source: RecruitmentSource;
+}
+
+/**
+ * Phase 7B — company sets/updates the recruitment source for an application.
+ *
+ * The source is owned by the application (not the company globally) so each
+ * candidate can be attributed independently, and a misclassification can be
+ * corrected after the fact. Only the owning COMPANY (or ADMIN) may write.
+ *
+ * Backward compatibility: existing applications without a source are unchanged
+ * by a no-op; calling this explicitly with a valid source sets the field.
+ */
+export async function setRecruitmentSource(
+  userId: string,
+  role: Role,
+  applicationId: string,
+  input: SetRecruitmentSourceInput,
+) {
+  const app = await Application.findById(applicationId);
+  if (!app) throw AppError.notFound('Application not found');
+
+  if (role === 'COMPANY') {
+    await assertCompanyOwnsApplication(userId, app);
+  } else if (role !== 'ADMIN') {
+    throw AppError.forbidden('Insufficient role');
+  }
+
+  (app as unknown as { recruitmentSource: RecruitmentSource }).recruitmentSource = input.source;
+  (app as unknown as { recruitmentSourceUpdatedAt: Date }).recruitmentSourceUpdatedAt = new Date();
+  app.timeline.push({
+    status: app.status,
+    at: new Date(),
+    note: `Recruitment source set to ${input.source}`,
+  });
+  await app.save();
+
+  return app.toJSON();
+}
+
+export interface CompletePlacementInput {
+  placedAt?: string;
+  notes?: string;
+}
+
+/**
+ * Phase 7B — company marks a placement as completed (candidate actually joined
+ * the role). Distinct from OFFER_ACCEPTED: that records the student accepting
+ * the offer, this records the company confirming the candidate has joined.
+ *
+ * Only the owning COMPANY (or ADMIN) may complete, and the application must
+ * currently be OFFER_ACCEPTED. The application transitions to COMPLETED via
+ * the existing transition map (Phase 7B added OFFER_ACCEPTED → COMPLETED).
+ *
+ * The candidate's `placedAt` and the company user who completed it are stored
+ * on the application for analytics and downstream verification.
+ */
+export async function completePlacementForApplication(
+  userId: string,
+  role: Role,
+  applicationId: string,
+  input: CompletePlacementInput = {},
+) {
+  const app = await Application.findById(applicationId).populate({
+    path: 'student',
+    populate: { path: 'user', select: '_id institution' },
+  });
+  if (!app) throw AppError.notFound('Application not found');
+
+  if (role === 'COMPANY') {
+    await assertCompanyOwnsApplication(userId, app);
+  } else if (role !== 'ADMIN') {
+    throw AppError.forbidden('Insufficient role');
+  }
+
+  if (app.status !== 'OFFER_ACCEPTED') {
+    throw AppError.badRequest(
+      'Placement can only be completed after the offer has been accepted',
+    );
+  }
+
+  const type = app.opportunityType as OpportunityType;
+  const transition = validateInternshipTransition({
+    currentStatus: 'OFFER_ACCEPTED',
+    newStatus: 'COMPLETED',
+    opportunityType: type,
+  });
+  if (!transition.valid) {
+    throw AppError.badRequest(transition.error ?? 'Cannot complete this placement');
+  }
+
+  const placedAt = input.placedAt ? new Date(input.placedAt) : new Date();
+  if (isNaN(placedAt.getTime())) {
+    throw AppError.badRequest('Invalid placement date');
+  }
+
+  app.status = 'COMPLETED';
+  (app as unknown as { placedAt: Date }).placedAt = placedAt;
+  (app as unknown as { completedAt: Date }).completedAt = placedAt;
+  (app as unknown as { placementCompletedBy: unknown }).placementCompletedBy = userId;
+  if (input.notes) {
+    (app as unknown as { placementCompletionNotes: string }).placementCompletionNotes = input.notes;
+  }
+  // Phase 7B — initialise verification to PENDING when a placement is completed,
+  // so the institution has a clear "needs review" record.
+  (app as unknown as {
+    placementVerification: { status: VerificationStatus; verifiedBy?: unknown; verifiedAt?: Date; note?: string };
+  }).placementVerification = {
+    status: 'PENDING',
+  };
+  app.timeline.push({
+    status: 'COMPLETED',
+    at: new Date(),
+    ...(input.notes ? { note: `Placement completed: ${input.notes}` } : { note: 'Placement completed' }),
+  });
+  await app.save();
+
+  // Notify the student
+  const student = app.student as unknown as { user: { _id: unknown } } | null;
+  if (student?.user) {
+    const title = await resolveOpportunityTitle(type, app);
+    await createNotification(
+      String(student.user._id),
+      'PLACEMENT_COMPLETED',
+      'Placement confirmed',
+      `Your placement for ${title} has been confirmed by the company.`,
+      `/student/applications/${String(app._id)}`,
+    );
+  }
+
+  return app.toJSON();
+}
+
+export interface VerifyPlacementInput {
+  status: VerificationStatus;
+  note?: string;
+}
+
+/**
+ * Phase 7B — institution or admin verifies a placement.
+ *
+ * Authorization:
+ *   - ADMIN: can verify any placement.
+ *   - INSTITUTION: can verify only placements belonging to students of their
+ *     own institution. The institution scope is derived from the authenticated
+ *     user's `institution` field — clients cannot bypass it via path/query.
+ *   - STUDENT/COMPANY/FACULTY: forbidden.
+ *
+ * Idempotency: if the application is already in the target verification status
+ * (and the verifying user matches), this is a no-op that returns the current
+ * state. The check is inside the atomic update so two parallel calls cannot
+ * both create timeline entries.
+ *
+ * The application must have a placement (placementCompletionNotes or placedAt
+ * set) to verify — verifying an offer-only application is meaningless.
+ */
+export async function verifyPlacement(
+  userId: string,
+  role: Role,
+  applicationId: string,
+  input: VerifyPlacementInput,
+) {
+  if (role !== 'INSTITUTION' && role !== 'ADMIN') {
+    throw AppError.forbidden('Only institution or admin may verify placements');
+  }
+
+  const app = await Application.findById(applicationId).populate({
+    path: 'student',
+    select: 'institution user',
+  });
+  if (!app) throw AppError.notFound('Application not found');
+
+  if (!app.student) {
+    throw AppError.forbidden('This application has no student applicant');
+  }
+
+  if (role === 'INSTITUTION') {
+    const studentRef = app.student as unknown as { _id: unknown; institution?: unknown };
+    await assertInstitutionOwnsStudent(userId, studentRef._id);
+  }
+
+  const placedAt = (app as unknown as { placedAt?: Date }).placedAt;
+  if (!placedAt) {
+    throw AppError.badRequest(
+      'Placement must be completed by the company before it can be verified',
+    );
+  }
+
+  const currentVerification = (app as unknown as {
+    placementVerification?: { status?: VerificationStatus; verifiedBy?: unknown; verifiedAt?: Date; note?: string };
+  }).placementVerification;
+  const currentStatus: VerificationStatus = currentVerification?.status ?? 'PENDING';
+
+  // Idempotent: already in the target state — return without modification.
+  if (currentStatus === input.status) {
+    return app.toJSON();
+  }
+
+  (app as unknown as {
+    placementVerification: {
+      status: VerificationStatus;
+      verifiedBy: unknown;
+      verifiedAt: Date;
+      note?: string;
+    };
+  }).placementVerification = {
+    status: input.status,
+    verifiedBy: userId,
+    verifiedAt: new Date(),
+    ...(input.note ? { note: input.note } : {}),
+  };
+  app.timeline.push({
+    status: app.status,
+    at: new Date(),
+    note: `Placement verification: ${input.status}${input.note ? ` (${input.note})` : ''}`,
+  });
+  await app.save();
+
+  // Notify the student and (if verified) the company. The placement outcome
+  // matters to both: the student wants to see their verified status, the
+  // company learns the institution confirmed the placement.
+  const studentRef = app.student as unknown as { user: { _id: unknown } } | null;
+  if (studentRef?.user) {
+    await createNotification(
+      String(studentRef.user._id),
+      'PLACEMENT_VERIFIED',
+      'Placement verification updated',
+      `Your placement verification status is now ${input.status}.`,
+      `/student/applications/${String(app._id)}`,
+    );
+  }
+  if (input.status === 'VERIFIED') {
+    const companyUserId = await resolveCompanyUserIdForApp(
+      app.opportunityType as OpportunityType,
+      app,
+    );
+    if (companyUserId) {
+      await createNotification(
+        companyUserId,
+        'PLACEMENT_VERIFIED',
+        'Placement verified',
+        'The institution has verified this placement.',
+        `/company/applicants/${String(app._id)}`,
+      );
+    }
+  }
+
+  return app.toJSON();
 }

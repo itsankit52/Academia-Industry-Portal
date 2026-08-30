@@ -20,6 +20,20 @@ const router = Router();
 
 router.get('/mentors', validate(listMentorsQuerySchema, 'query'), ctrl.listMentors);
 
+// Phase 8 — Recommended mentors
+router.get(
+  '/mentors/recommended/me',
+  requireAuth,
+  requireRole('STUDENT'),
+  ctrl.listRecommended,
+);
+router.get(
+  '/mentors/recommended',
+  requireAuth,
+  requireRole('STUDENT'),
+  ctrl.listRecommended,
+);
+
 router.post(
   '/mentors/me',
   requireAuth,

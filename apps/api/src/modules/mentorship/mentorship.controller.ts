@@ -16,6 +16,11 @@ import type { MentorshipMenteeRole } from '../../models/MentorshipRequest';
 import { AppError } from '../../utils/AppError';
 import * as service from './mentorship.service';
 
+export const listRecommended = asyncHandler(async (req: Request, res: Response) => {
+  const items = await service.recommendMentorsForStudent(req.user!.id, 10);
+  return ok(res, { items });
+});
+
 function num(v: unknown): number | undefined {
   if (v === undefined || v === null || v === '') return undefined;
   const n = Number(v);

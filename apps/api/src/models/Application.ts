@@ -1,5 +1,10 @@
 import { Schema, model, type HydratedDocument, type InferSchemaType } from 'mongoose';
-import { APPLICATION_STATUSES, OPPORTUNITY_TYPES } from '@aip/config';
+import {
+  APPLICATION_STATUSES,
+  OPPORTUNITY_TYPES,
+  RECRUITMENT_SOURCES,
+  VERIFICATION_STATUSES,
+} from '@aip/config';
 
 const timelineEntrySchema = new Schema(
   {
@@ -62,6 +67,29 @@ const applicationSchema = new Schema(
     // Phase 6B — student-initiated withdrawal after OFFER_ACCEPTED
     withdrawalRequestedAt: { type: Date },
     withdrawalReason: { type: String, maxlength: 1000 },
+    // Phase 7B — recruitment source. Owned by the company; set/updated on the
+    // application so each candidate's source is recorded independently of the
+    // posting. Optional for backward compatibility with pre-Phase 7B records.
+    recruitmentSource: {
+      type: String,
+      enum: [...RECRUITMENT_SOURCES],
+    },
+    recruitmentSourceUpdatedAt: { type: Date },
+    // Phase 7B — company-confirmed placement completion (for JOB applications).
+    // Distinct from OFFER_ACCEPTED: that is the student accepting the offer;
+    // placedAt records when the candidate actually joined / started the role.
+    placedAt: { type: Date },
+    placementCompletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    placementCompletionNotes: { type: String, maxlength: 2000 },
+    // Phase 7B — institution/admin verification that the placement is genuine.
+    // Stored as a subdocument so the verifying user and the verification status
+    // evolve together; the absence of a subdoc implies "not yet verified".
+    placementVerification: {
+      status: { type: String, enum: [...VERIFICATION_STATUSES], default: 'PENDING' },
+      verifiedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+      verifiedAt: { type: Date },
+      note: { type: String, maxlength: 2000 },
+    },
   },
   {
     timestamps: true,

@@ -254,7 +254,8 @@ describe('internshipLifecycle', () => {
       expect(INTERNSHIP_TRANSITIONS.REJECTED).toHaveLength(0);
       expect(INTERNSHIP_TRANSITIONS.WITHDRAWN).toHaveLength(0);
       expect(INTERNSHIP_TRANSITIONS.COMPLETED).toHaveLength(0);
-      expect(INTERNSHIP_TRANSITIONS.OFFER_ACCEPTED).toHaveLength(0);
+      // Phase 7B: OFFER_ACCEPTED can transition to COMPLETED (placement completion).
+      expect(INTERNSHIP_TRANSITIONS.OFFER_ACCEPTED).toContain('COMPLETED');
       expect(INTERNSHIP_TRANSITIONS.OFFER_REJECTED).toHaveLength(0);
       // Phase 5B: ONGOING can still transition to COMPLETED
       expect(INTERNSHIP_TRANSITIONS.ONGOING).toContain('COMPLETED');

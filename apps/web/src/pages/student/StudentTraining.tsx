@@ -10,12 +10,12 @@ import { SkeletonCard } from '@/components/ui/Skeleton';
 import { useTrainings } from '@/hooks/queries/useTrainings';
 import { useRecommendedTrainings } from '@/hooks/queries/useRecommendedTrainings';
 import { useSkillsCatalog } from '@/hooks/queries/useSkillsCatalog';
+import { useEnrollInTraining } from '@/hooks/queries/useTrainingEnrollment';
+import { useMyEnrollments } from '@/hooks/queries/useTrainingEnrollment';
 
 export default function StudentTraining() {
   const [searchParams] = useSearchParams();
   const [page, setPage] = useState(1);
-  // The skill-gap page links here with `?skill=<id>` for a missing skill, so the
-  // relevant filter is applied on arrival instead of landing on an unfiltered list.
   const [selectedSkills, setSelectedSkills] = useState<string[]>(() =>
     searchParams.getAll('skill').filter(Boolean),
   );
@@ -26,11 +26,22 @@ export default function StudentTraining() {
   const recommendedItems = recommended.data?.items ?? [];
   const { data, isLoading, isError, refetch } = useTrainings({ skills: selectedSkills, page });
 
+  const enrollmentsQ = useMyEnrollments({ pageSize: 100 });
+  const enrollMut = useEnrollInTraining();
+
+  const enrolledTrainingIds = new Set(
+    (enrollmentsQ.data?.items ?? []).map((e) => e.training),
+  );
+
   function toggleSkill(skillId: string) {
     setSelectedSkills((prev) =>
       prev.includes(skillId) ? prev.filter((s) => s !== skillId) : [...prev, skillId],
     );
     setPage(1);
+  }
+
+  function handleEnroll(trainingId: string) {
+    enrollMut.mutate(trainingId);
   }
 
   return (
@@ -45,7 +56,13 @@ export default function StudentTraining() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {recommendedItems.map((item) => (
-              <TrainingCard key={item.training.id} training={item.training} />
+              <TrainingCard
+                key={item.training.id}
+                training={item.training}
+                onEnroll={handleEnroll}
+                isEnrolling={enrollMut.isPending && enrollMut.variables === item.training.id}
+                isEnrolled={enrolledTrainingIds.has(item.training.id)}
+              />
             ))}
           </div>
         </div>
@@ -103,7 +120,13 @@ export default function StudentTraining() {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
               {data.items.map((training) => (
-                <TrainingCard key={training.id} training={training} />
+                <TrainingCard
+                  key={training.id}
+                  training={training}
+                  onEnroll={handleEnroll}
+                  isEnrolling={enrollMut.isPending && enrollMut.variables === training.id}
+                  isEnrolled={enrolledTrainingIds.has(training.id)}
+                />
               ))}
             </div>
             <div className="flex justify-center">

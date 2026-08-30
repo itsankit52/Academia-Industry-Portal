@@ -7,7 +7,7 @@
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { Types } from 'mongoose';
-import type { Request, Response, NextFunction } from 'express';
+import type { Request, Response } from 'express';
 import { fullMatchForMe } from '../recommendations.controller';
 import { AppError } from '../../../utils/AppError';
 
@@ -67,7 +67,7 @@ describe('GET /recommendations/full-match/:type/:id', () => {
   it('calls analyzeFullMatch for a valid JOB opportunity', async () => {
     const req = mockReq('JOB', OPP_ID);
     const res = mockRes();
-    const next = vi.fn<Parameters<NextFunction>>();
+    const next = vi.fn<(err?: unknown) => void>();
     await fullMatchForMe(req, res, next);
     expect(next).not.toHaveBeenCalled();
     expect(analyzeFullMatch).toHaveBeenCalledWith(USER_ID, 'JOB', OPP_ID);
@@ -76,7 +76,7 @@ describe('GET /recommendations/full-match/:type/:id', () => {
   it('calls analyzeFullMatch for a valid INTERNSHIP opportunity', async () => {
     const req = mockReq('INTERNSHIP', OPP_ID);
     const res = mockRes();
-    const next = vi.fn<Parameters<NextFunction>>();
+    const next = vi.fn<(err?: unknown) => void>();
     await fullMatchForMe(req, res, next);
     expect(next).not.toHaveBeenCalled();
     expect(analyzeFullMatch).toHaveBeenCalledWith(USER_ID, 'INTERNSHIP', OPP_ID);
@@ -85,7 +85,7 @@ describe('GET /recommendations/full-match/:type/:id', () => {
   it('passes a 400 AppError to next when type is not JOB or INTERNSHIP', async () => {
     const req = mockReq('FOO', OPP_ID);
     const res = mockRes();
-    const next = vi.fn<Parameters<NextFunction>>();
+    const next = vi.fn<(err?: unknown) => void>();
     await fullMatchForMe(req, res, next);
     expect(next).toHaveBeenCalledTimes(1);
     const err = next.mock.calls[0]![0] as AppError;
@@ -97,7 +97,7 @@ describe('GET /recommendations/full-match/:type/:id', () => {
   it('passes a 400 AppError to next when id is not a 24-character ObjectId', async () => {
     const req = mockReq('JOB', 'not-an-id');
     const res = mockRes();
-    const next = vi.fn<Parameters<NextFunction>>();
+    const next = vi.fn<(err?: unknown) => void>();
     await fullMatchForMe(req, res, next);
     expect(next).toHaveBeenCalledTimes(1);
     const err = next.mock.calls[0]![0] as AppError;
@@ -108,7 +108,7 @@ describe('GET /recommendations/full-match/:type/:id', () => {
   it('passes a 401 AppError to next when request has no authenticated user', async () => {
     const req = mockReq('JOB', OPP_ID, '');
     const res = mockRes();
-    const next = vi.fn<Parameters<NextFunction>>();
+    const next = vi.fn<(err?: unknown) => void>();
     await fullMatchForMe(req, res, next);
     expect(next).toHaveBeenCalledTimes(1);
     const err = next.mock.calls[0]![0] as AppError;

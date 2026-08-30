@@ -174,4 +174,42 @@ router.post(
   ctrl.requestWithdrawal,
 );
 
+// Phase 7B: Recruitment source, placement completion, verification
+router.put(
+  '/:id/recruitment-source',
+  requireAuth,
+  requireRole('COMPANY', 'ADMIN'),
+  validate(idParamSchema, 'params'),
+  auditLog({
+    action: 'RECRUITMENT_SOURCE_UPDATED',
+    entity: 'Application',
+    resolveEntityId: (req) => req.params.id,
+  }),
+  ctrl.putRecruitmentSource,
+);
+router.patch(
+  '/:id/placement-complete',
+  requireAuth,
+  requireRole('COMPANY', 'ADMIN'),
+  validate(idParamSchema, 'params'),
+  auditLog({
+    action: 'PLACEMENT_COMPLETED',
+    entity: 'Application',
+    resolveEntityId: (req) => req.params.id,
+  }),
+  ctrl.completePlacement,
+);
+router.patch(
+  '/:id/placement-verify',
+  requireAuth,
+  requireRole('INSTITUTION', 'ADMIN'),
+  validate(idParamSchema, 'params'),
+  auditLog({
+    action: 'PLACEMENT_VERIFIED',
+    entity: 'Application',
+    resolveEntityId: (req) => req.params.id,
+  }),
+  ctrl.verifyPlacement,
+);
+
 export default router;

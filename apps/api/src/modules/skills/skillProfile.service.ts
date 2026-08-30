@@ -215,6 +215,7 @@ export async function buildSkillProfile(userId: string): Promise<SkillProfile> {
             : null,
         resumeMentioned: resumeSkillsLower.has(String(skillObj.name).toLowerCase()),
         trainingMatches,
+        industryDemand: 0,
       },
       createdAt: iso(row.createdAt),
       updatedAt: iso(row.updatedAt),

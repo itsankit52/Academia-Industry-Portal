@@ -193,8 +193,9 @@ describe('updateStatus — valid transitions', () => {
     await updateStatus(COMPANY_USER, 'COMPANY', String(app._id), {
       status: 'SHORTLISTED',
     } as never);
-    expect(app.timeline).toHaveLength(1);
-    expect(app.timeline[0]).toMatchObject({ status: 'SHORTLISTED' });
+    const tl = app.timeline as Array<Record<string, unknown>>;
+    expect(tl).toHaveLength(1);
+    expect(tl[0]).toMatchObject({ status: 'SHORTLISTED' });
   });
 
   it('records a note when provided', async () => {
@@ -203,7 +204,8 @@ describe('updateStatus — valid transitions', () => {
       status: 'SELECTED',
       note: 'Strong culture fit, excellent skills',
     } as never);
-    expect(app.timeline[0]).toMatchObject({
+    const tl = app.timeline as Array<Record<string, unknown>>;
+    expect(tl[0]).toMatchObject({
       status: 'SELECTED',
       note: 'Strong culture fit, excellent skills',
     });

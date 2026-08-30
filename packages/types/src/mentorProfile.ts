@@ -25,3 +25,10 @@ export interface PublicMentor {
   mentorshipCapacity: number;
   activeCount?: number;
 }
+
+export interface RecommendedMentor extends PublicMentor {
+  score: number;
+  skillOverlap: number;
+  expertiseOverlap: number;
+  reasons: string[];
+}

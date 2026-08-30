@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { FiArrowLeft, FiDownload, FiFileText, FiUser, FiUserPlus, FiCheckCircle, FiClock, FiDollarSign, FiCalendar, FiUploadCloud } from 'react-icons/fi';
+import { FiArrowLeft, FiDownload, FiFileText, FiUser, FiUserPlus, FiCheckCircle, FiClock, FiDollarSign, FiCalendar } from 'react-icons/fi';
 import PageHeader from '@/components/ui/PageHeader';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -17,7 +17,6 @@ import {
 } from '@/hooks/queries/useCompanyApplicants';
 import {
   useInterimReports,
-  useMentorFeedback,
 } from '@/hooks/queries/useInterimReports';
 import { useDownloadCertificate } from '@/hooks/queries/useDownloadCertificate';
 import {
@@ -32,6 +31,11 @@ import {
   useAttachOfferLetter,
 } from '@/hooks/queries/useOfferDetails';
 import { useUploadDocument } from '@/hooks/queries/useDocuments';
+import {
+  useSetRecruitmentSource,
+  useCompletePlacement,
+} from '@/hooks/queries/usePhase7B';
+import { RECRUITMENT_SOURCES } from '@aip/config';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { format } from 'date-fns';
 import type { ApplicationStatus } from '@aip/config';
@@ -52,6 +56,7 @@ const statusConfig: Record<ApplicationStatus, { label: string; variant: BadgeVar
   OFFER_ACCEPTED: { label: 'Offer Accepted', variant: 'success' },
   OFFER_REJECTED: { label: 'Offer Declined', variant: 'danger' },
   WITHDRAWAL_REQUESTED: { label: 'Withdrawal Requested', variant: 'warning' },
+  OFFER_EXPIRED: { label: 'Offer Expired', variant: 'danger' },
 };
 
 export default function CompanyApplicantDetails() {
@@ -83,6 +88,17 @@ export default function CompanyApplicantDetails() {
   const [offerJoiningDate, setOfferJoiningDate] = useState('');
   const [offerTerms, setOfferTerms] = useState('');
   const [offerExpiresAt, setOfferExpiresAt] = useState('');
+
+  // Phase 7B: Recruitment source
+  const setRecruitmentSource = useSetRecruitmentSource();
+  const [showRecruitmentSource, setShowRecruitmentSource] = useState(false);
+  const [selectedSource, setSelectedSource] = useState('');
+
+  // Phase 7B: Placement completion
+  const completePlacement = useCompletePlacement();
+  const [showPlacementComplete, setShowPlacementComplete] = useState(false);
+  const [placementDate, setPlacementDate] = useState('');
+  const [placementNotes, setPlacementNotes] = useState('');
 
   if (isError) return <ErrorState onRetry={refetch} />;
   if (isLoading || !data)
@@ -685,6 +701,204 @@ export default function CompanyApplicantDetails() {
               </Card.Body>
             </Card>
           )}
+
+          {/* Phase 7B: Recruitment source + placement completion */}
+          <Card>
+            <Card.Header>
+              <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <FiUserPlus className="w-4 h-4" />
+                Recruitment &amp; Placement
+              </h3>
+            </Card.Header>
+            <Card.Body className="space-y-3">
+              {/* Recruitment source */}
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Recruitment Source</p>
+                <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                  {application.recruitmentSource
+                    ? application.recruitmentSource.replace(/_/g, ' ')
+                    : '—'}
+                </p>
+                {!showRecruitmentSource ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-2"
+                    onClick={() => {
+                      setSelectedSource(application.recruitmentSource ?? '');
+                      setShowRecruitmentSource(true);
+                    }}
+                  >
+                    {application.recruitmentSource ? 'Update Source' : 'Set Source'}
+                  </Button>
+                ) : (
+                  <div className="mt-2 space-y-2">
+                    <select
+                      className="w-full input input-sm"
+                      value={selectedSource}
+                      onChange={(e) => setSelectedSource(e.target.value)}
+                    >
+                      <option value="">Select source…</option>
+                      {RECRUITMENT_SOURCES.map((s) => (
+                        <option key={s} value={s}>
+                          {s.replace(/_/g, ' ')}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        disabled={!selectedSource || setRecruitmentSource.isPending}
+                        onClick={() => {
+                          if (!selectedSource) return;
+                          setRecruitmentSource.mutate(
+                            {
+                              id: application.id,
+                              source: selectedSource as NonNullable<
+                                typeof application.recruitmentSource
+                              >,
+                            },
+                            {
+                              onSuccess: () => setShowRecruitmentSource(false),
+                            },
+                          );
+                        }}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setShowRecruitmentSource(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Placement completion */}
+              {application.status === 'OFFER_ACCEPTED' && (
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                    Mark candidate as placed/joined
+                  </p>
+                  {!showPlacementComplete ? (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      iconLeft={<FiCheckCircle className="w-4 h-4" />}
+                      onClick={() => {
+                        setPlacementDate(new Date().toISOString().split('T')[0] ?? '');
+                        setPlacementNotes('');
+                        setShowPlacementComplete(true);
+                      }}
+                    >
+                      Mark Placement Completed
+                    </Button>
+                  ) : (
+                    <div className="space-y-2">
+                      <div>
+                        <label className="text-xs text-slate-500 dark:text-slate-400">
+                          Placement Date
+                        </label>
+                        <input
+                          type="date"
+                          className="w-full input input-sm"
+                          value={placementDate}
+                          onChange={(e) => setPlacementDate(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-500 dark:text-slate-400">
+                          Notes (optional)
+                        </label>
+                        <textarea
+                          rows={2}
+                          className="w-full input input-sm"
+                          value={placementNotes}
+                          onChange={(e) => setPlacementNotes(e.target.value)}
+                          placeholder="e.g. Joined on 1 July 2026, full-time role"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          disabled={completePlacement.isPending}
+                          onClick={() =>
+                            completePlacement.mutate(
+                              {
+                                id: application.id,
+                                placedAt: placementDate
+                                  ? new Date(placementDate).toISOString()
+                                  : undefined,
+                                notes: placementNotes || undefined,
+                              },
+                              {
+                                onSuccess: () => setShowPlacementComplete(false),
+                              },
+                            )
+                          }
+                        >
+                          Confirm Placement
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setShowPlacementComplete(false)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Placement status display */}
+              {application.placedAt && (
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Placed On</p>
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                    {format(new Date(application.placedAt), 'MMM d, yyyy')}
+                  </p>
+                  {application.placementCompletionNotes && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      {application.placementCompletionNotes}
+                    </p>
+                  )}
+                  {application.placementVerification && (
+                    <div className="mt-2">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Verification Status
+                      </p>
+                      <p className="text-sm">
+                        {application.placementVerification.status === 'VERIFIED' ? (
+                          <span className="text-emerald-700 dark:text-emerald-300 font-medium">
+                            ✅ Verified
+                          </span>
+                        ) : application.placementVerification.status === 'REJECTED' ? (
+                          <span className="text-red-700 dark:text-red-300 font-medium">
+                            ❌ Rejected
+                          </span>
+                        ) : (
+                          <span className="text-amber-700 dark:text-amber-300 font-medium">
+                            ⏳ Pending
+                          </span>
+                        )}
+                      </p>
+                      {application.placementVerification.verifiedAt && (
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {format(new Date(application.placementVerification.verifiedAt), 'MMM d, yyyy')}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </Card.Body>
+          </Card>
 
           {resumeUrl && (
             <Card>

@@ -25,3 +25,4 @@ export { MentorshipMessage, type MentorshipMessageDoc } from './MentorshipMessag
 export { InterimReport, type InterimReportDoc } from './InterimReport';
 export { CollaborationEvent, type CollaborationEventDoc } from './CollaborationEvent';
 export { EventRegistration, type EventRegistrationDoc } from './EventRegistration';
+export { TrainingEnrollment, type TrainingEnrollmentDoc } from './TrainingEnrollment';

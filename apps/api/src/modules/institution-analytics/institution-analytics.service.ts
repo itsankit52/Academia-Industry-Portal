@@ -80,6 +80,13 @@ export interface DashboardStats {
     offerAcceptanceRate: number;
     interviewConversionRate: number;
     placementRate: number;
+    // Phase 7B: Placements are OFFER_ACCEPTED → COMPLETED (placement completion
+    // recorded by the company) — distinct from the offer being accepted.
+    placementsCompleted: number;
+    placementsPendingVerification: number;
+    placementsVerified: number;
+    verificationRate: number;
+    recruitmentSources: { source: string; count: number }[];
   };
 }
 
@@ -363,11 +370,10 @@ export async function getDashboardStats(
       ? Math.round((internshipCompleted / internshipSelected) * 1000) / 10
       : 0;
 
-  // Phase 6B: placement pipeline metrics for job applications.
-  // "Expired" here means SELECTED with offerExpiresAt in the past — the same
-  // isOfferExpired helper the application service uses, evaluated at the DB
-  // level for performance.
-  const now = new Date();
+  // Phase 6B / 7A: placement pipeline metrics for job applications.
+  // "Expired" now means OFFER_EXPIRED status (set by the background processor
+  // when offerExpiresAt passes) — more reliable than the old SELECTED + expired
+  // date query.
   const placementMatch = {
     student: { $in: studentIds },
     opportunityType: 'JOB',
@@ -380,7 +386,11 @@ export async function getDashboardStats(
     placementOfferAccepted,
     placementOfferRejected,
     placementWithdrawalRequested,
-    placementExpiredRaw,
+    placementOfferExpired,
+    placementCompleted,
+    placementVerified,
+    placementPendingVerification,
+    recruitmentSourceAgg,
   ] = await Promise.all([
     Application.countDocuments(placementMatch),
     Application.countDocuments({ ...placementMatch, status: 'SHORTLISTED' }),
@@ -392,13 +402,30 @@ export async function getDashboardStats(
     Application.countDocuments({ ...placementMatch, status: 'OFFER_ACCEPTED' }),
     Application.countDocuments({ ...placementMatch, status: 'OFFER_REJECTED' }),
     Application.countDocuments({ ...placementMatch, status: 'WITHDRAWAL_REQUESTED' }),
+    Application.countDocuments({ ...placementMatch, status: 'OFFER_EXPIRED' }),
+    // Phase 7B: company-confirmed placements (status COMPLETED with placedAt set).
+    Application.countDocuments({ ...placementMatch, status: 'COMPLETED', placedAt: { $exists: true, $ne: null } }),
+    Application.countDocuments({ ...placementMatch, 'placementVerification.status': 'VERIFIED' }),
     Application.countDocuments({
       ...placementMatch,
-      status: 'SELECTED',
-      offerExpiresAt: { $ne: null, $lte: now },
+      placedAt: { $exists: true, $ne: null },
+      $or: [
+        { placementVerification: { $exists: false } },
+        { 'placementVerification.status': 'PENDING' },
+      ],
     }),
+    // Phase 7B: recruitment source aggregation across placed applications.
+    Application.aggregate<{ _id: string; count: number }>([
+      {
+        $match: {
+          ...placementMatch,
+          recruitmentSource: { $exists: true, $ne: null },
+        },
+      },
+      { $group: { _id: '$recruitmentSource', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]),
   ]);
-  const placementOfferExpired = placementExpiredRaw;
   // Offer acceptance rate = accepted / (accepted + rejected + expired).
   const offerDenominator =
     placementOfferAccepted + placementOfferRejected + placementOfferExpired;
@@ -461,6 +488,18 @@ export async function getDashboardStats(
       offerAcceptanceRate,
       interviewConversionRate,
       placementRate,
+      // Phase 7B additions
+      placementsCompleted: placementCompleted,
+      placementsVerified: placementVerified,
+      placementsPendingVerification: placementPendingVerification,
+      verificationRate:
+        placementCompleted > 0
+          ? Math.round((placementVerified / placementCompleted) * 1000) / 10
+          : 0,
+      recruitmentSources: recruitmentSourceAgg.map((r) => ({
+        source: r._id,
+        count: r.count,
+      })),
     },
   };
 }

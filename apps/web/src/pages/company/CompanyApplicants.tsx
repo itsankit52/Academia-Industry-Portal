@@ -17,7 +17,8 @@ import {
   useStartInternship,
   useMarkInternshipOngoing,
 } from '@/hooks/queries/useCompanyApplicants';
-import { APPLICATION_STATUSES } from '@aip/config';
+import { useCompletePlacement } from '@/hooks/queries/usePhase7B';
+import { APPLICATION_STATUSES, RECRUITMENT_SOURCES } from '@aip/config';
 import type { ApplicationStatus } from '@aip/config';
 import { getStudentName, getStudentEmail, getOpportunityTitle } from '@aip/types';
 import { format } from 'date-fns';
@@ -38,6 +39,7 @@ const statusConfig: Record<ApplicationStatus, { label: string; variant: BadgeVar
   OFFER_ACCEPTED: { label: 'Offer Accepted', variant: 'success' },
   OFFER_REJECTED: { label: 'Offer Declined', variant: 'danger' },
   WITHDRAWAL_REQUESTED: { label: 'Withdrawal Requested', variant: 'warning' },
+  OFFER_EXPIRED: { label: 'Offer Expired', variant: 'danger' },
 };
 
 const statusOptions = [
@@ -60,6 +62,7 @@ export default function CompanyApplicants() {
   const updateStatus = useUpdateApplicationStatus();
   const startInternship = useStartInternship();
   const markOngoing = useMarkInternshipOngoing();
+  const completePlacement = useCompletePlacement();
 
   if (isError) return <ErrorState onRetry={refetch} />;
 
@@ -180,6 +183,15 @@ export default function CompanyApplicants() {
                           className="text-xs px-2 py-1 rounded border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 transition-colors"
                         >
                           Mark Ongoing
+                        </button>
+                      )}
+                      {/* Phase 7B: Mark placement completed (JOB/INTERNSHIP after OFFER_ACCEPTED) */}
+                      {app.status === 'OFFER_ACCEPTED' && (
+                        <button
+                          onClick={() => completePlacement.mutate({ id: app.id })}
+                          className="text-xs px-2 py-1 rounded border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/40 transition-colors"
+                        >
+                          Mark Completed
                         </button>
                       )}
                     </div>

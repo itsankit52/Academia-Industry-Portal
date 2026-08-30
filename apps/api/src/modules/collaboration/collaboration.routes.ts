@@ -7,6 +7,7 @@ import {
   listMyRegistrationsQuerySchema,
   listEventRegistrationsQuerySchema,
   markAttendedSchema,
+  submitFeedbackSchema,
   idParamSchema,
 } from '@aip/validation';
 import { requireAuth } from '../../middleware/requireAuth';
@@ -103,6 +104,28 @@ router.post(
   validate(idParamSchema, 'params'),
   validate(markAttendedSchema),
   ctrl.markAttended,
+);
+
+// Phase 8 — Event feedback
+router.post(
+  '/:id/feedback',
+  requireAuth,
+  validate(idParamSchema, 'params'),
+  validate(submitFeedbackSchema),
+  auditLog({
+    action: 'EVENT_FEEDBACK_SUBMITTED',
+    entity: 'EventRegistration',
+    resolveEntityId: (req) => req.params.id,
+  }),
+  ctrl.submitFeedback,
+);
+
+router.get(
+  '/:id/feedback/summary',
+  requireAuth,
+  requireRole('COMPANY', 'INSTITUTION', 'FACULTY', 'ADMIN'),
+  validate(idParamSchema, 'params'),
+  ctrl.feedbackSummary,
 );
 
 export default router;

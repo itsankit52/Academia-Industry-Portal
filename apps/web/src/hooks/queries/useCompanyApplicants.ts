@@ -3,7 +3,12 @@ import { toast } from 'sonner';
 import { apiGet, apiPatch } from '@/lib/api';
 import { queryKeys } from './queryKeys';
 import type { Application, Paginated, TimelineEntry } from '@aip/types';
-import type { ApplicationStatus, OpportunityType } from '@aip/config';
+import type {
+  ApplicationStatus,
+  OpportunityType,
+  RecruitmentSource,
+  VerificationStatus,
+} from '@aip/config';
 
 export interface ApplicantsFilters {
   status?: string;
@@ -94,6 +99,16 @@ export interface CandidateDetails {
     offerLetter?: { id: string; filename: string; mimeType: string };
     offerRespondedAt?: string;
     withdrawalRequestedAt?: string;
+    // Phase 7B
+    recruitmentSource?: RecruitmentSource;
+    placedAt?: string;
+    placementCompletionNotes?: string;
+    placementVerification?: {
+      status: VerificationStatus;
+      verifiedBy?: string;
+      verifiedAt?: string;
+      note?: string;
+    };
   };
   aiNarrative?: string;
 }

@@ -6,6 +6,7 @@ import type {
   ListMyRegistrationsQuery,
   ListEventRegistrationsQuery,
   MarkAttendedInput,
+  SubmitFeedbackInput,
 } from '@aip/validation';
 import type { Role } from '@aip/config';
 import { asyncHandler } from '../../utils/asyncHandler';
@@ -90,6 +91,25 @@ export const markAttended = asyncHandler(async (req: Request, res: Response) => 
     req.user!.role as Role,
     req.params.id!,
     body.attendeeUserId,
+  );
+  return ok(res, data);
+});
+
+export const submitFeedback = asyncHandler(async (req: Request, res: Response) => {
+  const body = req.body as SubmitFeedbackInput;
+  const data = await service.submitEventFeedback(
+    req.user!.id,
+    req.params.id!,
+    body,
+  );
+  return ok(res, data);
+});
+
+export const feedbackSummary = asyncHandler(async (req: Request, res: Response) => {
+  const data = await service.getEventFeedbackSummary(
+    req.params.id!,
+    req.user!.id,
+    req.user!.role as Role,
   );
   return ok(res, data);
 });

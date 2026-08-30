@@ -17,7 +17,10 @@ export const INTERNSHIP_TRANSITIONS: Record<ApplicationStatus, ApplicationStatus
   SHORTLISTED: ['INTERVIEW_SCHEDULED', 'SELECTED', 'REJECTED', 'WITHDRAWN'],
   INTERVIEW_SCHEDULED: ['SELECTED', 'REJECTED', 'WITHDRAWN'],
   SELECTED: ['INTERNSHIP_STARTED', 'REJECTED', 'WITHDRAWN', 'OFFER_ACCEPTED', 'OFFER_REJECTED'],
-  OFFER_ACCEPTED: [],
+  // Phase 7B: Company can mark placement as completed after OFFER_ACCEPTED.
+  // This records the candidate actually joining/starting the role (distinct from
+  // the student accepting the offer letter).
+  OFFER_ACCEPTED: ['COMPLETED'],
   OFFER_REJECTED: [],
   REJECTED: [],
   WITHDRAWN: [],
@@ -28,6 +31,8 @@ export const INTERNSHIP_TRANSITIONS: Record<ApplicationStatus, ApplicationStatus
   // (requestOfferWithdrawal) so this is empty — the generic updateStatus
   // path cannot create this transition.
   WITHDRAWAL_REQUESTED: [],
+  // Phase 7A: OFFER_EXPIRED is set by the background processor. Terminal.
+  OFFER_EXPIRED: [],
 };
 
 /**
@@ -42,7 +47,8 @@ export const JOB_TRANSITIONS: Record<ApplicationStatus, ApplicationStatus[]> = {
   SHORTLISTED: ['INTERVIEW_SCHEDULED', 'SELECTED', 'REJECTED', 'WITHDRAWN'],
   INTERVIEW_SCHEDULED: ['SELECTED', 'REJECTED', 'WITHDRAWN'],
   SELECTED: ['REJECTED', 'WITHDRAWN', 'OFFER_ACCEPTED', 'OFFER_REJECTED'],
-  OFFER_ACCEPTED: [],
+  // Phase 7B: Company can mark placement as completed after OFFER_ACCEPTED.
+  OFFER_ACCEPTED: ['COMPLETED'],
   OFFER_REJECTED: [],
   REJECTED: [],
   WITHDRAWN: [],
@@ -52,6 +58,8 @@ export const JOB_TRANSITIONS: Record<ApplicationStatus, ApplicationStatus[]> = {
   // Phase 6B: Withdrawal is handled by a dedicated student endpoint, so
   // the generic updateStatus path cannot create this transition.
   WITHDRAWAL_REQUESTED: [],
+  // Phase 7A: OFFER_EXPIRED is set by the background processor. Terminal.
+  OFFER_EXPIRED: [],
 };
 
 export interface InternshipDates {
@@ -161,7 +169,8 @@ export function isTerminalStatus(status: ApplicationStatus): boolean {
     status === 'WITHDRAWN' ||
     status === 'COMPLETED' ||
     status === 'OFFER_ACCEPTED' ||
-    status === 'OFFER_REJECTED'
+    status === 'OFFER_REJECTED' ||
+    status === 'OFFER_EXPIRED'
   );
 }
 
