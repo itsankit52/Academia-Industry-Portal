@@ -32,7 +32,8 @@ export const queryKeys = {
   /** Phase 9B — aggregate-only peer benchmark. */
   careerBenchmark: () => ['recommendations', 'benchmark'] as const,
   /** Phase 9B — readiness progression. */
-  careerProgression: (currentScore: number) => ['recommendations', 'progression', currentScore] as const,
+  careerProgression: (currentScore: number) =>
+    ['recommendations', 'progression', currentScore] as const,
 
   student: {
     dashboard: ['student', 'dashboard'] as const,
@@ -90,6 +91,8 @@ export const queryKeys = {
     skillGaps: (institutionId?: string) => ['institution', 'skill-gaps', institutionId] as const,
     placements: (institutionId?: string) => ['institution', 'placements', institutionId] as const,
     fdps: (institutionId?: string) => ['institution', 'fdps', institutionId] as const,
+    facultyOpps: (filters?: object) => ['institution', 'faculty-opps', filters] as const,
+    facultyOpp: (id: string) => ['institution', 'faculty-opp', id] as const,
   },
 
   skills: (filters?: object) => ['skills', 'list', filters] as const,
@@ -157,7 +160,8 @@ export const queryKeys = {
 
   // Phase 11 — Placement Drive Operations
   drives: {
-    list: (filters?: Record<string, unknown>) => ['placement', 'drives', 'list', filters ?? {}] as const,
+    list: (filters?: Record<string, unknown>) =>
+      ['placement', 'drives', 'list', filters ?? {}] as const,
     detail: (id: string) => ['placement', 'drives', 'detail', id] as const,
     myParticipations: () => ['placement', 'drives', 'myParticipations'] as const,
     eligibility: (driveId: string) => ['placement', 'drives', 'eligibility', driveId] as const,
@@ -179,6 +183,7 @@ export const queryKeys = {
   },
   // Phase 11 — Action Queue
   actionItems: {
-    list: (filters?: Record<string, unknown>) => ['placement', 'actionItems', 'list', filters ?? {}] as const,
+    list: (filters?: Record<string, unknown>) =>
+      ['placement', 'actionItems', 'list', filters ?? {}] as const,
   },
 };

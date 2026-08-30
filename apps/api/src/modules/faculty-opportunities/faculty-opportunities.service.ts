@@ -89,6 +89,31 @@ export async function listOpportunities(
   return buildPaginated(items, total, page, pageSize);
 }
 
+/**
+ * Phase 12 — admin-only list. Bypasses the public PUBLISHED filter and
+ * surfaces every opportunity across every host institution so admins can
+ * see drafts, closures, and archived postings in one place.
+ */
+export async function listAllOpportunities(
+  pag: PaginationInput,
+  filters: FacultyOpportunityListFilters,
+): Promise<ReturnType<typeof buildPaginated<Record<string, unknown>>>> {
+  const { page, pageSize, skip, limit, sort } = applyPagination(pag);
+  const where: Record<string, unknown> = {};
+  if (filters.status) where.status = filters.status;
+  if (filters.opportunityType) where.opportunityType = filters.opportunityType;
+  if (filters.hostType) where.hostType = filters.hostType;
+  if (filters.mode) where.mode = filters.mode;
+  if (filters.q) where.$text = { $search: filters.q };
+
+  const [rows, total] = await Promise.all([
+    FacultyOpportunity.find(where).sort(sort).skip(skip).limit(limit),
+    FacultyOpportunity.countDocuments(where),
+  ]);
+  const items = await populateHostList(rows);
+  return buildPaginated(items, total, page, pageSize);
+}
+
 export async function getOpportunityById(id: string): Promise<Record<string, unknown>> {
   const doc = await FacultyOpportunity.findById(id);
   if (!doc) throw AppError.notFound('Faculty opportunity not found');
@@ -109,10 +134,16 @@ export async function updateOpportunity(
   userId: string,
   role: Role,
   input: UpdateFacultyOpportunityInput,
+  newStatus?: 'DRAFT' | 'PUBLISHED' | 'CLOSED' | 'ARCHIVED',
 ): Promise<Record<string, unknown>> {
   const doc = await assertOwner(id, userId, role);
   const patch: Record<string, unknown> = { ...input };
   if (input.applicationDeadline) patch.applicationDeadline = new Date(input.applicationDeadline);
+  // Allow status to be updated via the optional fourth arg (e.g. "Save Draft" from edit page).
+  // Omitting it preserves the existing status (important: don't revert CLOSED → PUBLISHED).
+  if (newStatus !== undefined) {
+    doc.status = newStatus;
+  }
   Object.assign(doc, patch);
   await doc.save();
   return populateHost(doc);
@@ -123,8 +154,9 @@ export async function patchOpportunity(
   userId: string,
   role: Role,
   input: UpdateFacultyOpportunityInput,
+  newStatus?: 'DRAFT' | 'PUBLISHED' | 'CLOSED' | 'ARCHIVED',
 ): Promise<Record<string, unknown>> {
-  return updateOpportunity(id, userId, role, input);
+  return updateOpportunity(id, userId, role, input, newStatus);
 }
 
 export async function closeOpportunity(

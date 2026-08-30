@@ -23,6 +23,15 @@ router.get(
   ctrl.listMine,
 );
 
+// Admin: list all opportunities across all statuses and institutions
+router.get(
+  '/all',
+  requireAuth,
+  requireRole('ADMIN'),
+  validate(listFacultyOpportunitiesQuerySchema, 'query'),
+  ctrl.adminList,
+);
+
 router.get('/:id', validate(idParamSchema, 'params'), ctrl.getById);
 
 router.post(
@@ -33,7 +42,8 @@ router.post(
   auditLog({
     action: 'FACULTY_OPP_CREATED',
     entity: 'FacultyOpportunity',
-    resolveEntityId: (_req, res) => (res as unknown as { locals?: { entityId?: string } }).locals?.entityId,
+    resolveEntityId: (_req, res) =>
+      (res as unknown as { locals?: { entityId?: string } }).locals?.entityId,
   }),
   ctrl.create,
 );

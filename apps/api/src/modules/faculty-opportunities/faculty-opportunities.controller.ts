@@ -41,6 +41,22 @@ export const listMine = asyncHandler(async (req: Request, res: Response) => {
   return ok(res, data);
 });
 
+// Phase 12 — admin: list all opportunities across all statuses/institutions
+export const adminList = asyncHandler(async (req: Request, res: Response) => {
+  const q = req.query as unknown as ListFacultyOpportunitiesQuery;
+  const data = await service.listAllOpportunities(
+    { page: q.page, pageSize: q.pageSize, sortBy: q.sortBy, sortDir: q.sortDir },
+    {
+      q: q.q,
+      opportunityType: q.opportunityType,
+      status: q.status,
+      hostType: q.hostType,
+      mode: q.mode,
+    },
+  );
+  return ok(res, data);
+});
+
 export const getById = asyncHandler(async (req: Request, res: Response) => {
   const data = await service.getOpportunityById(req.params.id!);
   return ok(res, data);
@@ -56,31 +72,35 @@ export const create = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const update = asyncHandler(async (req: Request, res: Response) => {
+  const { status: newStatus, ...rest } = req.body as UpdateFacultyOpportunityInput & {
+    status?: 'DRAFT' | 'PUBLISHED' | 'CLOSED' | 'ARCHIVED';
+  };
   const data = await service.updateOpportunity(
     req.params.id!,
     req.user!.id,
     req.user!.role as Role,
-    req.body as UpdateFacultyOpportunityInput,
+    rest as UpdateFacultyOpportunityInput,
+    newStatus,
   );
   return ok(res, data);
 });
 
 export const patch = asyncHandler(async (req: Request, res: Response) => {
+  const { status: newStatus, ...rest } = req.body as UpdateFacultyOpportunityInput & {
+    status?: 'DRAFT' | 'PUBLISHED' | 'CLOSED' | 'ARCHIVED';
+  };
   const data = await service.patchOpportunity(
     req.params.id!,
     req.user!.id,
     req.user!.role as Role,
-    req.body as UpdateFacultyOpportunityInput,
+    rest as UpdateFacultyOpportunityInput,
+    newStatus,
   );
   return ok(res, data);
 });
 
 export const close = asyncHandler(async (req: Request, res: Response) => {
-  const data = await service.closeOpportunity(
-    req.params.id!,
-    req.user!.id,
-    req.user!.role as Role,
-  );
+  const data = await service.closeOpportunity(req.params.id!, req.user!.id, req.user!.role as Role);
   return ok(res, data);
 });
 

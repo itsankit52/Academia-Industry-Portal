@@ -128,15 +128,29 @@ const InstitutionSkillGaps = lazy(() => import('@/pages/institution/InstitutionS
 const InstitutionPlacements = lazy(() => import('@/pages/institution/InstitutionPlacements'));
 const InstitutionFdps = lazy(() => import('@/pages/institution/InstitutionFdps'));
 // Phase 10
-const InstitutionPlacementIntelligence = lazy(() => import('@/pages/institution/InstitutionPlacementIntelligence'));
+const InstitutionPlacementIntelligence = lazy(
+  () => import('@/pages/institution/InstitutionPlacementIntelligence'),
+);
 // Phase 11
-const InstitutionDriveManagement = lazy(() => import('@/pages/institution/InstitutionDriveManagement'));
+const InstitutionDriveManagement = lazy(
+  () => import('@/pages/institution/InstitutionDriveManagement'),
+);
 const InstitutionActionItems = lazy(() => import('@/pages/institution/InstitutionActionItems'));
 const InstitutionCollaborationHub = lazy(
   () => import('@/pages/institution/InstitutionCollaborationHub'),
 );
 const InstitutionSettings = lazy(() => import('@/pages/institution/InstitutionSettings'));
 const InstitutionVerifications = lazy(() => import('@/pages/institution/InstitutionVerifications'));
+// Phase 12 — Institution Faculty Opportunities
+const InstitutionFacultyOpportunities = lazy(
+  () => import('@/pages/institution/InstitutionFacultyOpportunities'),
+);
+const InstitutionCreateFacultyOpp = lazy(
+  () => import('@/pages/institution/InstitutionCreateFacultyOpp'),
+);
+const InstitutionEditFacultyOpp = lazy(
+  () => import('@/pages/institution/InstitutionEditFacultyOpp'),
+);
 
 const StudentMentorship = lazy(() => import('@/pages/student/StudentMentorship'));
 const StudentMentorshipDetails = lazy(() => import('@/pages/student/StudentMentorshipDetails'));
@@ -395,6 +409,9 @@ export const router = createBrowserRouter([
           { path: 'drive-management', element: s(InstitutionDriveManagement) },
           { path: 'action-items', element: s(InstitutionActionItems) },
           { path: 'fdps', element: s(InstitutionFdps) },
+          { path: 'faculty-opportunities', element: s(InstitutionFacultyOpportunities) },
+          { path: 'faculty-opportunities/new', element: s(InstitutionCreateFacultyOpp) },
+          { path: 'faculty-opportunities/:id/edit', element: s(InstitutionEditFacultyOpp) },
           { path: 'verifications', element: s(InstitutionVerifications) },
           { path: 'events', element: s(InstitutionEvents) },
           { path: 'events/new', element: s(InstitutionEventCreate) },

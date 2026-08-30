@@ -2,10 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { apiDelete, apiGet, apiPatch, apiPost, apiPut } from '@/lib/api';
 import type { FacultyOpportunity, Paginated } from '@aip/types';
-import type {
-  CreateFacultyOpportunityInput,
-  UpdateFacultyOpportunityInput,
-} from '@aip/validation';
+import type { CreateFacultyOpportunityInput, UpdateFacultyOpportunityInput } from '@aip/validation';
 import { queryKeys } from './queryKeys';
 
 export interface FacultyOpportunityFilters {
@@ -40,7 +37,11 @@ export function useFacultyOpportunities(filters: FacultyOpportunityFilters = {})
 
 export function useMyFacultyOpportunities(filters: FacultyOpportunityFilters = {}) {
   return useQuery({
-    queryKey: queryKeys.company.facultyOpps(filters),
+    // Company and institution use the same endpoint; keying under a single
+    // shared root keeps the cache hot across role switches and makes
+    // invalidation easier — every mutation that lists "my opps" can drop the
+    // `['my-faculty-opps', ...]` branch in one call.
+    queryKey: ['my-faculty-opps', filters],
     queryFn: () =>
       apiGet<Paginated<FacultyOpportunity>>(`/faculty-opportunities/me?${buildParams(filters)}`),
   });
@@ -57,11 +58,14 @@ export function useFacultyOpportunity(id: string) {
 export function useCreateFacultyOpportunity() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: CreateFacultyOpportunityInput) =>
-      apiPost<FacultyOpportunity>('/faculty-opportunities', data),
+    // Accept both input shapes — the form passes UpdateFacultyOpportunityInput (all
+    // fields optional) and addStatus covers the required fields via the form's
+    // own validation + buildPayload logic.
+    mutationFn: (data: CreateFacultyOpportunityInput | UpdateFacultyOpportunityInput) =>
+      apiPost<FacultyOpportunity>('/faculty-opportunities', data as CreateFacultyOpportunityInput),
     onSuccess: () => {
       toast.success('Faculty opportunity created.');
-      qc.invalidateQueries({ queryKey: ['company', 'faculty-opps'] });
+      qc.invalidateQueries({ queryKey: ['my-faculty-opps'] });
       qc.invalidateQueries({ queryKey: ['faculty', 'opportunities'] });
     },
     onError: (err: Error) => toast.error(err.message),
@@ -75,9 +79,10 @@ export function useUpdateFacultyOpportunity(id: string) {
       apiPut<FacultyOpportunity>(`/faculty-opportunities/${id}`, data),
     onSuccess: () => {
       toast.success('Faculty opportunity updated.');
-      qc.invalidateQueries({ queryKey: ['company', 'faculty-opps'] });
+      qc.invalidateQueries({ queryKey: ['my-faculty-opps'] });
       qc.invalidateQueries({ queryKey: queryKeys.faculty.opportunity(id) });
       qc.invalidateQueries({ queryKey: queryKeys.company.facultyOpp(id) });
+      qc.invalidateQueries({ queryKey: queryKeys.institution.facultyOpp(id) });
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -89,7 +94,7 @@ export function usePatchFacultyOpportunity() {
     mutationFn: ({ id, data }: { id: string; data: UpdateFacultyOpportunityInput }) =>
       apiPatch<FacultyOpportunity>(`/faculty-opportunities/${id}`, data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['company', 'faculty-opps'] });
+      qc.invalidateQueries({ queryKey: ['my-faculty-opps'] });
       qc.invalidateQueries({ queryKey: ['faculty', 'opportunities'] });
     },
     onError: (err: Error) => toast.error(err.message),
@@ -102,7 +107,7 @@ export function useCloseFacultyOpportunity() {
     mutationFn: (id: string) => apiPatch<FacultyOpportunity>(`/faculty-opportunities/${id}/close`),
     onSuccess: () => {
       toast.success('Opportunity closed.');
-      qc.invalidateQueries({ queryKey: ['company', 'faculty-opps'] });
+      qc.invalidateQueries({ queryKey: ['my-faculty-opps'] });
       qc.invalidateQueries({ queryKey: ['faculty', 'opportunities'] });
     },
     onError: (err: Error) => toast.error(err.message),
@@ -115,8 +120,16 @@ export function useDeleteFacultyOpportunity() {
     mutationFn: (id: string) => apiDelete<void>(`/faculty-opportunities/${id}`),
     onSuccess: () => {
       toast.success('Opportunity deleted.');
-      qc.invalidateQueries({ queryKey: ['company', 'faculty-opps'] });
+      qc.invalidateQueries({ queryKey: ['my-faculty-opps'] });
     },
     onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useAdminFacultyOpportunities(filters: FacultyOpportunityFilters = {}) {
+  return useQuery({
+    queryKey: ['admin', 'faculty-opportunities', filters],
+    queryFn: () =>
+      apiGet<Paginated<FacultyOpportunity>>(`/faculty-opportunities/all?${buildParams(filters)}`),
   });
 }
