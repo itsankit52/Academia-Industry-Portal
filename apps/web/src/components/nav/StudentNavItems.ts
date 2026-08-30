@@ -18,6 +18,7 @@ import {
   FiZap,
   FiUsers,
   FiActivity,
+  FiTarget as FiDrive,
 } from 'react-icons/fi';
 
 export interface NavItem {
@@ -48,6 +49,8 @@ export const studentNavItems: NavItem[] = [
   { to: '/student/my-trainings', label: 'My Trainings', icon: FiBookOpen },
   { to: '/student/learning', label: 'Learning', icon: FiZap },
   { to: '/student/mentorship', label: 'Mentorship', icon: FiUser },
+  { to: '/student/placements', label: 'Placement Drives', icon: FiDrive },
+  { to: '/student/placements/participations', label: 'My Participations', icon: FiAward },
   { to: '/student/events', label: 'Events', icon: FiCalendar },
   { to: '/student/collaboration', label: 'Collab Hub', icon: FiUsers },
   { to: '/student/settings', label: 'Settings', icon: FiSettings },

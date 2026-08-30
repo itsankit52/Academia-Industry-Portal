@@ -20,3 +20,4 @@ export * from './institutionAnalytics';
 export * from './facultyOpportunity';
 export * from './document';
 export * from './aptitude';
+export * from './placement';

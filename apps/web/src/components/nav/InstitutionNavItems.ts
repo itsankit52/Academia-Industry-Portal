@@ -9,6 +9,8 @@ import {
   FiSettings,
   FiCheckCircle,
   FiZap,
+  FiTarget,
+  FiActivity,
 } from 'react-icons/fi';
 import type { NavItem } from './StudentNavItems';
 
@@ -18,6 +20,9 @@ export const institutionNavItems: NavItem[] = [
   { to: '/institution/faculty', label: 'Faculty', icon: FiUser },
   { to: '/institution/skill-gaps', label: 'Skill Gaps', icon: FiTrendingDown },
   { to: '/institution/placements', label: 'Placements', icon: FiAward },
+  { to: '/institution/drive-management', label: 'Drive Mgmt', icon: FiTarget },
+  { to: '/institution/placement-intelligence', label: 'Drive Intel', icon: FiActivity },
+  { to: '/institution/action-items', label: 'Action Items', icon: FiZap },
   { to: '/institution/fdps', label: 'Faculty FDPs', icon: FiBookOpen },
   { to: '/institution/events', label: 'Events', icon: FiCalendar },
   { to: '/institution/collaboration', label: 'Collab Hub', icon: FiZap },

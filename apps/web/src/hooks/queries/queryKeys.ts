@@ -25,6 +25,14 @@ export const queryKeys = {
   learningRecommendations: (params?: object) =>
     ['recommendations', 'learning', params ?? {}] as const,
   fullMatch: (type: string, id: string) => ['recommendations', 'full-match', type, id] as const,
+  /** Phase 9B — career path analysis for a target opportunity. */
+  careerPath: (type: string, id: string) => ['recommendations', 'career-path', type, id] as const,
+  /** Phase 9B — ordered action plan, optionally scoped to a target opportunity. */
+  careerActionPlan: (params?: object) => ['recommendations', 'action-plan', params ?? {}] as const,
+  /** Phase 9B — aggregate-only peer benchmark. */
+  careerBenchmark: () => ['recommendations', 'benchmark'] as const,
+  /** Phase 9B — readiness progression. */
+  careerProgression: (currentScore: number) => ['recommendations', 'progression', currentScore] as const,
 
   student: {
     dashboard: ['student', 'dashboard'] as const,
@@ -130,5 +138,47 @@ export const queryKeys = {
     registrations: (eventId: string, filters?: object) =>
       ['events', 'registrations', eventId, filters] as const,
     feedbackSummary: (eventId: string) => ['events', 'feedback', 'summary', eventId] as const,
+  },
+
+  /**
+   * Phase 10 — Placement intelligence query keys. Grouped under `placement`
+   * so callers can invalidate the entire surface when student data changes.
+   */
+  placement: {
+    readiness: () => ['placement', 'readiness', 'me'] as const,
+    outcomes: () => ['placement', 'outcomes', 'me'] as const,
+    institutionReadiness: (institutionId?: string) =>
+      ['placement', 'institution', 'readiness', institutionId ?? 'me'] as const,
+    institutionInterventions: (institutionId?: string) =>
+      ['placement', 'institution', 'interventions', institutionId ?? 'me'] as const,
+    skillOutcomes: (institutionId?: string) =>
+      ['placement', 'institution', 'skill-outcomes', institutionId ?? 'me'] as const,
+  },
+
+  // Phase 11 — Placement Drive Operations
+  drives: {
+    list: (filters?: Record<string, unknown>) => ['placement', 'drives', 'list', filters ?? {}] as const,
+    detail: (id: string) => ['placement', 'drives', 'detail', id] as const,
+    myParticipations: () => ['placement', 'drives', 'myParticipations'] as const,
+    eligibility: (driveId: string) => ['placement', 'drives', 'eligibility', driveId] as const,
+    eligibilityExplanation: (driveId: string) =>
+      ['placement', 'drives', 'eligibilityExplanation', driveId] as const,
+    eligibleStudents: (driveId: string, filters?: Record<string, unknown>) =>
+      ['placement', 'drives', 'eligibleStudents', driveId, filters ?? {}] as const,
+    participants: (driveId: string, filters?: Record<string, unknown>) =>
+      ['placement', 'drives', 'participants', driveId, filters ?? {}] as const,
+    participant: (driveId: string, participantId: string) =>
+      ['placement', 'drives', 'participant', driveId, participantId] as const,
+    outcomes: (driveId: string, filters?: Record<string, unknown>) =>
+      ['placement', 'drives', 'outcomes', driveId, filters ?? {}] as const,
+    outcome: (driveId: string, outcomeId: string) =>
+      ['placement', 'drives', 'outcome', driveId, outcomeId] as const,
+    report: (driveId: string) => ['placement', 'drives', 'report', driveId] as const,
+    institutionReport: (filters?: Record<string, unknown>) =>
+      ['placement', 'drives', 'institutionReport', filters ?? {}] as const,
+  },
+  // Phase 11 — Action Queue
+  actionItems: {
+    list: (filters?: Record<string, unknown>) => ['placement', 'actionItems', 'list', filters ?? {}] as const,
   },
 };

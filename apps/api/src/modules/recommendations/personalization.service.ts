@@ -1,5 +1,6 @@
 /**
  * Phase 9A — Personalized Student Intelligence
+ * Phase 9B — Advanced Intelligence & Career Decision Support
  *
  * Deterministic, explainable personalization engine. Composes existing services
  * rather than duplicating their math:
@@ -9,20 +10,28 @@
  *   - mentor recommendations      → mentorship.service.recommendMentorsForStudent (Phase 8)
  *   - job/internship recs       → recommendations.service recommendJobs/Internships
  *   - career readiness          → skillProfile.service.buildSkillProfile (Phase 5B)
+ *   - career insights / benchmark / progression (Phase 9B) →
+ *                                  careerAnalysis.service
  *
  * No LLM, no external services, no new collections.
  */
 
 import { Types } from 'mongoose';
 import type {
+  CareerAction,
+  CareerBenchmark,
+  CareerInsightStrength,
+  CareerInsights,
   CareerReadinessSummary,
   PersonalizedOpportunitySummary,
   PersonalizedRecommendations,
   PersonalizedTraining,
   ReadinessLevel,
+  ReadinessProgression,
   SkillGapPriority,
   SkillGapRecommendation,
 } from '@aip/types';
+import type { Proficiency } from '@aip/config';
 import {
   Internship,
   Job,
@@ -39,6 +48,13 @@ import { buildSkillProfile } from '../skills/skillProfile.service';
 import { idOf } from '../matching/skillGap';
 import type { GapSkill } from '@aip/types';
 import type { RecommendedJob, RecommendedInternship } from './recommendations.service';
+import {
+  buildCareerInsights,
+  getCareerBenchmark,
+  getReadinessProgression,
+  buildGapClosingTrainings,
+  loadAssessmentSignals,
+} from './careerAnalysis.service';
 
 /* ─── Tunables ──────────────────────────────────────────────────────── */
 
@@ -253,6 +269,15 @@ async function buildTrainings(
 
 /* ─── Opportunity summary helpers ─────────────────────────────────── */
 
+function companyNameFromRef(
+  company: unknown,
+): string | undefined {
+  if (!company || typeof company !== 'object') return undefined;
+  const c = company as Record<string, unknown>;
+  if (typeof c.name === 'string') return c.name;
+  return undefined;
+}
+
 function summarizeJob(item: RecommendedJob): PersonalizedOpportunitySummary {
   return {
     id: item.job.id,
@@ -264,7 +289,7 @@ function summarizeJob(item: RecommendedJob): PersonalizedOpportunitySummary {
     topMissingSkills: item.insight.topMissingSkills,
     matchedSkillNames: item.matchedSkills.slice(0, 3).map((s) => s.name),
     careerInterestsMatch: item.insight.careerInterestsMatch,
-    ...(item.job.company ? { companyName: item.job.company.name } : {}),
+    ...(companyNameFromRef(item.job.company) ? { companyName: companyNameFromRef(item.job.company) } : {}),
   };
 }
 
@@ -279,7 +304,9 @@ function summarizeInternship(item: RecommendedInternship): PersonalizedOpportuni
     topMissingSkills: item.insight.topMissingSkills,
     matchedSkillNames: item.matchedSkills.slice(0, 3).map((s) => s.name),
     careerInterestsMatch: item.insight.careerInterestsMatch,
-    ...(item.internship.company ? { companyName: item.internship.company.name } : {}),
+    ...(companyNameFromRef(item.internship.company)
+      ? { companyName: companyNameFromRef(item.internship.company) }
+      : {}),
   };
 }
 
@@ -302,6 +329,18 @@ export async function getPersonalizedRecommendations(
 
   if (!profile) {
     // No profile → return a valid empty payload so the frontend renders cleanly.
+    const emptyBenchmark: CareerBenchmark = {
+      available: false,
+      sampleSize: 0,
+      unavailableReason: 'Benchmark unavailable due to insufficient data.',
+    };
+    const emptyProgression: ReadinessProgression = {
+      currentScore: 0,
+      previousScore: null,
+      delta: 0,
+      contributingFactors: [],
+      fallbackReason: 'No previous readiness baseline available yet.',
+    };
     return {
       readiness: buildReadinessSummary(0),
       skillGaps: [],
@@ -309,6 +348,14 @@ export async function getPersonalizedRecommendations(
       mentors: [],
       jobs: [],
       internships: [],
+      careerInsights: buildCareerInsights({
+        readiness: buildReadinessSummary(0),
+        topStrengths: [],
+        topGaps: [],
+        recommendedNextAction: null,
+      }),
+      benchmark: emptyBenchmark,
+      progression: emptyProgression,
       generatedAt: new Date().toISOString(),
     };
   }
@@ -320,6 +367,8 @@ export async function getPersonalizedRecommendations(
   const studentSkillIds = new Set(studentSkills.map((s) => String(s.skill)));
 
   // Fan out: everything that doesn't depend on gaps runs in parallel.
+  // Phase 9B calls are wrapped in try-catch at the service level; a failing
+  // benchmark or progression does not crash the unified recommendations response.
   const [skillProfile, jobRecs, internRecs, mentors] = await Promise.all([
     buildSkillProfile(studentUserId).catch(() => null),
     recommendJobs(studentUserId, { page: 1, pageSize: MAX_PER_CATEGORY }),
@@ -327,10 +376,28 @@ export async function getPersonalizedRecommendations(
     recommendMentorsForStudent(studentUserId, MAX_PER_CATEGORY),
   ]);
 
+  // Phase 9B: these run sequentially after Phase 9A to avoid polluting the
+  // critical-path Promise.all with failures that would prevent the main response.
+  const [benchmarkResult, progressionResult, assessmentSignals] = await Promise.all([
+    getCareerBenchmark(studentUserId).catch((err) => {
+      console.warn('[Phase 9B] Benchmark unavailable:', err instanceof Error ? err.message : err);
+      return null;
+    }),
+    getReadinessProgression({ studentUserId, currentScore: skillProfile?.totals.readinessScore ?? 0 }).catch(
+      (err) => {
+        console.warn('[Phase 9B] Progression unavailable:', err instanceof Error ? err.message : err);
+        return null;
+      },
+    ),
+    loadAssessmentSignals(profile._id).catch(() => new Map()),
+  ]);
+
+  const benchmark = benchmarkResult;
+  const progression = progressionResult;
+
   // Gaps need the student skill set, so they run after.
   const gaps = await prioritizeSkillGaps(studentSkillIds);
   const gapIds = gaps.map((g) => g.id);
-  const gapMap = new Map(gaps.map((g) => [g.id, g]));
 
   // Skill gap recommendations (top 5).
   const gapRecommendations: SkillGapRecommendation[] = gaps.slice(0, MAX_PER_CATEGORY).map((g) => ({
@@ -349,16 +416,201 @@ export async function getPersonalizedRecommendations(
   // Sort mentors by Phase 8 score desc.
   const sortedMentors = [...mentors].sort((a, b) => b.score - a.score);
 
+  // ─── Phase 9B — Build Career Insights + Progression ────────────────
+  const readinessScore = skillProfile?.totals.readinessScore ?? 0;
+  const readiness = buildReadinessSummary(readinessScore);
+
+  // Top strengths: pick the highest-proficiency skills from the skill profile
+  // (Phase 5B) so the strengths line up with what the student already sees.
+  const topStrengths: CareerInsightStrength[] = (skillProfile?.strengths ?? [])
+    .slice(0, 3)
+    .map((s) => ({
+      skillId: s.skill.id,
+      name: s.skill.name,
+      category: s.category,
+      proficiency: (s.proficiency ?? 'INTERMEDIATE') as Proficiency,
+    }));
+
+  // Recommended next action: the top training that covers the most gaps,
+  // unless assessment data points to a weak skill with no training yet.
+  const recommendedNextAction = await pickNextAction({
+    profileId: profile._id,
+    gapIds,
+    sortedMentors,
+    assessmentSignals,
+  });
+
+  const careerInsights: CareerInsights = buildCareerInsights({
+    readiness,
+    topStrengths,
+    topGaps: gapRecommendations,
+    recommendedNextAction,
+  });
+
   return {
-    readiness: buildReadinessSummary(skillProfile?.totals.readinessScore ?? 0),
+    readiness,
     skillGaps: gapRecommendations,
     trainings,
     mentors: sortedMentors,
     jobs: jobRecs.items.map(summarizeJob),
     internships: internRecs.items.map(summarizeInternship),
+    careerInsights,
+    benchmark:
+      benchmark ??
+      ({ available: false, sampleSize: 0, unavailableReason: 'Benchmark unavailable due to insufficient data.' }),
+    progression:
+      progression ??
+      ({
+        currentScore: readinessScore,
+        previousScore: null,
+        delta: 0,
+        contributingFactors: [],
+        fallbackReason: 'No previous readiness baseline available yet.',
+      }),
     generatedAt: new Date().toISOString(),
   };
 }
+
+/* ─── Phase 9B — Enrich existing payload without recomputing Phase 9A ─ */
+
+/**
+ * Returns only the new Phase 9B fields (careerInsights, benchmark,
+ * progression) for an existing personalized recommendations response.
+ * Lets a client refresh just the deep-insight surface without re-running
+ * the heavier Phase 9A composition.
+ */
+export async function enrichPersonalizedRecommendations(
+  studentUserId: string,
+  currentScore: number,
+  existing: Pick<PersonalizedRecommendations, 'readiness' | 'skillGaps' | 'trainings' | 'mentors'>,
+): Promise<{
+  careerInsights: CareerInsights;
+  benchmark: CareerBenchmark;
+  progression: ReadinessProgression;
+}> {
+  const [benchmark, progression] = await Promise.all([
+    getCareerBenchmark(studentUserId),
+    getReadinessProgression({ studentUserId, currentScore }),
+  ]);
+
+  const topStrengths: CareerInsightStrength[] = [];
+  const topGaps = existing.skillGaps.slice(0, 3);
+
+  // Use the strongest trainings and mentors for the recommended next action.
+  const recommendedNextAction: CareerAction | null = await pickNextActionFromExisting(
+    existing.trainings,
+    existing.mentors,
+  );
+
+  const careerInsights: CareerInsights = buildCareerInsights({
+    readiness: existing.readiness,
+    topStrengths,
+    topGaps,
+    recommendedNextAction,
+  });
+
+  return { careerInsights, benchmark, progression };
+}
+
+/* ─── Phase 9B — pick the recommended next action ────────────────── */
+
+async function pickNextAction(params: {
+  profileId: Types.ObjectId;
+  gapIds: string[];
+  sortedMentors: PersonalizedRecommendations['mentors'];
+  assessmentSignals: Map<string, { lastScore: number; weaknessScore: number; skillName: string }>;
+}): Promise<CareerAction | null> {
+  const { profileId, gapIds, sortedMentors, assessmentSignals } = params;
+  if (gapIds.length === 0 && sortedMentors.length === 0) return null;
+
+  // 1) Assessment-driven: when assessment signal exists, prefer a training
+  //    that closes a weak skill.
+  if (assessmentSignals.size > 0) {
+    const weak = [...assessmentSignals.entries()].sort(
+      (a, b) => b[1].weaknessScore - a[1].weaknessScore,
+    )[0];
+    if (weak) {
+      const trainings = await buildGapClosingTrainings(profileId, [weak[1].skillName].map(() => ''));
+      const top = trainings[0];
+      if (top) {
+        return {
+          priority: 1,
+          type: 'TRAINING',
+          title: `Complete ${top.title}`,
+          reason: `Assessment showed weakness here; this training covers the gap.`,
+          entityId: top.id,
+          ctaPath: top.registrationUrl || '/student/training',
+          ctaLabel: 'Start training',
+        };
+      }
+    }
+  }
+
+  // 2) Otherwise: the top gap-closing training.
+  if (gapIds.length > 0) {
+    const trainings = await buildGapClosingTrainings(profileId, gapIds.slice(0, 5));
+    const top = trainings[0];
+    if (top) {
+      return {
+        priority: 1,
+        type: 'TRAINING',
+        title: `Complete ${top.title}`,
+        reason: `Covers ${top.overlapCount} of your priority gaps.`,
+        entityId: top.id,
+        ctaPath: top.registrationUrl || '/student/training',
+        ctaLabel: 'Start training',
+      };
+    }
+  }
+
+  // 3) Mentor fallback.
+  const mentor = sortedMentors[0];
+  if (mentor) {
+    return {
+      priority: 1,
+      type: 'MENTOR',
+      title: `Connect with ${mentor.fullName}`,
+      reason: `Their expertise covers your gap areas.`,
+      entityId: mentor.id,
+      ctaPath: '/student/mentorship',
+      ctaLabel: 'Find a mentor',
+    };
+  }
+
+  return null;
+}
+
+async function pickNextActionFromExisting(
+  trainings: PersonalizedTraining[],
+  mentors: PersonalizedRecommendations['mentors'],
+): Promise<CareerAction | null> {
+  const top = trainings[0];
+  if (top) {
+    return {
+      priority: 1,
+      type: 'TRAINING',
+      title: `Complete ${top.title}`,
+      reason: `Covers ${top.overlapCount} of your priority gaps.`,
+      entityId: top.id,
+      ctaPath: top.registrationUrl || '/student/training',
+      ctaLabel: 'Start training',
+    };
+  }
+  const mentor = mentors[0];
+  if (mentor) {
+    return {
+      priority: 1,
+      type: 'MENTOR',
+      title: `Connect with ${mentor.fullName}`,
+      reason: `Their expertise covers your gap areas.`,
+      entityId: mentor.id,
+      ctaPath: '/student/mentorship',
+      ctaLabel: 'Find a mentor',
+    };
+  }
+  return null;
+}
+
 
 /* ─── Re-exports for tests ────────────────────────────────────────── */
 

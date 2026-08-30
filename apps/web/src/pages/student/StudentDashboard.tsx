@@ -26,7 +26,14 @@ import InterviewCard from '@/components/cards/InterviewCard';
 import { useStudentDashboard } from '@/hooks/queries/useStudentDashboard';
 import { useAssessmentSummary } from '@/hooks/queries/useAssessmentSummary';
 import { useSkillProfile } from '@/hooks/queries/useSkillProfile';
+import { usePersonalizedRecommendations } from '@/hooks/queries/usePersonalizedRecommendations';
+import { usePlacementReadiness } from '@/hooks/queries/usePlacementReadiness';
+import { usePlacementOutcomes } from '@/hooks/queries/usePlacementOutcomes';
 import { useAuthStore } from '@/store/auth';
+import { RecommendedSection } from '@/components/recommendations/RecommendedSection';
+import { CareerInsightsSection } from '@/components/recommendations/CareerInsightsSection';
+import { PlacementReadinessCard } from '@/components/placement/PlacementReadinessCard';
+import { OutcomeFunnel } from '@/components/placement/OutcomeFunnel';
 
 type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info';
 
@@ -50,6 +57,14 @@ export default function StudentDashboard() {
   const { data, isLoading, isError, refetch } = useStudentDashboard();
   const { data: assessmentSummary } = useAssessmentSummary();
   const { data: skillProfile, isLoading: skillProfileLoading } = useSkillProfile();
+  // Phase 9B — personalized recommendations now carries career insights, benchmark, progression
+  const { data: personalized, isLoading: recsLoading, isError: recsError, refetch: refetchRecs } =
+    usePersonalizedRecommendations();
+  // Phase 10 — placement readiness + outcome hooks
+  const { data: readiness, isLoading: readinessLoading, isError: readinessError, refetch: refetchReadiness } =
+    usePlacementReadiness();
+  const { data: outcomes, isLoading: outcomesLoading, isError: outcomesError, refetch: refetchOutcomes } =
+    usePlacementOutcomes();
 
   const firstName = user?.email.split('@')[0] ?? 'Student';
 
@@ -291,6 +306,36 @@ export default function StudentDashboard() {
                 </Card.Footer>
               </Card>
             ))}
+
+          {/* Phase 9A — Personalized Recommendations */}
+          <RecommendedSection onRetry={() => void refetch()} />
+
+          {/* Phase 10 — Placement Readiness & Outcomes */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <PlacementReadinessCard
+              data={readiness}
+              isLoading={readinessLoading}
+              isError={readinessError}
+              onRetry={() => void refetchReadiness()}
+            />
+            <OutcomeFunnel
+              data={outcomes}
+              isLoading={outcomesLoading}
+              isError={outcomesError}
+              onRetry={() => void refetchOutcomes()}
+              variant="student"
+            />
+          </div>
+
+          {/* Phase 9B — Career Insights */}
+          <CareerInsightsSection
+            insights={personalized?.careerInsights}
+            benchmark={personalized?.benchmark}
+            progression={personalized?.progression}
+            isLoading={recsLoading}
+            isError={recsError}
+            onRetry={() => void refetchRecs()}
+          />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>

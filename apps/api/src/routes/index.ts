@@ -29,6 +29,14 @@ import collaborationRouter from '../modules/collaboration/collaboration.routes';
 import webhooksRouter from '../modules/webhooks/webhooks.routes';
 import interimReportsRouter from '../modules/interim-reports/interim-reports.routes';
 import institutionAnalyticsRouter from '../modules/institution-analytics/institution-analytics.routes';
+import {
+  studentRouter as placementReadinessRouter,
+  studentOutcomesRouter as placementOutcomesRouter,
+  institutionRouter as placementInstitutionRouter,
+} from '../modules/placement/placement.routes';
+import phase11Router from '../modules/placement/phase11.routes';
+import actionQueueRouter from '../modules/placement/action-queue.routes';
+import institutionReportsRouter from '../modules/placement/institution-reports.routes';
 
 const router = Router();
 
@@ -63,6 +71,15 @@ const mounts: Array<[string, ExpressRouter]> = [
   ['/events', collaborationRouter],
   ['/', interimReportsRouter],
   ['/institution', institutionAnalyticsRouter],
+  // Phase 10 — Placement intelligence
+  ['/placement-readiness', placementReadinessRouter],
+  ['/placement-outcomes', placementOutcomesRouter],
+  // Phase 10 — Institution placement analytics (nested under institution-analytics)
+  ['/institution-analytics', placementInstitutionRouter],
+  // Phase 11 — Placement drive operations (drives, participants, outcomes, action items)
+  ['/', phase11Router],
+  ['/placement-action-items', actionQueueRouter],
+  ['/institution-analytics/placement-drives', institutionReportsRouter],
   ['/webhooks', webhooksRouter],
 ];
 

@@ -21,6 +21,15 @@ if (typeof window !== 'undefined') {
       dispatchEvent: vi.fn(),
     })),
   });
+
+  // recharts ResponsiveContainer uses ResizeObserver — polyfill it.
+  if (typeof globalThis.ResizeObserver === 'undefined') {
+    globalThis.ResizeObserver = vi.fn().mockImplementation(() => ({
+      observe: vi.fn(),
+      unobserve: vi.fn(),
+      disconnect: vi.fn(),
+    })) as unknown as typeof ResizeObserver;
+  }
 }
 
 afterEach(cleanup);

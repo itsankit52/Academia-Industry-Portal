@@ -53,12 +53,17 @@ const StudentSkillProfile = lazy(() => import('@/pages/student/StudentSkillProfi
 const StudentTraining = lazy(() => import('@/pages/student/StudentTraining'));
 const StudentLearning = lazy(() => import('@/pages/student/StudentLearning'));
 const StudentSettings = lazy(() => import('@/pages/student/StudentSettings'));
+// Phase 9B
+const StudentCareerPlan = lazy(() => import('@/pages/student/StudentCareerPlan'));
 const StudentAssessments = lazy(() => import('@/pages/student/StudentAssessments'));
 const StudentAssessmentTake = lazy(() => import('@/pages/student/StudentAssessmentTake'));
 const StudentAssessmentResult = lazy(() => import('@/pages/student/StudentAssessmentResult'));
 const StudentAptitude = lazy(() => import('@/pages/student/StudentAptitude'));
 const StudentAptitudeTake = lazy(() => import('@/pages/student/StudentAptitudeTake'));
 const StudentAptitudeResult = lazy(() => import('@/pages/student/StudentAptitudeResult'));
+// Phase 11
+const StudentPlacementDrives = lazy(() => import('@/pages/student/StudentPlacementDrives'));
+const StudentMyParticipations = lazy(() => import('@/pages/student/StudentMyParticipations'));
 const StudentDocuments = lazy(() => import('@/pages/student/StudentDocuments'));
 
 const CompanyDashboard = lazy(() => import('@/pages/company/CompanyDashboard'));
@@ -122,6 +127,11 @@ const InstitutionFacultyDetails = lazy(
 const InstitutionSkillGaps = lazy(() => import('@/pages/institution/InstitutionSkillGaps'));
 const InstitutionPlacements = lazy(() => import('@/pages/institution/InstitutionPlacements'));
 const InstitutionFdps = lazy(() => import('@/pages/institution/InstitutionFdps'));
+// Phase 10
+const InstitutionPlacementIntelligence = lazy(() => import('@/pages/institution/InstitutionPlacementIntelligence'));
+// Phase 11
+const InstitutionDriveManagement = lazy(() => import('@/pages/institution/InstitutionDriveManagement'));
+const InstitutionActionItems = lazy(() => import('@/pages/institution/InstitutionActionItems'));
 const InstitutionCollaborationHub = lazy(
   () => import('@/pages/institution/InstitutionCollaborationHub'),
 );
@@ -228,6 +238,7 @@ export const router = createBrowserRouter([
           { path: 'notifications', element: s(StudentNotifications) },
           { path: 'skill-gap', element: s(StudentSkillGap) },
           { path: 'skill-profile', element: s(StudentSkillProfile) },
+          { path: 'career-plan', element: s(StudentCareerPlan) },
           { path: 'assessments', element: s(StudentAssessments) },
           { path: 'assessments/:id/take', element: s(StudentAssessmentTake) },
           { path: 'assessments/:id', element: s(StudentAssessmentResult) },
@@ -244,6 +255,9 @@ export const router = createBrowserRouter([
           { path: 'events', element: s(StudentEvents) },
           { path: 'events/registrations', element: s(StudentMyRegistrations) },
           { path: 'collaboration', element: s(StudentCollaborationHub) },
+          // Phase 11 — Placement drives
+          { path: 'placements', element: s(StudentPlacementDrives) },
+          { path: 'placements/participations', element: s(StudentMyParticipations) },
           { path: 'settings', element: s(StudentSettings) },
         ],
       },
@@ -376,6 +390,10 @@ export const router = createBrowserRouter([
           { path: 'faculty/:id', element: s(InstitutionFacultyDetails) },
           { path: 'skill-gaps', element: s(InstitutionSkillGaps) },
           { path: 'placements', element: s(InstitutionPlacements) },
+          { path: 'placement-intelligence', element: s(InstitutionPlacementIntelligence) },
+          // Phase 11 — Drive management
+          { path: 'drive-management', element: s(InstitutionDriveManagement) },
+          { path: 'action-items', element: s(InstitutionActionItems) },
           { path: 'fdps', element: s(InstitutionFdps) },
           { path: 'verifications', element: s(InstitutionVerifications) },
           { path: 'events', element: s(InstitutionEvents) },

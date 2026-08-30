@@ -86,7 +86,8 @@ export default function StudentApplicationDetails() {
   const now = new Date();
   const offerExpired =
     application.status === 'SELECTED' &&
-    application.offerExpiresAt !== null &&
+    application.offerExpiresAt != null &&
+    application.offerExpiresAt.length > 0 &&
     new Date(application.offerExpiresAt).getTime() < now.getTime();
   const canRespondToOffer = application.status === 'SELECTED' && !offerExpired;
   const canWithdrawOffer = application.status === 'OFFER_ACCEPTED';
@@ -97,7 +98,7 @@ export default function StudentApplicationDetails() {
     ['ONGOING', 'COMPLETED'].includes(application.status) &&
     (reportsQ.data?.items.length ?? 0) > 0;
   const hasOfferDetails =
-    application.offerDetails !== null &&
+    application.offerDetails != null &&
     (application.offerDetails.offeredSalary !== undefined ||
       application.offerDetails.joiningDate !== undefined);
   const hasOfferLetter = application.offerLetter !== null;

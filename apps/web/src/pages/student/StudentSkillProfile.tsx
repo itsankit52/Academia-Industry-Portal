@@ -50,6 +50,7 @@ import {
   type CategoryGroup,
   type SkillTimelineEvent,
 } from '@/hooks/queries/useSkillProfile';
+import { usePersonalizedRecommendations } from '@/hooks/queries/usePersonalizedRecommendations';
 
 const CATEGORY_LABELS: Record<SkillCategory, string> = {
   PROGRAMMING: 'Programming',
@@ -167,6 +168,7 @@ export default function StudentSkillProfile() {
 }
 
 function SkillProfileBody({ profile }: { profile: SkillProfile }) {
+  const { data: recs, isLoading: recsLoading } = usePersonalizedRecommendations();
   const tone = readinessTone(profile.totals.readinessScore);
   const sortedCategories = sortCategories(profile.categories);
   const total =
@@ -349,6 +351,12 @@ function SkillProfileBody({ profile }: { profile: SkillProfile }) {
           <NextStepSuggestion profile={profile} />
         </Card.Body>
       </Card>
+
+      {/* Phase 9A — Top priorities derived from personalized recommendations */}
+      <TopPrioritiesCard
+        gaps={recs?.skillGaps ?? []}
+        loading={recsLoading}
+      />
     </>
   );
 }
@@ -776,6 +784,72 @@ function NextStepSuggestion({ profile }: { profile: SkillProfile }) {
         </Link>
       </div>
     </div>
+  );
+}
+
+function TopPrioritiesCard({
+  gaps,
+  loading,
+}: {
+  gaps: import('@aip/types').SkillGapRecommendation[];
+  loading: boolean;
+}) {
+  if (loading) {
+    return <SkeletonCard />;
+  }
+  if (gaps.length === 0) {
+    return null;
+  }
+  return (
+    <Card>
+      <Card.Header>
+        <h2 className="text-sm font-semibold text-rose-700 dark:text-rose-400 uppercase tracking-wide flex items-center gap-1.5">
+          <FiAlertTriangle /> Your Top Priorities
+        </h2>
+      </Card.Header>
+      <Card.Body className="space-y-4">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Skills ranked by industry demand that you don't have yet. Closing these gaps unlocks
+          the most opportunities.
+        </p>
+        <ol className="space-y-3">
+          {gaps.slice(0, 3).map((gap, i) => (
+            <li
+              key={gap.id}
+              className="flex items-start justify-between gap-3 p-3 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40"
+            >
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
+                    #{i + 1}
+                  </span>
+                  <span className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                    {gap.name}
+                  </span>
+                  <span
+                    className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${
+                      gap.priority === 'CRITICAL'
+                        ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300'
+                        : gap.priority === 'HIGH'
+                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                          : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                    }`}
+                  >
+                    {gap.priority}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{gap.reason}</p>
+              </div>
+              <Link to={`/student/training?skill=${encodeURIComponent(gap.name)}`}>
+                <Button size="sm" variant="outline" iconLeft={<FiAward />}>
+                  Improve
+                </Button>
+              </Link>
+            </li>
+          ))}
+        </ol>
+      </Card.Body>
+    </Card>
   );
 }
 

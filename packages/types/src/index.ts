@@ -27,3 +27,4 @@ export * from './document';
 export * from './aptitudeQuestion';
 export * from './aptitudeTest';
 export * from './recommendation';
+export * from './placement';
