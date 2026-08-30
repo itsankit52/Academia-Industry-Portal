@@ -39,6 +39,28 @@ export interface DashboardStats {
   }[];
   verifiedDocumentsCount: number;
   pendingDocumentsCount: number;
+  // Phase 5B: Internship metrics
+  internshipMetrics: {
+    totalApplications: number;
+    selected: number;
+    activeInterns: number;
+    completedInterns: number;
+    completionRate: number;
+  };
+  // Phase 6B: Placement pipeline metrics
+  placementMetrics: {
+    totalJobApplications: number;
+    shortlisted: number;
+    interviewed: number;
+    selected: number;
+    offerAccepted: number;
+    offerRejected: number;
+    offerExpired: number;
+    withdrawalRequested: number;
+    offerAcceptanceRate: number;
+    interviewConversionRate: number;
+    placementRate: number;
+  };
 }
 
 export interface StudentRow {

@@ -13,7 +13,10 @@ import {
   CompanyProfile,
   Job,
   Internship,
+  User,
+  MentorProfile,
 } from '../../models';
+import { createNotification } from '../notifications/notifications.service';
 
 function opportunityModel(type: OpportunityType): typeof Job {
   return (type === 'JOB' ? Job : Internship) as unknown as typeof Job;
@@ -48,6 +51,11 @@ async function assertAccessToApp(userId: string, role: Role, appId: string) {
     }
     return app;
   }
+  if (role === 'FACULTY') {
+    // Faculty can access if assigned as mentor
+    if (app.mentor && String(app.mentor) === userId) return app;
+    throw AppError.forbidden('Not authorized for this application');
+  }
   if (role === 'ADMIN') return app;
   throw AppError.forbidden('Insufficient role');
 }
@@ -58,8 +66,12 @@ export async function createReport(
   input: CreateInterimReportInput,
 ) {
   const { student, app } = await verifyStudentOwnsApp(studentUserId, applicationId);
-  if (app.status !== 'SELECTED') {
-    throw AppError.badRequest('Interim reports require a SELECTED application');
+  // Allow reports for SELECTED, INTERNSHIP_STARTED, or ONGOING (Phase 5B)
+  const validStatuses = ['SELECTED', 'INTERNSHIP_STARTED', 'ONGOING'];
+  if (!validStatuses.includes(app.status)) {
+    throw AppError.badRequest(
+      'Progress reports can only be submitted for selected or active internships',
+    );
   }
   try {
     const doc = await InterimReport.create({
@@ -74,6 +86,44 @@ export async function createReport(
       ...(typeof input.hoursSpent === 'number' ? { hoursSpent: input.hoursSpent } : {}),
       submittedAt: new Date(),
     });
+
+    // Notify mentor (if assigned) and company
+    const studentProfile = await StudentProfile.findById(student._id).select('fullName');
+    const studentName = studentProfile?.fullName ?? 'The student';
+
+    // Get opportunity title
+    const OppModel = opportunityModel(app.opportunityType as OpportunityType);
+    const opp = await OppModel.findById(app.opportunity).select('title').lean();
+    const oppTitle = (opp as unknown as { title?: string })?.title ?? 'the internship';
+
+    // Notify company
+    const OppModel2 = opportunityModel(app.opportunityType as OpportunityType);
+    const opp2 = await OppModel2.findById(app.opportunity)
+      .populate('company', 'user')
+      .select('company')
+      .lean();
+    const companyUser = (opp2 as unknown as { company?: { user?: string } })?.company?.user;
+    if (companyUser) {
+      await createNotification(
+        String(companyUser),
+        'PROGRESS_REPORT_SUBMITTED',
+        'New progress report submitted',
+        `${studentName} submitted progress report (Week ${input.weekNumber}) for ${oppTitle}.`,
+        `/company/applications/${app._id}/reports`,
+      );
+    }
+
+    // Notify mentor if assigned
+    if (app.mentor) {
+      await createNotification(
+        String(app.mentor),
+        'PROGRESS_REPORT_SUBMITTED',
+        'New progress report to review',
+        `${studentName} submitted progress report (Week ${input.weekNumber}) for ${oppTitle}.`,
+        `/faculty/applications/${app._id}/reports`,
+      );
+    }
+
     return doc.toJSON();
   } catch (err: unknown) {
     if ((err as { code?: number }).code === 11000) {
@@ -118,10 +168,31 @@ export async function addMentorFeedback(
 ) {
   const doc = await InterimReport.findById(id);
   if (!doc) throw AppError.notFound('Report not found');
-  if (reviewerRole !== 'COMPANY' && reviewerRole !== 'ADMIN') {
-    throw AppError.forbidden('Only COMPANY or ADMIN may review');
+  // Allow COMPANY, FACULTY (if mentor), and ADMIN to give feedback
+  const app = await Application.findById(doc.application).select('mentor student');
+  if (!app) throw AppError.notFound('Application not found');
+
+  const isMentor = app.mentor && String(app.mentor) === reviewerUserId;
+  const isCompany = reviewerRole === 'COMPANY';
+  const isAdmin = reviewerRole === 'ADMIN';
+
+  if (!isCompany && !isMentor && !isAdmin) {
+    throw AppError.forbidden('Only COMPANY, assigned mentor, or ADMIN may provide feedback');
   }
-  await assertAccessToApp(reviewerUserId, reviewerRole, String(doc.application));
+
+  // Notify student
+  const student = await StudentProfile.findById(app.student).select('user fullName');
+  if (student?.user) {
+    const reviewerName = isMentor ? 'Your mentor' : isCompany ? 'The company' : 'Admin';
+    await createNotification(
+      String(student.user),
+      'MENTOR_FEEDBACK_ADDED',
+      'New feedback on your progress report',
+      `${reviewerName} provided feedback on your Week ${doc.weekNumber} progress report.`,
+      `/student/applications/${app._id}/reports`,
+    );
+  }
+
   doc.mentorFeedback = input.mentorFeedback;
   if (typeof input.mentorRating === 'number') doc.mentorRating = input.mentorRating;
   doc.mentorReviewedAt = new Date();

@@ -35,6 +35,7 @@ export const studentNavItems: NavItem[] = [
   { to: '/student/recommended', label: 'Recommended', icon: FiTrendingUp },
   { to: '/student/jobs', label: 'Jobs', icon: FiBriefcase },
   { to: '/student/internships', label: 'Internships', icon: FiBookOpen },
+  { to: '/student/my-internships', label: 'My Internships', icon: FiAward },
   { to: '/student/saved', label: 'Saved', icon: FiBookmark },
   { to: '/student/applications', label: 'Applications', icon: FiClipboard },
   { to: '/student/interviews', label: 'Interviews', icon: FiCalendar },

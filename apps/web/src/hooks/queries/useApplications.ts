@@ -5,6 +5,7 @@ import { queryKeys } from './queryKeys';
 
 export interface ApplicationFilters {
   status?: string;
+  opportunityType?: string;
   page?: number;
   pageSize?: number;
 }
@@ -12,6 +13,7 @@ export interface ApplicationFilters {
 export function useApplications(filters: ApplicationFilters = {}) {
   const params = new URLSearchParams();
   if (filters.status) params.set('status', filters.status);
+  if (filters.opportunityType) params.set('opportunityType', filters.opportunityType);
   params.set('page', String(filters.page ?? 1));
   params.set('pageSize', String(filters.pageSize ?? 20));
 

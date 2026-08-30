@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FiBook, FiEdit2, FiTrash2, FiPlus } from 'react-icons/fi';
+import { FiBook, FiEdit2, FiTrash2, FiPlus, FiUsers } from 'react-icons/fi';
 import PageHeader from '@/components/ui/PageHeader';
 import Table from '@/components/ui/Table';
 import Badge from '@/components/ui/Badge';
@@ -50,7 +50,7 @@ export default function CompanyInternshipManage() {
     <div className="container-page py-8 space-y-6">
       <PageHeader
         title="Manage Internships"
-        subtitle="Publish, close, or delete your internship listings."
+        subtitle="Publish, close, or delete your internship listings. View and manage applicants."
         actions={
           <Link to="/company/internships/new">
             <Button size="sm" iconLeft={<FiPlus className="w-4 h-4" />}>Post Internship</Button>
@@ -69,8 +69,8 @@ export default function CompanyInternshipManage() {
             <Table.Th>Location</Table.Th>
             <Table.Th>Mode</Table.Th>
             <Table.Th>Duration</Table.Th>
-            <Table.Th>Openings</Table.Th>
             <Table.Th>Status</Table.Th>
+            <Table.Th>Applicants</Table.Th>
             <Table.Th>Deadline</Table.Th>
             <Table.Th>Actions</Table.Th>
           </tr>
@@ -89,8 +89,16 @@ export default function CompanyInternshipManage() {
                   <Table.Td>{internship.location}</Table.Td>
                   <Table.Td>{internship.workMode}</Table.Td>
                   <Table.Td>{internship.durationMonths}mo</Table.Td>
-                  <Table.Td>{internship.openings}</Table.Td>
                   <Table.Td><Badge variant={cfg.variant} size="sm">{cfg.label}</Badge></Table.Td>
+                  <Table.Td>
+                    <Link
+                      to={`/company/applicants?opportunityId=${internship.id}`}
+                      className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-700 no-underline"
+                    >
+                      <FiUsers className="w-3.5 h-3.5" />
+                      View
+                    </Link>
+                  </Table.Td>
                   <Table.Td>{internship.applicationDeadline ? format(new Date(internship.applicationDeadline), 'MMM d, yyyy') : '—'}</Table.Td>
                   <Table.Td>
                     <div className="flex items-center gap-2">

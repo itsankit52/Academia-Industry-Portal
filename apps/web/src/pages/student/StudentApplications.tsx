@@ -27,6 +27,12 @@ const statusConfig: Record<string, { label: string; variant: BadgeVariant }> = {
   SELECTED: { label: 'Selected', variant: 'success' },
   REJECTED: { label: 'Rejected', variant: 'danger' },
   WITHDRAWN: { label: 'Withdrawn', variant: 'default' },
+  INTERNSHIP_STARTED: { label: 'Internship Started', variant: 'success' },
+  ONGOING: { label: 'Ongoing', variant: 'success' },
+  COMPLETED: { label: 'Completed', variant: 'success' },
+  OFFER_ACCEPTED: { label: 'Offer Accepted', variant: 'success' },
+  OFFER_REJECTED: { label: 'Offer Declined', variant: 'danger' },
+  WITHDRAWAL_REQUESTED: { label: 'Withdrawal Requested', variant: 'warning' },
 };
 
 const statusLabels: Record<ApplicationStatus, string> = {
@@ -37,6 +43,12 @@ const statusLabels: Record<ApplicationStatus, string> = {
   SELECTED: 'Selected',
   REJECTED: 'Rejected',
   WITHDRAWN: 'Withdrawn',
+  INTERNSHIP_STARTED: 'Internship Started',
+  ONGOING: 'Ongoing',
+  COMPLETED: 'Completed',
+  OFFER_ACCEPTED: 'Offer Accepted',
+  OFFER_REJECTED: 'Offer Declined',
+  WITHDRAWAL_REQUESTED: 'Withdrawal Requested',
 };
 
 export default function StudentApplications() {

@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import type { CreateInternshipInput, UpdateInternshipInput } from '@aip/validation';
 import type { Role } from '@aip/config';
+import { z } from 'zod';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { ok, created, noContent } from '../../utils/apiResponse';
 import * as service from './internships.service';
@@ -102,5 +103,40 @@ export const listManaged = asyncHandler(async (req: Request, res: Response) => {
     },
     { status: str(q.status) },
   );
+  return ok(res, data);
+});
+
+const setDatesSchema = z.object({
+  startDate: z.string().datetime().optional(),
+  expectedEndDate: z.string().datetime().optional(),
+});
+
+export const setDates = asyncHandler(async (req: Request, res: Response) => {
+  const parsed = setDatesSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Invalid input', details: parsed.error.errors });
+  }
+  const data = await service.setInternshipDates(
+    req.user!.id,
+    req.params.id!,
+    parsed.data,
+  );
+  return ok(res, data);
+});
+
+export const startInternship = asyncHandler(async (req: Request, res: Response) => {
+  const parsed = setDatesSchema.safeParse(req.body);
+  const data = parsed.success ? parsed.data : undefined;
+  const result = await service.startInternship(req.user!.id, req.params.id!, data);
+  return ok(res, result);
+});
+
+export const markOngoing = asyncHandler(async (req: Request, res: Response) => {
+  const result = await service.markInternshipOngoing(req.user!.id, req.params.id!);
+  return ok(res, result);
+});
+
+export const getApplicationStats = asyncHandler(async (req: Request, res: Response) => {
+  const data = await service.getInternshipApplicationStats(req.user!.id, req.params.id!);
   return ok(res, data);
 });

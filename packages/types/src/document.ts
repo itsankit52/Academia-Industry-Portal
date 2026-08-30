@@ -104,4 +104,18 @@ export interface PublicPortfolio {
     endDate?: string;
     description?: string;
   }[];
+  // Phase 5B: completed/active internships
+  internships?: {
+    id: string;
+    title: string;
+    organization: string;
+    startDate?: string;
+    endDate?: string;
+    status: string;
+    completedAt?: string;
+    durationMonths?: number;
+    companyId?: string;
+    skills: string[];
+    description?: string;
+  }[];
 }

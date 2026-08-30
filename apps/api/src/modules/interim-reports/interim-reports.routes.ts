@@ -50,7 +50,7 @@ router.get(
 router.patch(
   '/interim-reports/:id/feedback',
   requireAuth,
-  requireRole('COMPANY', 'ADMIN'),
+  requireRole('COMPANY', 'FACULTY', 'ADMIN'),
   validate(idParamSchema, 'params'),
   validate(mentorFeedbackSchema),
   auditLog({

@@ -12,6 +12,11 @@ const statusConfig: Record<string, { label: string; variant: BadgeVariant }> = {
   SELECTED: { label: 'Selected', variant: 'success' },
   REJECTED: { label: 'Rejected', variant: 'danger' },
   WITHDRAWN: { label: 'Withdrawn', variant: 'default' },
+  INTERNSHIP_STARTED: { label: 'Internship Started', variant: 'success' },
+  ONGOING: { label: 'Ongoing', variant: 'success' },
+  COMPLETED: { label: 'Completed', variant: 'success' },
+  OFFER_ACCEPTED: { label: 'Offer Accepted', variant: 'success' },
+  OFFER_REJECTED: { label: 'Offer Declined', variant: 'danger' },
 };
 
 interface Props {

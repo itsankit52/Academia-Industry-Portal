@@ -18,6 +18,7 @@ const router = Router();
 router.get('/', optionalAuth, ctrl.list);
 router.get('/me/managed', requireAuth, requireRole('COMPANY'), ctrl.listManaged);
 router.get('/:id', optionalAuth, validate(idParamSchema, 'params'), ctrl.getById);
+router.get('/:id/application-stats', requireAuth, requireRole('COMPANY', 'ADMIN'), validate(idParamSchema, 'params'), ctrl.getApplicationStats);
 router.post(
   '/',
   requireAuth,

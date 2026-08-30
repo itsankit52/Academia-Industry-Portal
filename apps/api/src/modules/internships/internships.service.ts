@@ -3,10 +3,14 @@ import type { CreateInternshipInput, UpdateInternshipInput } from '@aip/validati
 import { INTERNSHIP_STATUSES } from '@aip/config';
 import type { InternshipStatus, Role } from '@aip/config';
 import { AppError } from '../../utils/AppError';
-import { Internship, CompanyProfile } from '../../models';
+import { Application, Internship, CompanyProfile } from '../../models';
 import { applyPagination, buildPaginated, type PaginationInput } from '../../utils/pagination';
 import { normalizeCompanyOn } from '../../utils/normalizeCompany';
 import { analyzeFullMatch } from '../matching/fullMatch.service';
+import {
+  validateInternshipDates,
+  parseDate,
+} from './internshipLifecycle';
 
 export interface InternshipListFilters {
   search?: string;
@@ -292,4 +296,159 @@ export async function listMyInternships(
     page,
     pageSize,
   );
+}
+
+export interface InternshipLifecycleStats {
+  totalApplications: number;
+  shortlisted: number;
+  selected: number;
+  activeInterns: number;
+}
+
+export async function getInternshipApplicationStats(userId: string, internshipId: string) {
+  const companyId = await getMyCompanyId(userId);
+  const internship = await Internship.findById(internshipId);
+  if (!internship) throw AppError.notFound('Internship not found');
+  if (String(internship.company) !== companyId) throw AppError.forbidden('Not your internship');
+
+  const [total, shortlistedCount, selectedCount, activeCount] = await Promise.all([
+    Application.countDocuments({ opportunityType: 'INTERNSHIP', opportunity: internship._id }),
+    Application.countDocuments({
+      opportunityType: 'INTERNSHIP',
+      opportunity: internship._id,
+      status: 'SHORTLISTED',
+    }),
+    Application.countDocuments({
+      opportunityType: 'INTERNSHIP',
+      opportunity: internship._id,
+      status: { $in: ['SELECTED', 'INTERNSHIP_STARTED', 'ONGOING'] },
+    }),
+    Application.countDocuments({
+      opportunityType: 'INTERNSHIP',
+      opportunity: internship._id,
+      status: { $in: ['INTERNSHIP_STARTED', 'ONGOING'] },
+    }),
+  ]);
+
+  return {
+    totalApplications: total,
+    shortlisted: shortlistedCount,
+    selected: selectedCount,
+    activeInterns: activeCount,
+  };
+}
+
+export interface SetInternshipDatesInput {
+  startDate?: string;
+  expectedEndDate?: string;
+}
+
+export async function setInternshipDates(
+  userId: string,
+  applicationId: string,
+  input: SetInternshipDatesInput,
+) {
+  const companyId = await getMyCompanyId(userId);
+  const app = await Application.findById(applicationId);
+  if (!app) throw AppError.notFound('Application not found');
+
+  if (app.opportunityType !== 'INTERNSHIP') {
+    throw AppError.badRequest('This operation is only for internship applications');
+  }
+
+  // Verify company owns this internship
+  const internship = await Internship.findById(app.opportunity);
+  if (!internship) throw AppError.notFound('Internship not found');
+  if (String(internship.company) !== companyId) throw AppError.forbidden('Not your application');
+
+  // Only allow setting dates when application is SELECTED
+  if (!['SELECTED', 'INTERNSHIP_STARTED'].includes(app.status)) {
+    throw AppError.badRequest('Can only set dates for selected applications');
+  }
+
+  const startDate = parseDate(input.startDate);
+  const expectedEndDate = parseDate(input.expectedEndDate);
+
+  // Validate dates
+  const dateValidation = validateInternshipDates({ startDate, expectedEndDate });
+  if (!dateValidation.valid) {
+    throw AppError.badRequest(dateValidation.error ?? 'Invalid dates');
+  }
+
+  if (startDate) {
+    (app as unknown as { startDate: Date }).startDate = startDate;
+  }
+  if (expectedEndDate) {
+    (app as unknown as { expectedEndDate: Date }).expectedEndDate = expectedEndDate;
+  }
+
+  await app.save();
+  return app.toJSON();
+}
+
+export async function startInternship(
+  userId: string,
+  applicationId: string,
+  input?: SetInternshipDatesInput,
+) {
+  const companyId = await getMyCompanyId(userId);
+  const app = await Application.findById(applicationId)
+    .populate({ path: 'student', populate: { path: 'user', select: '_id' } });
+  if (!app) throw AppError.notFound('Application not found');
+
+  if (app.opportunityType !== 'INTERNSHIP') {
+    throw AppError.badRequest('This operation is only for internship applications');
+  }
+
+  const internship = await Internship.findById(app.opportunity);
+  if (!internship) throw AppError.notFound('Internship not found');
+  if (String(internship.company) !== companyId) throw AppError.forbidden('Not your application');
+
+  if (app.status !== 'SELECTED') {
+    throw AppError.badRequest('Only selected applications can be started');
+  }
+
+  const startDate = parseDate(input?.startDate);
+  const expectedEndDate = parseDate(input?.expectedEndDate);
+
+  const dateValidation = validateInternshipDates({ startDate, expectedEndDate });
+  if (!dateValidation.valid) {
+    throw AppError.badRequest(dateValidation.error ?? 'Invalid dates');
+  }
+
+  app.status = 'INTERNSHIP_STARTED';
+  app.timeline.push({ status: 'INTERNSHIP_STARTED', at: new Date(), note: 'Internship started' });
+  (app as unknown as { startedAt: Date }).startedAt = new Date();
+  if (startDate) (app as unknown as { startDate: Date }).startDate = startDate;
+  if (expectedEndDate) (app as unknown as { expectedEndDate: Date }).expectedEndDate = expectedEndDate;
+
+  await app.save();
+  return app.toJSON();
+}
+
+export async function markInternshipOngoing(
+  userId: string,
+  applicationId: string,
+) {
+  const companyId = await getMyCompanyId(userId);
+  const app = await Application.findById(applicationId)
+    .populate({ path: 'student', populate: { path: 'user', select: '_id' } });
+  if (!app) throw AppError.notFound('Application not found');
+
+  if (app.opportunityType !== 'INTERNSHIP') {
+    throw AppError.badRequest('This operation is only for internship applications');
+  }
+
+  const internship = await Internship.findById(app.opportunity);
+  if (!internship) throw AppError.notFound('Internship not found');
+  if (String(internship.company) !== companyId) throw AppError.forbidden('Not your application');
+
+  if (app.status !== 'INTERNSHIP_STARTED') {
+    throw AppError.badRequest('Only started internships can be marked as ongoing');
+  }
+
+  app.status = 'ONGOING';
+  app.timeline.push({ status: 'ONGOING', at: new Date(), note: 'Internship is now ongoing' });
+  await app.save();
+  return app.toJSON();
 }

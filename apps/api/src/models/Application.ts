@@ -35,6 +35,33 @@ const applicationSchema = new Schema(
     coverLetter: { type: String, maxlength: 5000 },
     matchScore: { type: Number, min: 0, max: 100 },
     timeline: { type: [timelineEntrySchema], default: [] },
+    // Internship lifecycle date fields (used when opportunityType is INTERNSHIP)
+    selectedAt: { type: Date },
+    startDate: { type: Date },
+    expectedEndDate: { type: Date },
+    startedAt: { type: Date },
+    completedAt: { type: Date },
+    // Phase 5B — mentor assignment for active internships
+    mentor: { type: Schema.Types.ObjectId, ref: 'User', index: true },
+    mentorAssignedAt: { type: Date },
+    // Phase 6A — student offer response (used for JOB placements and optionally INTERNSHIPs)
+    offerRespondedAt: { type: Date },
+    // Phase 6B — offer details (salary, joining date, terms) and expiry.
+    // Stored on the application rather than the Job so each candidate can receive
+    // a candidate-specific package. The Job's salary remains the public posting.
+    offerDetails: {
+      offeredSalary: { type: Number, min: 0 },
+      currency: { type: String, trim: true, maxlength: 8 },
+      joiningDate: { type: Date },
+      offerTerms: { type: String, maxlength: 5000 },
+      updatedAt: { type: Date },
+    },
+    offerExpiresAt: { type: Date, index: true },
+    // Phase 6B — offer letter (Document of type OFFER_LETTER linked to this application)
+    offerLetter: { type: Schema.Types.ObjectId, ref: 'Document' },
+    // Phase 6B — student-initiated withdrawal after OFFER_ACCEPTED
+    withdrawalRequestedAt: { type: Date },
+    withdrawalReason: { type: String, maxlength: 1000 },
   },
   {
     timestamps: true,

@@ -77,3 +77,18 @@ export function useDeleteInternship() {
     onError: (err: Error) => toast.error(err.message),
   });
 }
+
+export interface InternshipApplicationStats {
+  totalApplications: number;
+  shortlisted: number;
+  selected: number;
+  activeInterns: number;
+}
+
+export function useInternshipApplicationStats(id: string) {
+  return useQuery({
+    queryKey: ['internship', id, 'application-stats'],
+    queryFn: () => apiGet<InternshipApplicationStats>(`/internships/${id}/application-stats`),
+    enabled: !!id,
+  });
+}

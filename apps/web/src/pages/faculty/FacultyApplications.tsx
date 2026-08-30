@@ -17,7 +17,7 @@ import { useFacultyApplications } from '@/hooks/queries/useFacultyApplications';
 
 type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info';
 
-const statusConfig: Record<string, { label: string; variant: BadgeVariant }> = {
+const statusConfig: Record<ApplicationStatus, { label: string; variant: BadgeVariant }> = {
   APPLIED: { label: 'Applied', variant: 'info' },
   UNDER_REVIEW: { label: 'Under Review', variant: 'warning' },
   SHORTLISTED: { label: 'Shortlisted', variant: 'success' },
@@ -25,6 +25,12 @@ const statusConfig: Record<string, { label: string; variant: BadgeVariant }> = {
   SELECTED: { label: 'Selected', variant: 'success' },
   REJECTED: { label: 'Rejected', variant: 'danger' },
   WITHDRAWN: { label: 'Withdrawn', variant: 'default' },
+  INTERNSHIP_STARTED: { label: 'Internship Started', variant: 'success' },
+  ONGOING: { label: 'Ongoing', variant: 'success' },
+  COMPLETED: { label: 'Completed', variant: 'success' },
+  OFFER_ACCEPTED: { label: 'Offer Accepted', variant: 'success' },
+  OFFER_REJECTED: { label: 'Offer Declined', variant: 'danger' },
+  WITHDRAWAL_REQUESTED: { label: 'Withdrawal Requested', variant: 'warning' },
 };
 
 const statusLabels: Record<ApplicationStatus, string> = {
@@ -35,6 +41,12 @@ const statusLabels: Record<ApplicationStatus, string> = {
   SELECTED: 'Selected',
   REJECTED: 'Rejected',
   WITHDRAWN: 'Withdrawn',
+  WITHDRAWAL_REQUESTED: 'Withdrawal Requested',
+  INTERNSHIP_STARTED: 'Internship Started',
+  ONGOING: 'Ongoing',
+  COMPLETED: 'Completed',
+  OFFER_ACCEPTED: 'Offer Accepted',
+  OFFER_REJECTED: 'Offer Declined',
 };
 
 export default function FacultyApplications() {

@@ -1,7 +1,10 @@
 import type { PublicPortfolio } from '@aip/types';
 import {
+  Application,
+  CompanyProfile,
   DocumentModel,
   Institution,
+  Internship,
   Skill,
   StudentProfile,
   StudentSkill,
@@ -13,13 +16,22 @@ export async function getPublicPortfolio(studentId: string): Promise<PublicPortf
   const profile = await StudentProfile.findById(studentId).lean();
   if (!profile) throw AppError.notFound('Student not found');
 
-  const [institution, studentSkillsRaw, verifiedDocsRaw] = await Promise.all([
+  const [institution, studentSkillsRaw, verifiedDocsRaw, completedInternships] = await Promise.all([
     profile.institution
       ? Institution.findById(profile.institution).select('name code').lean()
       : Promise.resolve(null),
     StudentSkill.find({ student: profile._id }).lean(),
     DocumentModel.find({ user: profile.user, verificationStatus: 'VERIFIED' })
       .sort({ verifiedAt: -1 })
+      .lean(),
+    // Phase 5B: Pull completed internships for the portfolio
+    Application.find({
+      student: profile._id,
+      opportunityType: 'INTERNSHIP',
+      status: { $in: ['ONGOING', 'COMPLETED'] },
+    })
+      .populate({ path: 'opportunity', populate: { path: 'company', select: 'companyName' } })
+      .sort({ completedAt: -1, startedAt: -1 })
       .lean(),
   ]);
 
@@ -44,6 +56,41 @@ export async function getPublicPortfolio(studentId: string): Promise<PublicPortf
         .lean()
     : [];
   const verifierMap = new Map(verifiers.map((u) => [String(u._id), u]));
+
+  // Phase 5B: Build internship experience entries
+  const internshipExperience = completedInternships
+    .filter((app) => {
+      const opp = app.opportunity as unknown as { title?: string } | null;
+      return Boolean(opp && opp.title);
+    })
+    .map((app) => {
+      const opp = app.opportunity as unknown as {
+        _id?: unknown;
+        title?: string;
+        durationMonths?: number;
+        company?: { _id?: unknown; companyName?: string };
+        requiredSkills?: unknown[];
+      };
+      return {
+        id: String(app._id),
+        title: opp.title ?? 'Internship',
+        organization: opp.company?.companyName ?? 'Company',
+        startDate: app.startDate ? String(app.startDate) : String(app.startedAt ?? ''),
+        endDate: app.completedAt
+          ? String(app.completedAt)
+          : app.expectedEndDate
+            ? String(app.expectedEndDate)
+            : undefined,
+        status: app.status as string,
+        completedAt: app.completedAt ? String(app.completedAt) : undefined,
+        durationMonths: opp.durationMonths,
+        companyId: opp.company?._id ? String(opp.company._id) : undefined,
+        skills: ((opp.requiredSkills ?? []) as unknown[]).map(String),
+        description: app.completedAt
+          ? `Completed internship: ${opp.title}`
+          : `Ongoing internship: ${opp.title}`,
+      };
+    });
 
   return {
     student: {
@@ -134,5 +181,7 @@ export async function getPublicPortfolio(studentId: string): Promise<PublicPortf
       ...(e.endDate ? { endDate: String(e.endDate) } : {}),
       ...(e.description ? { description: e.description as string } : {}),
     })),
-  };
+    // Phase 5B: completed/ongoing internships as a separate section
+    internships: internshipExperience,
+  } as PublicPortfolio;
 }

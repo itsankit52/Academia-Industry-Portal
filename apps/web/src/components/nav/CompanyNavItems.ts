@@ -11,6 +11,7 @@ import {
   FiBell,
   FiSettings,
   FiZap,
+  FiActivity,
 } from 'react-icons/fi';
 import type { NavItem } from './StudentNavItems';
 
@@ -21,6 +22,7 @@ export const companyNavItems: NavItem[] = [
   { to: '/company/internships', label: 'Internships', icon: FiBookOpen },
   { to: '/company/faculty-opportunities', label: 'Faculty Programs', icon: FiBookmark },
   { to: '/company/applicants', label: 'Applicants', icon: FiUsers },
+  { to: '/company/active-interns', label: 'Active Interns', icon: FiActivity },
   { to: '/company/shortlisted', label: 'Shortlisted', icon: FiUserCheck },
   { to: '/company/interviews', label: 'Interviews', icon: FiCalendar },
   { to: '/company/mentorship', label: 'Mentorship', icon: FiUsers },

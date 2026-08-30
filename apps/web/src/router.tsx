@@ -44,6 +44,7 @@ const StudentInternships = lazy(() => import('@/pages/student/StudentInternships
 const StudentSaved = lazy(() => import('@/pages/student/StudentSaved'));
 const StudentApplications = lazy(() => import('@/pages/student/StudentApplications'));
 const StudentApplicationDetails = lazy(() => import('@/pages/student/StudentApplicationDetails'));
+const StudentMyInternships = lazy(() => import('@/pages/student/StudentMyInternships'));
 const StudentInterviews = lazy(() => import('@/pages/student/StudentInterviews'));
 const StudentInterviewDetails = lazy(() => import('@/pages/student/StudentInterviewDetails'));
 const StudentNotifications = lazy(() => import('@/pages/student/StudentNotifications'));
@@ -98,6 +99,7 @@ const AdminVerificationQueue = lazy(() => import('@/pages/admin/AdminVerificatio
 const AdminCollaborationHub = lazy(() => import('@/pages/admin/AdminCollaborationHub'));
 
 const CompanyVerifications = lazy(() => import('@/pages/company/CompanyVerifications'));
+const CompanyActiveInterns = lazy(() => import('@/pages/company/CompanyActiveInterns'));
 
 const FacultyDashboard = lazy(() => import('@/pages/faculty/FacultyDashboard'));
 const FacultyBrowseOpportunities = lazy(() => import('@/pages/faculty/FacultyBrowseOpportunities'));
@@ -140,6 +142,8 @@ const FacultyEventCreate = lazy(() => import('@/pages/faculty/FacultyEventCreate
 const FacultyCollaborationHub = lazy(() => import('@/pages/faculty/FacultyCollaborationHub'));
 const FacultyEventEdit = lazy(() => import('@/pages/faculty/FacultyEventEdit'));
 const FacultyEventDetails = lazy(() => import('@/pages/faculty/FacultyEventDetails'));
+const FacultyMentorInterns = lazy(() => import('@/pages/faculty/FacultyMentorInterns'));
+const FacultyInterimReports = lazy(() => import('@/pages/faculty/FacultyInterimReports'));
 
 const CompanyMentorship = lazy(() => import('@/pages/company/CompanyMentorship'));
 const CompanyMentorshipDetails = lazy(() => import('@/pages/company/CompanyMentorshipDetails'));
@@ -210,6 +214,7 @@ export const router = createBrowserRouter([
           { path: 'saved', element: s(StudentSaved) },
           { path: 'applications', element: s(StudentApplications) },
           { path: 'applications/:id', element: s(StudentApplicationDetails) },
+          { path: 'my-internships', element: s(StudentMyInternships) },
           { path: 'interviews', element: s(StudentInterviews) },
           // `interviews.service.ts` writes its interview notifications with the
           // link `/student/interviews/<id>`. Without this child that link matched
@@ -264,6 +269,7 @@ export const router = createBrowserRouter([
           { path: 'internships/manage', element: s(CompanyInternshipManage) },
           { path: 'applicants', element: s(CompanyApplicants) },
           { path: 'applicants/:id', element: s(CompanyApplicantDetails) },
+          { path: 'active-interns', element: s(CompanyActiveInterns) },
           { path: 'shortlisted', element: s(CompanyShortlisted) },
           { path: 'interviews', element: s(CompanyInterviews) },
           { path: 'notifications', element: s(CompanyNotifications) },
@@ -332,6 +338,8 @@ export const router = createBrowserRouter([
           { path: 'opportunities/:id', element: s(FacultyOpportunityDetails) },
           { path: 'applications', element: s(FacultyApplications) },
           { path: 'applications/:id', element: s(FacultyApplicationDetails) },
+          { path: 'assigned-interns', element: s(FacultyMentorInterns) },
+          { path: 'applications/:appId/reports', element: s(FacultyInterimReports) },
           { path: 'profile', element: s(FacultyProfile) },
           { path: 'profile/edit', element: s(FacultyEditProfile) },
           { path: 'mentorship', element: s(FacultyMentorship) },

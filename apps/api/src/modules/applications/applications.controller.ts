@@ -4,6 +4,7 @@ import type {
   UpdateApplicationStatusInput,
 } from '@aip/validation';
 import type { ApplicationStatus, OpportunityType, Role } from '@aip/config';
+import { z } from 'zod';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { ok, created } from '../../utils/apiResponse';
 import { AppError } from '../../utils/AppError';
@@ -140,4 +141,199 @@ export const certificate = asyncHandler(async (req: Request, res: Response) => {
   doc.text(`Issued on ${fmtDate(new Date())}`, 350, 508, { align: 'right' });
 
   doc.end();
+});
+
+const internshipDatesSchema = z.object({
+  startDate: z.string().datetime().optional(),
+  expectedEndDate: z.string().datetime().optional(),
+});
+
+export const setInternshipDates = asyncHandler(async (req: Request, res: Response) => {
+  const parsed = internshipDatesSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Invalid input', details: parsed.error.errors });
+  }
+  const data = await service.setInternshipDatesForApplication(
+    req.user!.id,
+    req.user!.role as Role,
+    req.params.id!,
+    parsed.data,
+  );
+  return ok(res, data);
+});
+
+export const startInternship = asyncHandler(async (req: Request, res: Response) => {
+  const parsed = internshipDatesSchema.safeParse(req.body);
+  const data = parsed.success ? parsed.data : undefined;
+  const result = await service.startInternshipForApplication(
+    req.user!.id,
+    req.user!.role as Role,
+    req.params.id!,
+    data,
+  );
+  return ok(res, result);
+});
+
+// --- Phase 6A: Student offer response ---
+
+const offerResponseSchema = z.object({
+  response: z.enum(['ACCEPT', 'REJECT']),
+});
+
+export const respondToOffer = asyncHandler(async (req: Request, res: Response) => {
+  const parsed = offerResponseSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res
+      .status(400)
+      .json({ error: 'Invalid input', details: parsed.error.errors });
+  }
+  const data = await service.respondToOffer(
+    req.user!.id,
+    req.user!.role as Role,
+    req.params.id!,
+    parsed.data.response,
+  );
+  return ok(res, data);
+});
+
+export const markInternshipOngoing = asyncHandler(async (req: Request, res: Response) => {
+  const result = await service.markInternshipOngoingForApplication(
+    req.user!.id,
+    req.user!.role as Role,
+    req.params.id!,
+  );
+  return ok(res, result);
+});
+
+// --- Phase 5B: Post-ONGOING lifecycle ---
+
+export const assignMentor = asyncHandler(async (req: Request, res: Response) => {
+  const data = await service.assignMentorToApplication(
+    req.user!.id,
+    req.user!.role as Role,
+    req.params.id!,
+    req.body,
+  );
+  return ok(res, data);
+});
+
+export const removeMentor = asyncHandler(async (req: Request, res: Response) => {
+  const data = await service.removeMentorFromApplication(
+    req.user!.id,
+    req.user!.role as Role,
+    req.params.id!,
+  );
+  return ok(res, data);
+});
+
+export const completeInternship = asyncHandler(async (req: Request, res: Response) => {
+  const result = await service.completeInternshipForApplication(
+    req.user!.id,
+    req.user!.role as Role,
+    req.params.id!,
+    req.body ?? {},
+  );
+  return ok(res, result);
+});
+
+export const listActiveInterns = asyncHandler(async (req: Request, res: Response) => {
+  const q = req.query as Record<string, unknown>;
+  const data = await service.listActiveInternsForCompany(
+    req.user!.id,
+    req.user!.role as Role,
+    {
+      page: num(q.page),
+      pageSize: num(q.pageSize),
+      sortBy: str(q.sortBy),
+      sortDir: q.sortDir === 'asc' ? 'asc' : 'desc',
+    },
+  );
+  return ok(res, data);
+});
+
+export const listMentorAssignedInterns = asyncHandler(async (req: Request, res: Response) => {
+  const q = req.query as Record<string, unknown>;
+  const data = await service.listAssignedInternsForMentor(req.user!.id, {
+    page: num(q.page),
+    pageSize: num(q.pageSize),
+    sortBy: str(q.sortBy),
+    sortDir: q.sortDir === 'asc' ? 'asc' : 'desc',
+  });
+  return ok(res, data);
+});
+
+export const getMentor = asyncHandler(async (req: Request, res: Response) => {
+  const data = await service.getMentorForApplication(req.params.id!, {
+    userId: req.user!.id,
+    role: req.user!.role as Role,
+  });
+  return ok(res, data ?? { message: 'No mentor assigned' });
+});
+
+// --- Phase 6B: Offer details, expiry, withdrawal, offer letter ---
+
+const setOfferDetailsSchema = z.object({
+  offeredSalary: z.number().min(0).optional(),
+  currency: z.string().min(1).max(8).optional(),
+  joiningDate: z.string().datetime().optional(),
+  offerTerms: z.string().max(5000).optional(),
+  offerExpiresAt: z.string().datetime().optional(),
+});
+
+export const putOfferDetails = asyncHandler(async (req: Request, res: Response) => {
+  const parsed = setOfferDetailsSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Invalid input', details: parsed.error.errors });
+  }
+  const data = await service.setOfferDetails(
+    req.user!.id,
+    req.user!.role as Role,
+    req.params.id!,
+    parsed.data,
+  );
+  return ok(res, data);
+});
+
+const attachOfferLetterSchema = z.object({
+  documentId: z.string().min(1),
+});
+
+export const attachOfferLetter = asyncHandler(async (req: Request, res: Response) => {
+  const parsed = attachOfferLetterSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Invalid input', details: parsed.error.errors });
+  }
+  const data = await service.attachOfferLetter(
+    req.user!.id,
+    req.user!.role as Role,
+    req.params.id!,
+    parsed.data,
+  );
+  return ok(res, data);
+});
+
+const withdrawOfferSchema = z.object({
+  reason: z.string().max(1000).optional(),
+});
+
+export const requestWithdrawal = asyncHandler(async (req: Request, res: Response) => {
+  const parsed = withdrawOfferSchema.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Invalid input', details: parsed.error.errors });
+  }
+  const data = await service.requestOfferWithdrawal(
+    req.user!.id,
+    req.user!.role as Role,
+    req.params.id!,
+    parsed.data.reason,
+  );
+  return ok(res, data);
+});
+
+export const getOfferLetter = asyncHandler(async (req: Request, res: Response) => {
+  const data = await service.getOfferLetterForApplication(req.params.id!, {
+    userId: req.user!.id,
+    role: req.user!.role as Role,
+  });
+  return ok(res, data);
 });

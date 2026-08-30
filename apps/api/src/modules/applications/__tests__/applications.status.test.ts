@@ -181,10 +181,39 @@ describe('updateStatus — applicant notifications', () => {
     expect(vi.mocked(createNotification).mock.calls[0]![1]).toBe('APPLICATION_REJECTED');
   });
 
-  it('stays quiet on an intermediate transition like SHORTLISTED', async () => {
-    // Shortlisting is not an outcome, so pinging the candidate would be noise.
+  it('notifies the applicant when they are shortlisted', async () => {
+    // Shortlisting is a key transition — students should be notified.
     const app = applicationDoc();
     await updateStatus(OWNER_USER, 'COMPANY', String(app._id), { status: 'SHORTLISTED' } as never);
-    expect(createNotification).not.toHaveBeenCalled();
+    expect(createNotification).toHaveBeenCalledTimes(1);
+    const [target, kind, title] = vi.mocked(createNotification).mock.calls[0]!;
+    expect(target).toBe(String(APPLICANT_USER));
+    expect(kind).toBe('APPLICATION_SHORTLISTED');
+    expect(title).toBe('You have been shortlisted');
+  });
+});
+
+describe('updateStatus — internship lifecycle', () => {
+  it('allows SHORTLISTED → SELECTED transition for jobs (backward compat)', async () => {
+    const app = applicationDoc();
+    const result = (await updateStatus(OWNER_USER, 'COMPANY', String(app._id), {
+      status: 'SELECTED',
+    } as never)) as { status: string };
+    expect(result.status).toBe('SELECTED');
+  });
+
+  it('refuses APPLIED → ONGOING (skipping all steps)', async () => {
+    const app = applicationDoc();
+    await expect(
+      updateStatus(OWNER_USER, 'COMPANY', String(app._id), { status: 'ONGOING' as never }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it('refuses REJECTED → SELECTED (terminal state)', async () => {
+    const app = applicationDoc();
+    app.status = 'REJECTED';
+    await expect(
+      updateStatus(OWNER_USER, 'COMPANY', String(app._id), { status: 'SELECTED' as never }),
+    ).rejects.toMatchObject({ statusCode: 400 });
   });
 });

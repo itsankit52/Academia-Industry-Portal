@@ -59,6 +59,28 @@ export interface DashboardStats {
   }[];
   verifiedDocumentsCount: number;
   pendingDocumentsCount: number;
+  // Phase 5B: Internship metrics
+  internshipMetrics: {
+    totalApplications: number;
+    selected: number;
+    activeInterns: number;
+    completedInterns: number;
+    completionRate: number;
+  };
+  // Phase 6B: Placement pipeline metrics
+  placementMetrics: {
+    totalJobApplications: number;
+    shortlisted: number;
+    interviewed: number;
+    selected: number;
+    offerAccepted: number;
+    offerRejected: number;
+    offerExpired: number;
+    withdrawalRequested: number;
+    offerAcceptanceRate: number;
+    interviewConversionRate: number;
+    placementRate: number;
+  };
 }
 
 export interface StudentRow {
@@ -175,7 +197,7 @@ export async function getDashboardStats(
     Application.distinct('student', { ...appBaseMatch, status: 'SHORTLISTED' }).then(
       (arr) => (arr as Types.ObjectId[]).length,
     ),
-    Application.distinct('student', { ...appBaseMatch, status: 'SELECTED' }).then(
+    Application.distinct('student', { ...appBaseMatch, status: { $in: ['SELECTED', 'OFFER_ACCEPTED'] } }).then(
       (arr) => (arr as Types.ObjectId[]).length,
     ),
     Application.distinct('_id', {
@@ -202,7 +224,7 @@ export async function getDashboardStats(
             {
               $match: {
                 $expr: { $eq: ['$student', '$$sid'] },
-                status: 'SELECTED',
+                status: { $in: ['SELECTED', 'OFFER_ACCEPTED'] },
                 ...(filters.fromDate || filters.toDate ? { createdAt: dateMatch } : {}),
               },
             },
@@ -316,6 +338,85 @@ export async function getDashboardStats(
     })
     .sort((a, b) => b.totalCount - a.totalCount);
 
+  // Phase 5B: Compute internship-specific metrics for institution students
+  const internshipTotal = await Application.countDocuments({
+    student: { $in: studentIds },
+    opportunityType: 'INTERNSHIP',
+  });
+  const internshipSelected = await Application.countDocuments({
+    student: { $in: studentIds },
+    opportunityType: 'INTERNSHIP',
+    status: { $in: ['SELECTED', 'OFFER_ACCEPTED'] },
+  });
+  const internshipActive = await Application.countDocuments({
+    student: { $in: studentIds },
+    opportunityType: 'INTERNSHIP',
+    status: { $in: ['INTERNSHIP_STARTED', 'ONGOING'] },
+  });
+  const internshipCompleted = await Application.countDocuments({
+    student: { $in: studentIds },
+    opportunityType: 'INTERNSHIP',
+    status: 'COMPLETED',
+  });
+  const internshipCompletionRate =
+    internshipSelected > 0
+      ? Math.round((internshipCompleted / internshipSelected) * 1000) / 10
+      : 0;
+
+  // Phase 6B: placement pipeline metrics for job applications.
+  // "Expired" here means SELECTED with offerExpiresAt in the past — the same
+  // isOfferExpired helper the application service uses, evaluated at the DB
+  // level for performance.
+  const now = new Date();
+  const placementMatch = {
+    student: { $in: studentIds },
+    opportunityType: 'JOB',
+  };
+  const [
+    placementTotalJobs,
+    placementShortlisted,
+    placementInterviewed,
+    placementSelected,
+    placementOfferAccepted,
+    placementOfferRejected,
+    placementWithdrawalRequested,
+    placementExpiredRaw,
+  ] = await Promise.all([
+    Application.countDocuments(placementMatch),
+    Application.countDocuments({ ...placementMatch, status: 'SHORTLISTED' }),
+    Application.countDocuments({
+      ...placementMatch,
+      status: { $in: ['INTERVIEW_SCHEDULED', 'SELECTED', 'OFFER_ACCEPTED', 'OFFER_REJECTED'] },
+    }),
+    Application.countDocuments({ ...placementMatch, status: 'SELECTED' }),
+    Application.countDocuments({ ...placementMatch, status: 'OFFER_ACCEPTED' }),
+    Application.countDocuments({ ...placementMatch, status: 'OFFER_REJECTED' }),
+    Application.countDocuments({ ...placementMatch, status: 'WITHDRAWAL_REQUESTED' }),
+    Application.countDocuments({
+      ...placementMatch,
+      status: 'SELECTED',
+      offerExpiresAt: { $ne: null, $lte: now },
+    }),
+  ]);
+  const placementOfferExpired = placementExpiredRaw;
+  // Offer acceptance rate = accepted / (accepted + rejected + expired).
+  const offerDenominator =
+    placementOfferAccepted + placementOfferRejected + placementOfferExpired;
+  const offerAcceptanceRate =
+    offerDenominator > 0
+      ? Math.round((placementOfferAccepted / offerDenominator) * 1000) / 10
+      : 0;
+  // Interview conversion rate = selected / interviewed.
+  const interviewConversionRate =
+    placementInterviewed > 0
+      ? Math.round((placementSelected / placementInterviewed) * 1000) / 10
+      : 0;
+  // Placement rate = (offer accepted) / total job applications.
+  const placementRate =
+    placementTotalJobs > 0
+      ? Math.round((placementOfferAccepted / placementTotalJobs) * 1000) / 10
+      : 0;
+
   return {
     studentCount,
     activeStudents,
@@ -341,6 +442,26 @@ export async function getDashboardStats(
     departmentWisePlacement,
     verifiedDocumentsCount: 0,
     pendingDocumentsCount: 0,
+    internshipMetrics: {
+      totalApplications: internshipTotal,
+      selected: internshipSelected,
+      activeInterns: internshipActive,
+      completedInterns: internshipCompleted,
+      completionRate: internshipCompletionRate,
+    },
+    placementMetrics: {
+      totalJobApplications: placementTotalJobs,
+      shortlisted: placementShortlisted,
+      interviewed: placementInterviewed,
+      selected: placementSelected,
+      offerAccepted: placementOfferAccepted,
+      offerRejected: placementOfferRejected,
+      offerExpired: placementOfferExpired,
+      withdrawalRequested: placementWithdrawalRequested,
+      offerAcceptanceRate,
+      interviewConversionRate,
+      placementRate,
+    },
   };
 }
 
@@ -574,7 +695,7 @@ export async function getPlacementMetrics(
       {
         $match: {
           student: { $in: studentIds },
-          status: 'SELECTED',
+          status: { $in: ['SELECTED', 'OFFER_ACCEPTED'] },
           updatedAt: { $gte: twelveMonthsAgo },
         },
       },
@@ -588,7 +709,7 @@ export async function getPlacementMetrics(
     ]),
     Application.distinct('student', {
       student: { $in: studentIds },
-      status: 'SELECTED',
+      status: { $in: ['SELECTED', 'OFFER_ACCEPTED'] },
     }) as Promise<Types.ObjectId[]>,
     StudentProfile.aggregate<{ _id: string | null; total: number }>([
       { $match: { institution: institutionId } },

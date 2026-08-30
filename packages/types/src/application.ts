@@ -31,6 +31,30 @@ export interface Application {
   matchedSkills?: string[];
   missingSkills?: string[];
   timeline: TimelineEntry[];
+  // Internship lifecycle date fields (set when opportunityType is INTERNSHIP)
+  selectedAt?: string;
+  startDate?: string;
+  expectedEndDate?: string;
+  startedAt?: string;
+  completedAt?: string;
+  // Phase 5B: mentor assignment
+  mentor?: string;
+  mentorAssignedAt?: string;
+  // Phase 6A: offer response
+  offerRespondedAt?: string;
+  // Phase 6B: offer details
+  offerDetails?: {
+    offeredSalary?: number;
+    currency?: string;
+    joiningDate?: string;
+    offerTerms?: string;
+    updatedAt?: string;
+  };
+  offerExpiresAt?: string;
+  offerLetter?: { id: string; filename: string; mimeType: string };
+  // Phase 6B: withdrawal
+  withdrawalRequestedAt?: string;
+  withdrawalReason?: string;
   createdAt: string;
   updatedAt: string;
 }

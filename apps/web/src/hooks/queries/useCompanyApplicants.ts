@@ -84,6 +84,16 @@ export interface CandidateDetails {
     resume?: { url: string; mimeType: string };
     timeline: TimelineEntry[];
     createdAt: string;
+    offerDetails?: {
+      offeredSalary?: number;
+      currency?: string;
+      joiningDate?: string;
+      offerTerms?: string;
+    };
+    offerExpiresAt?: string;
+    offerLetter?: { id: string; filename: string; mimeType: string };
+    offerRespondedAt?: string;
+    withdrawalRequestedAt?: string;
   };
   aiNarrative?: string;
 }
@@ -116,6 +126,36 @@ export function useUpdateApplicationStatus() {
       // The applicant detail page shows the same status and timeline from its own
       // query, and shortlists from the same mutation.
       qc.invalidateQueries({ queryKey: ['company', 'candidate'] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useStartInternship() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiPatch<Application>(`/applications/${id}/internship/start`, {}),
+    onSuccess: () => {
+      toast.success('Internship started.');
+      qc.invalidateQueries({ queryKey: ['company', 'applicants'] });
+      qc.invalidateQueries({ queryKey: ['company', 'candidate'] });
+      qc.invalidateQueries({ queryKey: ['company', 'dashboard'] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useMarkInternshipOngoing() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiPatch<Application>(`/applications/${id}/internship/ongoing`, {}),
+    onSuccess: () => {
+      toast.success('Marked as ongoing.');
+      qc.invalidateQueries({ queryKey: ['company', 'applicants'] });
+      qc.invalidateQueries({ queryKey: ['company', 'candidate'] });
+      qc.invalidateQueries({ queryKey: ['company', 'dashboard'] });
     },
     onError: (err: Error) => toast.error(err.message),
   });

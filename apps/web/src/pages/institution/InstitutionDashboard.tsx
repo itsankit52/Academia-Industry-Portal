@@ -12,6 +12,8 @@ import {
   FiBriefcase,
   FiCheckCircle,
   FiStar,
+  FiUserCheck,
+  FiX,
 } from 'react-icons/fi';
 import {
   ResponsiveContainer,
@@ -73,6 +75,11 @@ const APPLICATION_STATUSES = [
   'SELECTED',
   'REJECTED',
   'WITHDRAWN',
+  'INTERNSHIP_STARTED',
+  'ONGOING',
+  'COMPLETED',
+  'OFFER_ACCEPTED',
+  'OFFER_REJECTED',
 ];
 
 export default function InstitutionDashboard() {
@@ -302,6 +309,80 @@ export default function InstitutionDashboard() {
               label="Published Internships"
               value={stats?.publishedInternshipsCount ?? 0}
               icon={<FiBriefcase />}
+            />
+          </>
+        )}
+      </div>
+
+      {/* Phase 5B: Internship Metrics Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {statsLoading ? (
+          Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
+        ) : (
+          <>
+            <StatCard
+              label="Total Internship Apps"
+              value={stats?.internshipMetrics?.totalApplications ?? 0}
+              icon={<FiClipboard />}
+            />
+            <StatCard
+              label="Selected"
+              value={stats?.internshipMetrics?.selected ?? 0}
+              icon={<FiUserCheck />}
+            />
+            <StatCard
+              label="Active Interns"
+              value={stats?.internshipMetrics?.activeInterns ?? 0}
+              icon={<FiActivity />}
+            />
+            <StatCard
+              label="Completed"
+              value={stats?.internshipMetrics?.completedInterns ?? 0}
+              icon={<FiAward />}
+            />
+            <StatCard
+              label="Completion Rate"
+              value={stats?.internshipMetrics?.completionRate !== undefined
+                ? `${stats.internshipMetrics.completionRate}%`
+                : '—'}
+              icon={<FiTrendingUp />}
+            />
+          </>
+        )}
+      </div>
+
+      {/* Phase 6B: Placement Pipeline Metrics Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {statsLoading ? (
+          Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
+        ) : (
+          <>
+            <StatCard
+              label="Job Apps"
+              value={stats?.placementMetrics?.totalJobApplications ?? 0}
+              icon={<FiClipboard />}
+            />
+            <StatCard
+              label="Shortlisted"
+              value={stats?.placementMetrics?.shortlisted ?? 0}
+              icon={<FiUserCheck />}
+            />
+            <StatCard
+              label="Offers Accepted"
+              value={stats?.placementMetrics?.offerAccepted ?? 0}
+              icon={<FiCheckCircle />}
+            />
+            <StatCard
+              label="Offers Declined"
+              value={stats?.placementMetrics?.offerRejected ?? 0}
+              icon={<FiX />}
+            />
+            <StatCard
+              label="Offer Accept Rate"
+              value={stats?.placementMetrics?.offerAcceptanceRate !== undefined
+                ? `${stats.placementMetrics.offerAcceptanceRate}%`
+                : '—'}
+              icon={<FiTrendingUp />}
             />
           </>
         )}

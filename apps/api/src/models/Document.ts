@@ -27,6 +27,11 @@ const documentSchema = new Schema(
     verifiedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     verifiedAt: { type: Date },
     verificationNotes: { type: String, trim: true, maxlength: 1000 },
+    // Phase 6B — link a document (e.g. an offer letter) back to the application it
+    // was attached to, so a company can attach an offer letter to a specific
+    // application without giving the student access to the company's other
+    // documents. Optional — documents without this field behave as before.
+    application: { type: Schema.Types.ObjectId, ref: 'Application', index: true },
   },
   {
     timestamps: true,

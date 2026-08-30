@@ -14,6 +14,8 @@ import { SkeletonTableRows } from '@/components/ui/Skeleton';
 import {
   useCompanyApplicants,
   useUpdateApplicationStatus,
+  useStartInternship,
+  useMarkInternshipOngoing,
 } from '@/hooks/queries/useCompanyApplicants';
 import { APPLICATION_STATUSES } from '@aip/config';
 import type { ApplicationStatus } from '@aip/config';
@@ -30,6 +32,12 @@ const statusConfig: Record<ApplicationStatus, { label: string; variant: BadgeVar
   SELECTED: { label: 'Selected', variant: 'success' },
   REJECTED: { label: 'Rejected', variant: 'danger' },
   WITHDRAWN: { label: 'Withdrawn', variant: 'default' },
+  INTERNSHIP_STARTED: { label: 'Started', variant: 'success' },
+  ONGOING: { label: 'Ongoing', variant: 'success' },
+  COMPLETED: { label: 'Completed', variant: 'success' },
+  OFFER_ACCEPTED: { label: 'Offer Accepted', variant: 'success' },
+  OFFER_REJECTED: { label: 'Offer Declined', variant: 'danger' },
+  WITHDRAWAL_REQUESTED: { label: 'Withdrawal Requested', variant: 'warning' },
 };
 
 const statusOptions = [
@@ -50,6 +58,8 @@ export default function CompanyApplicants() {
   const { data, isLoading, isError, refetch } = useCompanyApplicants(filters);
   const applications = data?.items ?? [];
   const updateStatus = useUpdateApplicationStatus();
+  const startInternship = useStartInternship();
+  const markOngoing = useMarkInternshipOngoing();
 
   if (isError) return <ErrorState onRetry={refetch} />;
 
@@ -136,21 +146,40 @@ export default function CompanyApplicants() {
                     </Badge>
                   </Table.Td>
                   <Table.Td>
-                    <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
-                      {app.status !== 'SHORTLISTED' && (
+                    <div className="flex gap-1.5 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                      {/* Shortlist action */}
+                      {app.status === 'APPLIED' || app.status === 'UNDER_REVIEW' ? (
                         <button
                           onClick={() => updateStatus.mutate({ id: app.id, status: 'SHORTLISTED' })}
                           className="text-xs px-2 py-1 rounded border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/40 transition-colors"
                         >
                           Shortlist
                         </button>
-                      )}
-                      {app.status !== 'REJECTED' && (
+                      ) : null}
+                      {/* Reject action */}
+                      {app.status !== 'REJECTED' && app.status !== 'WITHDRAWN' && !['INTERNSHIP_STARTED', 'ONGOING'].includes(app.status) ? (
                         <button
                           onClick={() => updateStatus.mutate({ id: app.id, status: 'REJECTED' })}
                           className="text-xs px-2 py-1 rounded border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
                         >
                           Reject
+                        </button>
+                      ) : null}
+                      {/* Internship lifecycle actions */}
+                      {app.opportunityType === 'INTERNSHIP' && app.status === 'SELECTED' && (
+                        <button
+                          onClick={() => startInternship.mutate(app.id)}
+                          className="text-xs px-2 py-1 rounded border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 transition-colors"
+                        >
+                          Start Internship
+                        </button>
+                      )}
+                      {app.opportunityType === 'INTERNSHIP' && app.status === 'INTERNSHIP_STARTED' && (
+                        <button
+                          onClick={() => markOngoing.mutate(app.id)}
+                          className="text-xs px-2 py-1 rounded border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 transition-colors"
+                        >
+                          Mark Ongoing
                         </button>
                       )}
                     </div>

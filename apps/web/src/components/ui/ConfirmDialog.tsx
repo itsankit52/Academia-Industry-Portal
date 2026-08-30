@@ -11,6 +11,8 @@ interface ConfirmDialogProps {
   onConfirm: () => void;
   onCancel: () => void;
   loading?: boolean;
+  /** Optional custom content rendered below the description */
+  children?: React.ReactNode;
 }
 
 export default function ConfirmDialog({
@@ -23,11 +25,13 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
   loading,
+  children,
 }: ConfirmDialogProps) {
   return (
     <Modal open={open} onClose={onCancel} title={title} size="sm">
-      <div className="px-6 py-4">
+      <div className="px-6 py-4 space-y-3">
         {description && <p className="text-sm text-slate-600 dark:text-slate-400">{description}</p>}
+        {children}
       </div>
       <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-200 dark:border-slate-800">
         <Button variant="outline" size="sm" onClick={onCancel} disabled={loading}>
