@@ -70,7 +70,7 @@ describe('Register page', () => {
     const user = userEvent.setup();
     renderWithProviders(<Register />);
     await user.type(screen.getByLabelText(/full name/i), 'Jane Smith');
-    await user.selectOptions(screen.getByLabelText(/institution/i), INSTITUTION_ID);
+    await user.selectOptions(screen.getByLabelText(/^institution$/i), INSTITUTION_ID);
     await user.type(screen.getByLabelText(/email address/i), 'jane@example.com');
     await user.type(screen.getByLabelText(/^password$/i), 'Password1!');
     await user.click(screen.getByRole('button', { name: /create account/i }));
@@ -95,11 +95,11 @@ describe('Register page', () => {
 
     // Land on STUDENT first, so both student-only inputs mount and register ''.
     expect(screen.getByLabelText(/full name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/institution/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^institution$/i)).toBeInTheDocument();
 
     await user.click(screen.getByLabelText(/company/i));
     expect(screen.queryByLabelText(/full name/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/institution/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^institution$/i)).not.toBeInTheDocument();
 
     await user.type(screen.getByLabelText(/company name/i), 'Acme Corp');
     await user.type(screen.getByLabelText(/email address/i), 'hiring@acme.com');
@@ -127,6 +127,75 @@ describe('Register page', () => {
     // The point is that the error is attached to a field that is on screen,
     // rather than to the unmounted fullName/institutionId.
     expect(await screen.findByText(/companyName is required for COMPANY/i)).toBeInTheDocument();
+    expect(hoisted.mutate).not.toHaveBeenCalled();
+  });
+
+  it('renders the INSTITUTION radio option', () => {
+    renderWithProviders(<Register />);
+    expect(screen.getByLabelText(/institution admin/i)).toBeInTheDocument();
+  });
+
+  it('shows institution-name, code, domain, address, city, state fields when INSTITUTION is selected', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Register />);
+
+    await user.click(screen.getByLabelText(/institution admin/i));
+
+    expect(screen.getByLabelText(/institution name/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/institution code/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/primary email domain/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^address$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^city$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^state$/i)).toBeInTheDocument();
+
+    // STUDENT/COMPANY/FACULTY fields must not be visible.
+    expect(screen.queryByLabelText(/full name/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/company name/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^institution$/i)).not.toBeInTheDocument();
+  });
+
+  it('submits the correct INSTITUTION registration payload', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Register />);
+
+    await user.click(screen.getByLabelText(/institution admin/i));
+    await user.type(screen.getByLabelText(/institution name/i), 'Mumbai Institute of Technology');
+    await user.type(screen.getByLabelText(/institution code/i), 'MITBOM');
+    await user.type(screen.getByLabelText(/primary email domain/i), 'mitbom.edu');
+    await user.type(screen.getByLabelText(/^address$/i), '123 MG Road');
+    await user.type(screen.getByLabelText(/^city$/i), 'Mumbai');
+    await user.type(screen.getByLabelText(/^state$/i), 'Maharashtra');
+    await user.type(screen.getByLabelText(/email address/i), 'admin@mitbom.edu');
+    await user.type(screen.getByLabelText(/^password$/i), 'Password1!');
+
+    await user.click(screen.getByRole('button', { name: /create account/i }));
+
+    await waitFor(() => expect(hoisted.mutate).toHaveBeenCalledTimes(1));
+    expect(hoisted.mutate).toHaveBeenCalledWith({
+      role: 'INSTITUTION',
+      institutionName: 'Mumbai Institute of Technology',
+      institutionCode: 'MITBOM',
+      institutionDomain: 'mitbom.edu',
+      institutionAddress: '123 MG Road',
+      institutionCity: 'Mumbai',
+      institutionState: 'Maharashtra',
+      email: 'admin@mitbom.edu',
+      password: 'Password1!',
+    });
+  });
+
+  it('shows validation errors when INSTITUTION required fields are missing', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Register />);
+
+    await user.click(screen.getByLabelText(/institution admin/i));
+    await user.type(screen.getByLabelText(/email address/i), 'admin@mitbom.edu');
+    await user.type(screen.getByLabelText(/^password$/i), 'Password1!');
+    await user.click(screen.getByRole('button', { name: /create account/i }));
+
+    // At least one of the required institution fields should show an error.
+    const errors = await screen.findAllByRole('alert');
+    expect(errors.length).toBeGreaterThan(0);
     expect(hoisted.mutate).not.toHaveBeenCalled();
   });
 });

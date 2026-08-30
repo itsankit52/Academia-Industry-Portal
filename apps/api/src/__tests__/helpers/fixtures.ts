@@ -44,6 +44,9 @@ interface CreateUserOptions {
   email?: string;
   fullName?: string;
   companyName?: string;
+  /** For INSTITUTION role: custom code and domain for the created institution. */
+  institutionCode?: string;
+  institutionDomain?: string;
 }
 
 interface CreatedUserRow {
@@ -118,6 +121,22 @@ export async function createUserRow(
     });
     // `resolveActorHost` looks up `user.institution` — keep it in sync.
     user.institution = new Types.ObjectId(institutionId);
+    await user.save();
+  } else if (role === 'INSTITUTION') {
+    // INSTITUTION users own the institution — create one and link it.
+    const code = opts.institutionCode ?? `TESTINST${uniqueCounter}`;
+    const domain = opts.institutionDomain ?? `${code.toLowerCase()}.edu`;
+    const institution = await Institution.create({
+      name: `Test Institution ${code}`,
+      code,
+      domain,
+      address: '1 Test Way',
+      city: 'Testville',
+      state: 'TS',
+      contactEmail: email,
+      verificationStatus: 'PENDING',
+    });
+    user.institution = institution._id;
     await user.save();
   }
 

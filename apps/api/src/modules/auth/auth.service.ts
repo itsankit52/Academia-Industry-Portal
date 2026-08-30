@@ -92,6 +92,21 @@ export async function registerUser(input: RegisterInput, res: Response, ctx: Aut
         designation: input.designation ?? 'Assistant Professor',
         department: input.department ?? 'General',
       });
+    } else if (input.role === 'INSTITUTION') {
+      // The institution account IS the institution — create the institution document
+      // first, link it to the user, then update the user record with the ID.
+      const institution = await Institution.create({
+        name: input.institutionName,
+        code: input.institutionCode!.toUpperCase(),
+        domain: input.institutionDomain!.toLowerCase(),
+        address: input.institutionAddress,
+        city: input.institutionCity,
+        state: input.institutionState,
+        contactEmail: email,
+        verificationStatus: 'PENDING',
+      });
+      user.institution = institution._id;
+      await user.save();
     }
   } catch (err) {
     try {
@@ -144,10 +159,7 @@ export async function loginUser(input: LoginInput, res: Response, ctx: AuthConte
     throw AppError.unauthorized('Invalid credentials');
   }
   if (!user.isActive) {
-    logger.warn(
-      { userId: String(user._id), ip: ctx.ip },
-      'Login rejected: account is deactivated',
-    );
+    logger.warn({ userId: String(user._id), ip: ctx.ip }, 'Login rejected: account is deactivated');
     throw AppError.unauthorized('Invalid credentials');
   }
 
@@ -262,6 +274,34 @@ export async function getCurrentUser(userId: string) {
   if (user.role === 'FACULTY') {
     const facultyProfile = await FacultyProfile.findOne({ user: user._id });
     return { ...base, facultyProfile: facultyProfile ? facultyProfile.toJSON() : null };
+  }
+  if (user.role === 'INSTITUTION') {
+    // For INSTITUTION users, user.institution holds the ID of the institution document.
+    const institution = user.institution
+      ? await Institution.findById(user.institution).lean()
+      : null;
+    return {
+      ...base,
+      institution: institution
+        ? {
+            id: String(institution._id),
+            name: institution.name as string,
+            code: institution.code as string,
+            domain: institution.domain as string,
+            address: institution.address as string,
+            city: institution.city as string,
+            state: institution.state as string,
+            contactEmail: institution.contactEmail as string,
+            contactPhone: (institution as Record<string, unknown>).contactPhone as
+              string | undefined,
+            website: (institution as Record<string, unknown>).website as string | undefined,
+            verificationStatus: institution.verificationStatus as string,
+            verifiedAt: institution.verifiedAt ? String(institution.verifiedAt) : undefined,
+            createdAt: String((institution as Record<string, unknown>).createdAt),
+            updatedAt: String((institution as Record<string, unknown>).updatedAt),
+          }
+        : null,
+    };
   }
   return base;
 }

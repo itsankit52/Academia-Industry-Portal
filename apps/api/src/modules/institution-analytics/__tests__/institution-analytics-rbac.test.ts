@@ -3,6 +3,7 @@ import request from 'supertest';
 import { createTestApp, hasTestDb } from '../../../__tests__/helpers/app';
 import { clearTestDb, connectTestDb, disconnectTestDb } from '../../../__tests__/helpers/db';
 import { createUserAndLogin, ensureTestInstitution } from '../../../__tests__/helpers/fixtures';
+import { Institution } from '../../../models';
 
 describe.skipIf(!hasTestDb)('institution-analytics rbac', () => {
   const app = createTestApp();
@@ -171,6 +172,63 @@ describe.skipIf(!hasTestDb)('institution-analytics rbac', () => {
         `/api/v1/institution/dashboard/skill-gaps?institutionId=${institutionId}`,
       );
       expect(res.status).toBe(401);
+    });
+  });
+
+  /**
+   * SIH Phase 12 §9 — multi-institution isolation. An INSTITUTION user must
+   * NEVER reach another institution's data, even if the request carries
+   * `?institutionId=<other-id>`. The previous implementation of
+   * `resolveInstitutionId` accepted that query parameter unconditionally for
+   * non-admins, which made institution A able to read institution B by
+   * changing the URL.
+   */
+  describe('INSTITUTION isolation — a second institution cannot be queried', () => {
+    const otherInstitutionId = '000000000000000000000099';
+
+    it('rejects when an INSTITUTION user passes another institutionId', async () => {
+      const inst = await createUserAndLogin(app, 'INSTITUTION', { email: 'inst-cross@t.demo' });
+      const res = await request(app)
+        .get(`/api/v1/institution/dashboard/stats?institutionId=${otherInstitutionId}`)
+        .set('Cookie', inst.cookie);
+      expect(res.status).toBe(403);
+    });
+
+    it('rejects on a different endpoint too — placement-metrics', async () => {
+      const inst = await createUserAndLogin(app, 'INSTITUTION', {
+        email: 'inst-cross-pm@t.demo',
+      });
+      const res = await request(app)
+        .get(`/api/v1/institution/dashboard/placement-metrics?institutionId=${otherInstitutionId}`)
+        .set('Cookie', inst.cookie);
+      expect(res.status).toBe(403);
+    });
+
+    it('still allows an INSTITUTION user to read their own institution', async () => {
+      // The fixture makes an Institution for the INSTITUTION user. Read its id
+      // from the DB and use it as the query — that must succeed.
+      const inst = await createUserAndLogin(app, 'INSTITUTION', { email: 'inst-own@t.demo' });
+      const user = await (
+        await import('../../../models')
+      ).User.findById(inst.userId)
+        .select('institution')
+        .lean();
+      const ownId = String(user?.institution);
+      expect(ownId).toBeTruthy();
+      const res = await request(app)
+        .get(`/api/v1/institution/dashboard/stats?institutionId=${ownId}`)
+        .set('Cookie', inst.cookie);
+      expect(res.status).toBe(200);
+    });
+
+    it('ADMIN is still allowed to scope to any institution', async () => {
+      // ADMIN is the one role that must keep the override — they are the
+      // platform operator and need to inspect any institution on demand.
+      const admin = await createUserAndLogin(app, 'ADMIN', { email: 'admin-cross@t.demo' });
+      const res = await request(app)
+        .get(`/api/v1/institution/dashboard/stats?institutionId=${otherInstitutionId}`)
+        .set('Cookie', admin.cookie);
+      expect(res.status).toBe(200);
     });
   });
 });

@@ -35,7 +35,9 @@ const INSTITUTIONS = [
 ];
 
 function institutionSelect(): HTMLSelectElement {
-  return screen.getByLabelText(/institution/i) as HTMLSelectElement;
+  // Exact-match: targets the Select labelled "Institution" (not the radio labelled
+  // "Institution Admin").
+  return screen.getByLabelText(/^institution$/i) as HTMLSelectElement;
 }
 
 describe('Register — Institution select data path', () => {
@@ -119,7 +121,9 @@ describe('Register — Institution select data path', () => {
     hoisted.apiGet.mockResolvedValue([]);
     renderWithProviders(<Register />);
 
-    expect(await screen.findByText(/no verified institutions are available yet/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/no verified institutions are available yet/i),
+    ).toBeInTheDocument();
     // An empty catalogue is not an error, so no error styling is applied.
     expect(screen.queryByText(/could not load the institution list/i)).not.toBeInTheDocument();
   });
@@ -142,7 +146,7 @@ describe('Register — Institution select data path', () => {
     await screen.findByRole('option', { name: 'Beta University (BETAUNIV)' });
 
     await user.click(screen.getByLabelText(/^company/i));
-    expect(screen.queryByLabelText(/institution/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^institution$/i)).not.toBeInTheDocument();
 
     await user.type(screen.getByLabelText(/company name/i), 'Acme Corp');
     await user.type(screen.getByLabelText(/email address/i), 'hiring@acme.com');

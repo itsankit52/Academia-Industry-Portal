@@ -10,12 +10,16 @@ import Button from '@/components/ui/Button';
 import RadioGroup from '@/components/ui/RadioGroup';
 import Select from '@/components/ui/Select';
 
-type PublicRole = 'STUDENT' | 'COMPANY' | 'FACULTY';
+type PublicRole = 'STUDENT' | 'COMPANY' | 'FACULTY' | 'INSTITUTION';
 
 const roleOptions: Array<{ value: PublicRole; label: string }> = [
   { value: 'STUDENT', label: 'Student — find jobs & internships' },
   { value: 'COMPANY', label: 'Company — post opportunities & hire' },
   { value: 'FACULTY', label: 'Faculty — mentor students & collaborate' },
+  {
+    value: 'INSTITUTION',
+    label: 'Institution Admin — manage students, faculty & industry',
+  },
 ];
 
 const schemaResolver = zodResolver(registerSchema) as Resolver<RegisterInput>;
@@ -72,11 +76,18 @@ export default function Register() {
     <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link to="/" className="inline-block text-2xl font-bold text-indigo-600 no-underline mb-3">
+          <Link
+            to="/"
+            className="inline-block text-2xl font-bold text-indigo-600 no-underline mb-3"
+          >
             AIP
           </Link>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Create your account</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Join the Academia-Industry Portal today.</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            Create your account
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
+            Join the Academia-Industry Portal today.
+          </p>
         </div>
 
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-8">
@@ -122,7 +133,9 @@ export default function Register() {
             {needsInstitution && (
               <Select
                 label="Institution"
-                placeholder={institutions.isLoading ? 'Loading institutions…' : 'Select your institution'}
+                placeholder={
+                  institutions.isLoading ? 'Loading institutions…' : 'Select your institution'
+                }
                 options={institutionOptions}
                 error={errors.institutionId?.message ?? institutionNotice}
                 helperText={
@@ -152,6 +165,59 @@ export default function Register() {
               </>
             )}
 
+            {role === 'INSTITUTION' && (
+              <>
+                <p
+                  className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2"
+                  role="note"
+                >
+                  Your institution will be created with <span className="font-medium">PENDING</span>{' '}
+                  verification. An administrator will review and verify the institution before it
+                  appears for students and faculty to select.
+                </p>
+                <Input
+                  label="Institution name"
+                  placeholder="Acme Institute of Technology"
+                  error={errors.institutionName?.message}
+                  {...register('institutionName')}
+                />
+                <Input
+                  label="Institution code"
+                  placeholder="IITBOM"
+                  helperText="Uppercase letters and digits, 3–20 characters."
+                  error={errors.institutionCode?.message}
+                  {...register('institutionCode')}
+                />
+                <Input
+                  label="Primary email domain"
+                  placeholder="acme.edu"
+                  helperText="e.g. the domain used by your students' email addresses."
+                  error={errors.institutionDomain?.message}
+                  {...register('institutionDomain')}
+                />
+                <Input
+                  label="Address"
+                  placeholder="123, Main Road"
+                  error={errors.institutionAddress?.message}
+                  {...register('institutionAddress')}
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input
+                    label="City"
+                    placeholder="Mumbai"
+                    error={errors.institutionCity?.message}
+                    {...register('institutionCity')}
+                  />
+                  <Input
+                    label="State"
+                    placeholder="Maharashtra"
+                    error={errors.institutionState?.message}
+                    {...register('institutionState')}
+                  />
+                </div>
+              </>
+            )}
+
             <Input
               label="Email address"
               type="email"
@@ -170,7 +236,10 @@ export default function Register() {
             />
 
             {register_.error && (
-              <p className="text-sm text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-lg px-3 py-2" role="alert">
+              <p
+                className="text-sm text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-lg px-3 py-2"
+                role="alert"
+              >
                 {register_.error.message}
               </p>
             )}

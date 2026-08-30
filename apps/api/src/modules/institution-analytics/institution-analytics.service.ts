@@ -139,20 +139,36 @@ export async function resolveInstitutionId(
   role: string,
   queryInstitutionId?: string,
 ): Promise<Types.ObjectId> {
+  // Institution isolation: only ADMIN may scope to a different institution via
+  // the query string. For an INSTITUTION user the institution id has to come
+  // from the authenticated session — accepting a client-supplied one would
+  // let institution A read institution B's analytics just by changing the
+  // `?institutionId=` parameter. Resolve the user's own institution first so
+  // the comparison and the fall-through share one read.
+  const user = await User.findById(userId).select('institution').lean();
+  const userInstitutionId = user?.institution ? (user.institution as Types.ObjectId) : undefined;
+
   if (queryInstitutionId) {
     if (!/^[a-f\d]{24}$/i.test(queryInstitutionId))
       throw AppError.badRequest('Invalid institutionId');
-    return new Types.ObjectId(queryInstitutionId);
+    if (role === 'ADMIN') {
+      return new Types.ObjectId(queryInstitutionId);
+    }
+    // Non-admin: the query value must match the institution on the session.
+    if (!userInstitutionId || String(userInstitutionId) !== queryInstitutionId) {
+      throw AppError.forbidden('Cannot access another institution');
+    }
+    return userInstitutionId;
   }
-  const user = await User.findById(userId).select('institution').lean();
-  if (!user?.institution) {
+
+  if (!userInstitutionId) {
     throw AppError.forbidden(
       role === 'ADMIN'
         ? 'Provide institutionId query param to scope this request.'
         : 'No institution linked to your account.',
     );
   }
-  return user.institution as Types.ObjectId;
+  return userInstitutionId;
 }
 
 export async function getDashboardStats(
@@ -204,9 +220,10 @@ export async function getDashboardStats(
     Application.distinct('student', { ...appBaseMatch, status: 'SHORTLISTED' }).then(
       (arr) => (arr as Types.ObjectId[]).length,
     ),
-    Application.distinct('student', { ...appBaseMatch, status: { $in: ['SELECTED', 'OFFER_ACCEPTED'] } }).then(
-      (arr) => (arr as Types.ObjectId[]).length,
-    ),
+    Application.distinct('student', {
+      ...appBaseMatch,
+      status: { $in: ['SELECTED', 'OFFER_ACCEPTED'] },
+    }).then((arr) => (arr as Types.ObjectId[]).length),
     Application.distinct('_id', {
       ...appBaseMatch,
       status: { $in: ['INTERVIEW_SCHEDULED', 'SHORTLISTED'] },
@@ -366,9 +383,7 @@ export async function getDashboardStats(
     status: 'COMPLETED',
   });
   const internshipCompletionRate =
-    internshipSelected > 0
-      ? Math.round((internshipCompleted / internshipSelected) * 1000) / 10
-      : 0;
+    internshipSelected > 0 ? Math.round((internshipCompleted / internshipSelected) * 1000) / 10 : 0;
 
   // Phase 6B / 7A: placement pipeline metrics for job applications.
   // "Expired" now means OFFER_EXPIRED status (set by the background processor
@@ -404,7 +419,11 @@ export async function getDashboardStats(
     Application.countDocuments({ ...placementMatch, status: 'WITHDRAWAL_REQUESTED' }),
     Application.countDocuments({ ...placementMatch, status: 'OFFER_EXPIRED' }),
     // Phase 7B: company-confirmed placements (status COMPLETED with placedAt set).
-    Application.countDocuments({ ...placementMatch, status: 'COMPLETED', placedAt: { $exists: true, $ne: null } }),
+    Application.countDocuments({
+      ...placementMatch,
+      status: 'COMPLETED',
+      placedAt: { $exists: true, $ne: null },
+    }),
     Application.countDocuments({ ...placementMatch, 'placementVerification.status': 'VERIFIED' }),
     Application.countDocuments({
       ...placementMatch,
@@ -427,12 +446,9 @@ export async function getDashboardStats(
     ]),
   ]);
   // Offer acceptance rate = accepted / (accepted + rejected + expired).
-  const offerDenominator =
-    placementOfferAccepted + placementOfferRejected + placementOfferExpired;
+  const offerDenominator = placementOfferAccepted + placementOfferRejected + placementOfferExpired;
   const offerAcceptanceRate =
-    offerDenominator > 0
-      ? Math.round((placementOfferAccepted / offerDenominator) * 1000) / 10
-      : 0;
+    offerDenominator > 0 ? Math.round((placementOfferAccepted / offerDenominator) * 1000) / 10 : 0;
   // Interview conversion rate = selected / interviewed.
   const interviewConversionRate =
     placementInterviewed > 0

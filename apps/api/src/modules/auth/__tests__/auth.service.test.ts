@@ -6,7 +6,7 @@ vi.mock('../../../models', () => ({
   StudentProfile: { create: vi.fn(), findOne: vi.fn() },
   CompanyProfile: { create: vi.fn(), findOne: vi.fn() },
   FacultyProfile: { create: vi.fn(), findOne: vi.fn() },
-  Institution: { findById: vi.fn() },
+  Institution: { findById: vi.fn(), create: vi.fn() },
   AuditLog: { create: vi.fn() },
 }));
 
@@ -22,20 +22,34 @@ vi.mock('../../../utils/jwt', () => ({
   verifyRefreshToken: vi.fn(),
 }));
 
-import { AuditLog, CompanyProfile, Institution, StudentProfile, User } from '../../../models';
+import {
+  AuditLog,
+  CompanyProfile,
+  FacultyProfile,
+  Institution,
+  StudentProfile,
+  User,
+} from '../../../models';
 import { getCurrentUser, loginUser, registerUser } from '../auth.service';
 
 const res = {} as never;
 const ctx = { ip: '127.0.0.1', userAgent: 'vitest' };
 
 /** Stands in for the Mongoose document `User.create` resolves to. */
-function userDoc(id: Types.ObjectId, role: string) {
+function userDoc(id: Types.ObjectId, role: string, institution?: Types.ObjectId) {
   return {
     _id: id,
     email: 'hiring@acme.com',
     role,
+    institution,
     refreshTokenVersion: 0,
-    toJSON: () => ({ id: String(id), email: 'hiring@acme.com', role }),
+    save: vi.fn(() => Promise.resolve()),
+    toJSON: () => ({
+      id: String(id),
+      email: 'hiring@acme.com',
+      role,
+      ...(institution ? { institution: String(institution) } : {}),
+    }),
   };
 }
 
@@ -53,10 +67,14 @@ beforeEach(() => {
     Promise.resolve({ _id: new Types.ObjectId() })) as never);
   vi.mocked(StudentProfile.create).mockImplementation((() =>
     Promise.resolve({ _id: new Types.ObjectId() })) as never);
-  vi.mocked(AuditLog.create).mockResolvedValue({} as never);
+  vi.mocked(FacultyProfile.create).mockImplementation((() =>
+    Promise.resolve({ _id: new Types.ObjectId() })) as never);
+  vi.mocked(Institution.create).mockImplementation((() =>
+    Promise.resolve({ _id: new Types.ObjectId() })) as never);
   vi.mocked(Institution.findById).mockReturnValue({
     select: () => Promise.resolve({ _id: new Types.ObjectId() }),
   } as never);
+  vi.mocked(AuditLog.create).mockResolvedValue({} as never);
 });
 
 const companyInput = {
@@ -310,5 +328,137 @@ describe('getCurrentUser — COMPANY payload', () => {
   it('404s when the token names a user who no longer exists', async () => {
     vi.mocked(User.findById).mockResolvedValue(null as never);
     await expect(getCurrentUser(String(newUserId))).rejects.toMatchObject({ statusCode: 404 });
+  });
+});
+
+/**
+ * SIH 4-role workflow: the institution account IS the institution. Registering
+ * an INSTITUTION user must create the Institution document, link it back to the
+ * User, and give back a role=INSTITUTION session so the existing Institution
+ * dashboard, layout, and requireRole('INSTITUTION') routes light up.
+ */
+describe('registerUser — INSTITUTION', () => {
+  const institutionInput = {
+    email: 'admin@mitbom.edu',
+    password: 'Password1!',
+    role: 'INSTITUTION' as const,
+    institutionName: 'Mumbai Institute of Technology',
+    institutionCode: 'mitbom',
+    institutionDomain: 'mitbom.edu',
+    institutionAddress: '123 MG Road',
+    institutionCity: 'Mumbai',
+    institutionState: 'Maharashtra',
+  };
+
+  it('creates the Institution and links it to the User', async () => {
+    const institutionId = new Types.ObjectId();
+    vi.mocked(Institution.create).mockImplementation((() =>
+      Promise.resolve({ _id: institutionId })) as never);
+
+    const savedUser = userDoc(newUserId, 'INSTITUTION', institutionId);
+    vi.mocked(User.create).mockImplementation((() => Promise.resolve(savedUser)) as never);
+
+    await registerUser(institutionInput, res, ctx);
+
+    expect(Institution.create).toHaveBeenCalledTimes(1);
+    const created = vi.mocked(Institution.create).mock.calls[0]![0] as Record<string, unknown>;
+    // Code is uppercased before uniqueness check, domain is lowercased — matches
+    // the schema and the existing /institutions/public catalogue.
+    expect(created.code).toBe('MITBOM');
+    expect(created.domain).toBe('mitbom.edu');
+    expect(created.name).toBe('Mumbai Institute of Technology');
+    expect(created.contactEmail).toBe('admin@mitbom.edu');
+    // New institutions must be PENDING until an admin verifies them, so they
+    // do not appear in the public catalogue.
+    expect(created.verificationStatus).toBe('PENDING');
+
+    // The User has to be linked to the Institution by id — the whole RBAC scope
+    // (resolveInstitutionId, /institution/dashboard/*) reads it from here.
+    expect(savedUser.institution).toBeDefined();
+    expect(String(savedUser.institution)).toBe(String(institutionId));
+    expect(savedUser.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('rolls back the User when the Institution cannot be created', async () => {
+    const boom = new Error('Institution validation failed');
+    vi.mocked(Institution.create).mockRejectedValue(boom as never);
+
+    await expect(registerUser(institutionInput, res, ctx)).rejects.toThrow(boom);
+
+    // Otherwise the user could log in, hit requireRole('INSTITUTION'), and find
+    // no institution behind them — every institution-scoped query would 403.
+    expect(User.deleteOne).toHaveBeenCalledTimes(1);
+    expect(String((vi.mocked(User.deleteOne).mock.calls[0]![0] as { _id: unknown })._id)).toBe(
+      String(newUserId),
+    );
+  });
+
+  it('does not create a StudentProfile, CompanyProfile, or FacultyProfile', async () => {
+    await registerUser(institutionInput, res, ctx);
+    expect(StudentProfile.create).not.toHaveBeenCalled();
+    expect(CompanyProfile.create).not.toHaveBeenCalled();
+    expect(FacultyProfile.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('getCurrentUser — INSTITUTION payload', () => {
+  it('returns the Institution document alongside the User', async () => {
+    const institutionId = new Types.ObjectId();
+    vi.mocked(User.findById).mockResolvedValue({
+      _id: newUserId,
+      email: 'admin@mitbom.edu',
+      role: 'INSTITUTION',
+      institution: institutionId,
+      toJSON: () => ({
+        id: String(newUserId),
+        email: 'admin@mitbom.edu',
+        role: 'INSTITUTION',
+        institution: String(institutionId),
+      }),
+    } as never);
+    vi.mocked(Institution.findById).mockReturnValue({
+      lean: () =>
+        Promise.resolve({
+          _id: institutionId,
+          name: 'Mumbai Institute of Technology',
+          code: 'MITBOM',
+          domain: 'mitbom.edu',
+          address: '123 MG Road',
+          city: 'Mumbai',
+          state: 'Maharashtra',
+          contactEmail: 'admin@mitbom.edu',
+          contactPhone: undefined,
+          website: undefined,
+          verificationStatus: 'PENDING',
+          verifiedAt: undefined,
+          createdAt: new Date('2024-01-01T00:00:00Z'),
+          updatedAt: new Date('2024-01-01T00:00:00Z'),
+        }),
+    } as never);
+
+    const result = (await getCurrentUser(String(newUserId))) as {
+      user: { role: string };
+      institution: { id: string; name: string; code: string; verificationStatus: string } | null;
+    };
+
+    expect(result.user.role).toBe('INSTITUTION');
+    expect(result.institution).not.toBeNull();
+    expect(result.institution?.id).toBe(String(institutionId));
+    expect(result.institution?.name).toBe('Mumbai Institute of Technology');
+    expect(result.institution?.code).toBe('MITBOM');
+    expect(result.institution?.verificationStatus).toBe('PENDING');
+  });
+
+  it('returns institution: null when the link is missing', async () => {
+    vi.mocked(User.findById).mockResolvedValue({
+      _id: newUserId,
+      email: 'admin@mitbom.edu',
+      role: 'INSTITUTION',
+      institution: undefined,
+      toJSON: () => ({ id: String(newUserId), email: 'admin@mitbom.edu', role: 'INSTITUTION' }),
+    } as never);
+
+    const result = (await getCurrentUser(String(newUserId))) as { institution: unknown };
+    expect(result.institution).toBeNull();
   });
 });
