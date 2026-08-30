@@ -38,7 +38,11 @@ export default function MobileMenu({ open, onClose }: Props) {
       ? '/student/dashboard'
       : user?.role === 'COMPANY'
         ? '/company/dashboard'
-        : '/admin/dashboard';
+        : user?.role === 'FACULTY'
+          ? '/faculty/dashboard'
+          : user?.role === 'INSTITUTION'
+            ? '/institution/dashboard'
+            : '/admin/dashboard';
 
   return (
     <div

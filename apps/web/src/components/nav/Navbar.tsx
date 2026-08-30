@@ -25,7 +25,11 @@ export default function Navbar() {
       ? '/student/dashboard'
       : user?.role === 'COMPANY'
         ? '/company/dashboard'
-        : '/admin/dashboard';
+        : user?.role === 'FACULTY'
+          ? '/faculty/dashboard'
+          : user?.role === 'INSTITUTION'
+            ? '/institution/dashboard'
+            : '/admin/dashboard';
 
   return (
     <>
