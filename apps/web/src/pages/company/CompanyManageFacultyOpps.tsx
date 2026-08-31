@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiEdit2, FiPlus, FiTrash2, FiXCircle } from 'react-icons/fi';
+import { FiEdit2, FiPlus, FiTrash2, FiXCircle, FiUsers } from 'react-icons/fi';
 import { format } from 'date-fns';
 import PageHeader from '@/components/ui/PageHeader';
 import Card from '@/components/ui/Card';
@@ -81,7 +81,9 @@ export default function CompanyManageFacultyOpps() {
                   <tr key={opp.id}>
                     <Td>
                       <button
-                        onClick={() => navigate(`/faculty/opportunities/${opp.id}`)}
+                        onClick={() =>
+                          navigate(`/company/faculty-opportunities/${opp.id}/applicants`)
+                        }
                         className="font-medium text-slate-900 dark:text-slate-100 text-sm hover:text-indigo-600"
                       >
                         {opp.title}
@@ -100,6 +102,16 @@ export default function CompanyManageFacultyOpps() {
                     </Td>
                     <Td>
                       <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          iconLeft={<FiUsers className="w-4 h-4" />}
+                          onClick={() =>
+                            navigate(`/company/faculty-opportunities/${opp.id}/applicants`)
+                          }
+                        >
+                          Applicants
+                        </Button>
                         <Button
                           size="sm"
                           variant="ghost"
