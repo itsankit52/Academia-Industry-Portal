@@ -5,6 +5,7 @@ import { cn } from '@/lib/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { useLogout } from '@/hooks/mutations/useLogout';
 import { dashboardPathForRole } from '@/lib/roleRoutes';
+import Logo from '@/components/ui/Logo';
 
 interface Props {
   open: boolean;
@@ -57,7 +58,7 @@ export default function MobileMenu({ open, onClose }: Props) {
         )}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800">
-          <span className="text-lg font-bold text-indigo-600">AIP</span>
+          <Logo className="h-5" />
           <button
             onClick={onClose}
             className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:text-slate-400 dark:hover:bg-slate-800"

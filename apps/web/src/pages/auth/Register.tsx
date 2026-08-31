@@ -9,6 +9,7 @@ import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import RadioGroup from '@/components/ui/RadioGroup';
 import Select from '@/components/ui/Select';
+import Logo from '@/components/ui/Logo';
 
 type PublicRole = 'STUDENT' | 'COMPANY' | 'FACULTY' | 'INSTITUTION';
 
@@ -76,11 +77,8 @@ export default function Register() {
     <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link
-            to="/"
-            className="inline-block text-2xl font-bold text-indigo-600 no-underline mb-3"
-          >
-            AIP
+          <Link to="/" className="inline-block no-underline mb-3">
+            <Logo className="h-8" />
           </Link>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
             Create your account

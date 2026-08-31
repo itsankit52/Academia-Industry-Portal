@@ -5,6 +5,7 @@ import { loginSchema, type LoginInput } from '@aip/validation';
 import { useLogin } from '@/hooks/mutations/useLogin';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
+import Logo from '@/components/ui/Logo';
 
 export default function Login() {
   const login = useLogin();
@@ -19,11 +20,8 @@ export default function Login() {
     <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link
-            to="/"
-            className="inline-block text-2xl font-bold text-indigo-600 no-underline mb-3"
-          >
-            AIP
+          <Link to="/" className="inline-block no-underline mb-3">
+            <Logo className="h-8" />
           </Link>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Welcome back</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">

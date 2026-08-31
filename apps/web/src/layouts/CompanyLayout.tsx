@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLogout } from '@/hooks/mutations/useLogout';
 import { useSidebarDrawer } from '@/hooks/useSidebarDrawer';
 import ThemeToggle from '@/components/ui/ThemeToggle';
+import Logo from '@/components/ui/Logo';
 
 export default function CompanyLayout() {
   useHydrateAuth();
@@ -35,8 +36,8 @@ export default function CompanyLayout() {
             >
               <FiMenu className="w-5 h-5" />
             </button>
-            <Link to="/" className="text-lg font-bold text-indigo-600 no-underline lg:hidden">
-              AIP
+            <Link to="/" className="no-underline lg:hidden">
+              <Logo className="h-6" />
             </Link>
           </div>
           <div className="flex items-center gap-3">

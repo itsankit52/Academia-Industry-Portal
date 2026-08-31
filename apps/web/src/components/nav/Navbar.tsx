@@ -7,6 +7,7 @@ import { useLogout } from '@/hooks/mutations/useLogout';
 import MobileMenu from './MobileMenu';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import { dashboardPathForRole } from '@/lib/roleRoutes';
+import Logo from '@/components/ui/Logo';
 
 const publicLinks = [
   { to: '/jobs', label: 'Jobs' },
@@ -30,7 +31,7 @@ export default function Navbar() {
         <div className="container-page">
           <div className="flex items-center justify-between h-16">
             <Link to="/" className="flex items-center gap-2 no-underline" aria-label="Home">
-              <span className="text-xl font-bold text-indigo-600">AIP</span>
+              <Logo />
               <span className="hidden sm:block text-sm font-medium text-slate-600 dark:text-slate-400">
                 AcadIn
               </span>

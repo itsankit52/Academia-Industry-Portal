@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLogout } from '@/hooks/mutations/useLogout';
 import { useSidebarDrawer } from '@/hooks/useSidebarDrawer';
 import ThemeToggle from '@/components/ui/ThemeToggle';
+import Logo from '@/components/ui/Logo';
 
 export default function AdminLayout() {
   useHydrateAuth();
@@ -35,8 +36,8 @@ export default function AdminLayout() {
             >
               <FiMenu className="w-5 h-5" />
             </button>
-            <Link to="/" className="text-lg font-bold text-indigo-600 no-underline lg:hidden">
-              AIP
+            <Link to="/" className="no-underline lg:hidden">
+              <Logo className="h-6" />
             </Link>
             <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Admin</span>
           </div>
