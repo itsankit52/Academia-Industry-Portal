@@ -75,7 +75,7 @@ At least one of `text` or `url` must be provided (validated by `resumeAnalyzeSch
 ```typescript
 {
   opportunityType: 'JOB' | 'INTERNSHIP';
-  opportunityId:   string;   // MongoDB ObjectId
+  opportunityId: string; // MongoDB ObjectId
 }
 ```
 
@@ -127,7 +127,7 @@ At least one of `text` or `url` must be provided (validated by `resumeAnalyzeSch
 
 The service sends the message to Gemini with a system prompt that:
 
-- Identifies the assistant as a career guidance tool for the Academia-Industry portal.
+- Identifies the assistant as a career guidance tool for the AcadIn.
 - Instructs the model to use only information present in the provided context; it must not fabricate job listings, company names, or skill data.
 - Instructs the model to respond with "I don't have that information" when asked about data not present in the context.
 - Keeps responses concise and actionable.

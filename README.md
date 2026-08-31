@@ -961,7 +961,7 @@ All variables belong in `.env` at the repo root. The setup scripts symlink it in
 | `WEBHOOK_LMS_SECRET`      | If LMS webhooks    | —                          | HMAC-SHA256 shared secret for LMS certification events (Coursera, Udemy). Feature disabled if unset                                                | `<lms-webhook-secret>`                               |
 | `WEBHOOK_ERP_SECRET`      | If ERP sync        | —                          | HMAC-SHA256 shared secret for institutional ERP student sync. Feature disabled if unset                                                            | `<erp-webhook-secret>`                               |
 | `VITE_API_URL`            | **Yes (frontend)** | —                          | Backend URL visible to the browser                                                                                                                 | `http://localhost:4000/api/v1`                       |
-| `VITE_APP_NAME`           | No                 | —                          | App name in the browser tab                                                                                                                        | `Academia-Industry Portal`                           |
+| `VITE_APP_NAME`           | No                 | —                          | App name in the browser tab                                                                                                                        | `AcadIn.`                                            |
 
 > `RESUME_STORAGE` is not present in `.env.example` because its default (`DATABASE`) requires no additional configuration. Add it explicitly only when switching to Cloudinary.
 

@@ -348,7 +348,7 @@ export async function explainJobMatch(
 export async function chatOnce(message: string): Promise<{ reply: string }> {
   assertConfigured();
   const prompt = [
-    'System: You are a career assistant for the Academia-Industry Portal.',
+    'System: You are a career assistant for the AcadIn.',
     "Only answer based on the user's message. Never invent job listings, companies, or statistics.",
     "If asked something factual you don't know, say so plainly.",
     'Respond in plain prose, at most 200 words.',
