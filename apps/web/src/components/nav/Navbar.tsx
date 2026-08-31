@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLogout } from '@/hooks/mutations/useLogout';
 import MobileMenu from './MobileMenu';
 import ThemeToggle from '@/components/ui/ThemeToggle';
+import { dashboardPathForRole } from '@/lib/roleRoutes';
 
 const publicLinks = [
   { to: '/jobs', label: 'Jobs' },
@@ -20,16 +21,8 @@ export default function Navbar() {
   const { isAuthenticated, user } = useAuth();
   const logout = useLogout();
 
-  const dashboardPath =
-    user?.role === 'STUDENT'
-      ? '/student/dashboard'
-      : user?.role === 'COMPANY'
-        ? '/company/dashboard'
-        : user?.role === 'FACULTY'
-          ? '/faculty/dashboard'
-          : user?.role === 'INSTITUTION'
-            ? '/institution/dashboard'
-            : '/admin/dashboard';
+  // Phase 14A: centralized role → dashboard mapping (single source of truth)
+  const dashboardPath = dashboardPathForRole(user?.role);
 
   return (
     <>

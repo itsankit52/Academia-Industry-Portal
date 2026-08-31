@@ -7,14 +7,7 @@
  */
 
 import { useState } from 'react';
-import {
-  FiAward,
-  FiCalendar,
-  FiBriefcase,
-  FiAlertCircle,
-  FiClock,
-  FiX,
-} from 'react-icons/fi';
+import { FiAward, FiCalendar, FiBriefcase, FiAlertCircle, FiClock, FiX } from 'react-icons/fi';
 import PageHeader from '@/components/ui/PageHeader';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -103,8 +96,8 @@ function StatusStepper({ currentStatus }: { currentStatus: string }) {
                 isActive
                   ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
                   : isPassed
-                  ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600'
+                    ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600'
               }`}
             >
               {STATUS_LABEL[status] ?? status}
@@ -138,12 +131,15 @@ function WithdrawModal({ participant, onClose, onConfirm, isPending }: WithdrawM
           <div className="flex items-start gap-2">
             <FiAlertCircle className="w-4 h-4 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
             <p className="text-sm text-amber-700 dark:text-amber-300">
-              This action cannot be undone. The drive coordinator will be notified of your withdrawal.
+              This action cannot be undone. The drive coordinator will be notified of your
+              withdrawal.
             </p>
           </div>
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Reason for withdrawal *</label>
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+            Reason for withdrawal *
+          </label>
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
@@ -154,7 +150,9 @@ function WithdrawModal({ participant, onClose, onConfirm, isPending }: WithdrawM
         </div>
       </div>
       <div className="flex gap-3 justify-end px-6 py-4 border-t border-slate-200 dark:border-slate-800">
-        <Button variant="outline" onClick={onClose} disabled={isPending}>Cancel</Button>
+        <Button variant="outline" onClick={onClose} disabled={isPending}>
+          Cancel
+        </Button>
         <Button
           variant="danger"
           onClick={() => onConfirm(participant.id, participant.drive, reason)}
@@ -288,9 +286,8 @@ export default function StudentMyParticipations() {
     active: allParticipations.filter((p) =>
       ['REGISTERED', 'SHORTLISTED', 'INTERVIEW_SCHEDULED', 'IN_ROUND'].includes(p.status),
     ).length,
-    offered: allParticipations.filter((p) =>
-      ['OFFERED', 'ACCEPTED', 'HIRED'].includes(p.status),
-    ).length,
+    offered: allParticipations.filter((p) => ['OFFERED', 'ACCEPTED', 'HIRED'].includes(p.status))
+      .length,
     rejected: allParticipations.filter((p) => ['REJECTED', 'WITHDRAWN'].includes(p.status)).length,
   };
 
@@ -300,7 +297,12 @@ export default function StudentMyParticipations() {
       .then(() => {
         toast.success('Withdrawn', { description: 'You have been withdrawn from the drive.' });
         setWithdrawing(null);
+        // Phase 14A: Invalidate all placement-related caches so dashboards and
+        // drives list reflect the new status without a manual refresh.
         void qc.invalidateQueries({ queryKey: queryKeys.drives.myParticipations() });
+        void qc.invalidateQueries({ queryKey: queryKeys.drives.list() });
+        void qc.invalidateQueries({ queryKey: queryKeys.studentDashboard() });
+        void qc.invalidateQueries({ queryKey: queryKeys.placement.readiness() });
         void refetch();
       })
       .catch((err: unknown) =>
@@ -322,10 +324,17 @@ export default function StudentMyParticipations() {
           {[
             { label: 'Total', value: stats.total, color: 'text-slate-700 dark:text-slate-300' },
             { label: 'Active', value: stats.active, color: 'text-indigo-600 dark:text-indigo-400' },
-            { label: 'Offered', value: stats.offered, color: 'text-emerald-600 dark:text-emerald-400' },
+            {
+              label: 'Offered',
+              value: stats.offered,
+              color: 'text-emerald-600 dark:text-emerald-400',
+            },
             { label: 'Closed', value: stats.rejected, color: 'text-slate-500 dark:text-slate-400' },
           ].map((s) => (
-            <div key={s.label} className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-4 text-center">
+            <div
+              key={s.label}
+              className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-4 text-center"
+            >
               <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
               <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">{s.label}</div>
             </div>
@@ -350,7 +359,9 @@ export default function StudentMyParticipations() {
       {/* Participations grid */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
         </div>
       ) : participations.length === 0 ? (
         <EmptyState
@@ -365,11 +376,7 @@ export default function StudentMyParticipations() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {participations.map((p) => (
-            <ParticipationCard
-              key={p.id}
-              participant={p}
-              onWithdraw={setWithdrawing}
-            />
+            <ParticipationCard key={p.id} participant={p} onWithdraw={setWithdrawing} />
           ))}
         </div>
       )}

@@ -49,6 +49,28 @@ async function countActiveMentorships(mentorUserId: string): Promise<number> {
   });
 }
 
+/**
+ * Phase 14A: resolves the right deep-link for a mentorship notification based on
+ * the recipient's role. Companies use `/company/mentorship`; faculty use
+ * `/faculty/mentorship`; all others (students, admin) use `/student/mentorship`.
+ */
+async function mentorLink(userId: string): Promise<string> {
+  const user = await User.findById(userId).select('role').lean();
+  const role = (user as { role?: string } | null)?.role as Role | undefined;
+  if (role === 'COMPANY') return '/company/mentorship';
+  if (role === 'FACULTY') return '/faculty/mentorship';
+  return '/student/mentorship';
+}
+
+/**
+ * Phase 14A: alias for `mentorLink` that targets the *mentee* side of a
+ * conversation. Same surface per role — exposed separately so a future
+ * "mentee dashboard" can diverge without rewriting every call site.
+ */
+async function menteeLink(userId: string): Promise<string> {
+  return mentorLink(userId);
+}
+
 export async function becomeMentor(userId: string, input: CreateMentorProfileInput) {
   const existing = await MentorProfile.findOne({ user: userId });
   if (existing) throw AppError.conflict('You already have a mentor profile');
@@ -160,10 +182,10 @@ export async function requestMentorship(
   });
   await createNotification(
     input.mentorUserId,
-    'ANNOUNCEMENT',
+    'MENTORSHIP_REQUEST_RECEIVED',
     'New mentorship request',
     'You have received a new mentorship request.',
-    '/company/mentorship',
+    await mentorLink(input.mentorUserId),
   );
   return doc.toJSON();
 }
@@ -267,13 +289,33 @@ export async function updateRequestStatus(
 
   await doc.save();
 
+  // Phase 14A: send role-specific notification with descriptive message.
   const otherUserId = isMentor ? String(doc.mentee) : String(doc.mentor);
+  const notifyStatus = doc.status as MentorshipStatus;
+  const notifType =
+    notifyStatus === 'ACTIVE'
+      ? 'MENTORSHIP_REQUEST_ACCEPTED'
+      : notifyStatus === 'DECLINED'
+        ? 'MENTORSHIP_REQUEST_DECLINED'
+        : notifyStatus === 'COMPLETED'
+          ? 'MENTORSHIP_COMPLETED'
+          : 'ANNOUNCEMENT'; // fallback for WITHDRAWN / other
+  const title =
+    notifyStatus === 'ACTIVE'
+      ? 'Mentorship request accepted'
+      : notifyStatus === 'DECLINED'
+        ? 'Mentorship request declined'
+        : notifyStatus === 'COMPLETED'
+          ? 'Mentorship completed'
+          : 'Mentorship update';
   await createNotification(
     otherUserId,
-    'ANNOUNCEMENT',
-    'Mentorship update',
-    `A mentorship request status changed to ${doc.status}.`,
-    '/student/mentorship',
+    notifType,
+    title,
+    title === 'Mentorship completed'
+      ? 'Your mentorship has been marked as completed.'
+      : `A mentorship request status changed to ${doc.status}.`,
+    await menteeLink(otherUserId),
   );
   return doc.toJSON();
 }
@@ -287,11 +329,7 @@ async function assertParticipant(requestId: string, userId: string) {
   return req;
 }
 
-export async function getMessages(
-  requestId: string,
-  userId: string,
-  filters: ListMessagesQuery,
-) {
+export async function getMessages(requestId: string, userId: string, filters: ListMessagesQuery) {
   await assertParticipant(requestId, userId);
   const { page, pageSize, skip, limit } = applyPagination({
     page: filters.page,
@@ -322,10 +360,10 @@ export async function sendMessage(
   const otherUserId = String(req.mentor) === senderUserId ? String(req.mentee) : String(req.mentor);
   await createNotification(
     otherUserId,
-    'ANNOUNCEMENT',
+    'MENTORSHIP_MESSAGE_RECEIVED',
     'New mentorship message',
     'You have a new message in a mentorship thread.',
-    '/student/mentorship',
+    await mentorLink(otherUserId),
   );
   return doc.toJSON();
 }
@@ -425,8 +463,7 @@ export async function recommendMentorsForStudent(
     // Experience: cap at 5 points so a single senior doesn't dominate.
     const experienceBonus = Math.min(5, Math.max(0, (m.yearsExperience ?? 0) / 2));
 
-    const score =
-      skillOverlap * 5 + expertiseOverlap * 3 + availabilityBonus + experienceBonus;
+    const score = skillOverlap * 5 + expertiseOverlap * 3 + availabilityBonus + experienceBonus;
 
     const reasons: string[] = [];
     if (skillOverlap > 0) reasons.push(`${skillOverlap} matching skill area(s)`);

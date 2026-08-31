@@ -5,6 +5,7 @@ import {
   FiBookOpen,
   FiBriefcase,
   FiCheckCircle,
+  FiClock,
   FiExternalLink,
   FiGithub,
   FiGlobe,
@@ -81,8 +82,16 @@ export default function PublicPortfolio() {
     );
   }
 
-  const { student, skills, projects, certifications, achievements, verifiedDocuments, experience } =
-    data;
+  const {
+    student,
+    skills,
+    projects,
+    certifications,
+    achievements,
+    verifiedDocuments,
+    experience,
+    internships,
+  } = data;
   const initials = student.fullName
     .split(' ')
     .map((n) => n[0])
@@ -97,6 +106,7 @@ export default function PublicPortfolio() {
     projects.length === 0 &&
     achievements.length === 0 &&
     experience.length === 0 &&
+    (!internships || internships.length === 0) &&
     !student.bio &&
     student.education.length === 0 &&
     student.languages.length === 0 &&
@@ -376,6 +386,77 @@ export default function PublicPortfolio() {
                   {exp.description && (
                     <p className="text-xs text-slate-600 dark:text-slate-400 mt-1.5 whitespace-pre-wrap">
                       {exp.description}
+                    </p>
+                  )}
+                </Card.Body>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Phase 14A: Portal-fetched completed/ongoing internships — distinct from manual experience */}
+      {internships && internships.length > 0 && (
+        <section>
+          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-3 flex items-center gap-2">
+            <FiBriefcase className="w-4 h-4" /> Portal Internships
+          </h2>
+          <div className="space-y-2">
+            {internships.map((internship) => (
+              <Card key={internship.id}>
+                <Card.Body className="space-y-1.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        {internship.title}
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {internship.organization}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <Badge
+                        variant={internship.status === 'COMPLETED' ? 'success' : 'info'}
+                        size="sm"
+                      >
+                        {internship.status === 'COMPLETED' ? 'Completed' : 'Ongoing'}
+                      </Badge>
+                      {internship.durationMonths && (
+                        <span className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1">
+                          <FiClock className="w-3 h-3" />
+                          {internship.durationMonths} mo
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {(internship.startDate || internship.endDate) && (
+                    <p className="text-xs text-slate-400 dark:text-slate-500">
+                      {internship.startDate
+                        ? format(new Date(internship.startDate), 'MMM yyyy')
+                        : '—'}{' '}
+                      —{' '}
+                      {internship.endDate
+                        ? format(new Date(internship.endDate), 'MMM yyyy')
+                        : 'Present'}
+                    </p>
+                  )}
+                  {internship.skills && internship.skills.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {internship.skills.slice(0, 6).map((s) => (
+                        <Badge key={s} variant="default" size="sm">
+                          {s}
+                        </Badge>
+                      ))}
+                      {internship.skills.length > 6 && (
+                        <Badge variant="default" size="sm">
+                          +{internship.skills.length - 6}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                  {internship.description && (
+                    <p className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-wrap">
+                      {internship.description}
                     </p>
                   )}
                 </Card.Body>

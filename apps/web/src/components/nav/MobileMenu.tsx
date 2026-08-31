@@ -4,6 +4,7 @@ import { FiX } from 'react-icons/fi';
 import { cn } from '@/lib/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { useLogout } from '@/hooks/mutations/useLogout';
+import { dashboardPathForRole } from '@/lib/roleRoutes';
 
 interface Props {
   open: boolean;
@@ -33,16 +34,9 @@ export default function MobileMenu({ open, onClose }: Props) {
 
   if (!open) return null;
 
-  const dashboardPath =
-    user?.role === 'STUDENT'
-      ? '/student/dashboard'
-      : user?.role === 'COMPANY'
-        ? '/company/dashboard'
-        : user?.role === 'FACULTY'
-          ? '/faculty/dashboard'
-          : user?.role === 'INSTITUTION'
-            ? '/institution/dashboard'
-            : '/admin/dashboard';
+  // Phase 14A: consume the centralized role → dashboard helper so all
+  // chrome surfaces (Navbar, MobileMenu, Sidebar, etc.) stay in lock-step.
+  const dashboardPath = dashboardPathForRole(user?.role);
 
   return (
     <div

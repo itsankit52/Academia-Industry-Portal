@@ -40,6 +40,7 @@ import {
   useInstitutionStats,
   useInstitutionPlacements,
   useInstitutionSkillGaps,
+  useInstitutionFacultyEngagements,
   type InstitutionStatsFilters,
 } from '@/hooks/queries/useInstitutionAnalytics';
 
@@ -109,6 +110,10 @@ export default function InstitutionDashboard() {
     isError: skillGapsError,
     refetch: refetchSkillGaps,
   } = useInstitutionSkillGaps();
+  // Phase 14A: faculty-industry engagement metrics surfaced on the dashboard
+  // so institution admins see FDP/Consultancy/Research participation at a glance.
+  const { data: facultyEngagements, isLoading: facultyEngagementsLoading } =
+    useInstitutionFacultyEngagements();
 
   if (statsError || placementsError || skillGapsError) {
     return (
@@ -316,6 +321,42 @@ export default function InstitutionDashboard() {
         )}
       </div>
 
+      {/* Phase 13/14A: Faculty Engagement Row — institution-wide FDP/Consultancy/Research
+          participation tracked from the existing faculty-opportunity flow. */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {facultyEngagementsLoading ? (
+          Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
+        ) : (
+          <>
+            <StatCard
+              label="Faculty Engaged"
+              value={facultyEngagements?.totalFaculty ?? 0}
+              icon={<FiUser />}
+            />
+            <StatCard
+              label="Faculty Opportunities"
+              value={facultyEngagements?.totalOpportunities ?? 0}
+              icon={<FiActivity />}
+            />
+            <StatCard
+              label="Faculty Applications"
+              value={facultyEngagements?.totalApplications ?? 0}
+              icon={<FiClipboard />}
+            />
+            <StatCard
+              label="Active Engagements"
+              value={(facultyEngagements?.selected ?? 0) + (facultyEngagements?.active ?? 0)}
+              icon={<FiActivity />}
+            />
+            <StatCard
+              label="Completed"
+              value={facultyEngagements?.completed ?? 0}
+              icon={<FiAward />}
+            />
+          </>
+        )}
+      </div>
+
       {/* Phase 5B: Internship Metrics Row */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {statsLoading ? (
@@ -344,9 +385,11 @@ export default function InstitutionDashboard() {
             />
             <StatCard
               label="Completion Rate"
-              value={stats?.internshipMetrics?.completionRate !== undefined
-                ? `${stats.internshipMetrics.completionRate}%`
-                : '—'}
+              value={
+                stats?.internshipMetrics?.completionRate !== undefined
+                  ? `${stats.internshipMetrics.completionRate}%`
+                  : '—'
+              }
               icon={<FiTrendingUp />}
             />
           </>
@@ -376,16 +419,20 @@ export default function InstitutionDashboard() {
             />
             <StatCard
               label="Verification Rate"
-              value={stats?.placementMetrics?.verificationRate !== undefined
-                ? `${stats.placementMetrics.verificationRate}%`
-                : '—'}
+              value={
+                stats?.placementMetrics?.verificationRate !== undefined
+                  ? `${stats.placementMetrics.verificationRate}%`
+                  : '—'
+              }
               icon={<FiTrendingUp />}
             />
             <StatCard
               label="Offer Acceptance Rate"
-              value={stats?.placementMetrics?.offerAcceptanceRate !== undefined
-                ? `${stats.placementMetrics.offerAcceptanceRate}%`
-                : '—'}
+              value={
+                stats?.placementMetrics?.offerAcceptanceRate !== undefined
+                  ? `${stats.placementMetrics.offerAcceptanceRate}%`
+                  : '—'
+              }
               icon={<FiTrendingUp />}
             />
           </>
@@ -425,9 +472,11 @@ export default function InstitutionDashboard() {
             />
             <StatCard
               label="Offer Accept Rate"
-              value={stats?.placementMetrics?.offerAcceptanceRate !== undefined
-                ? `${stats.placementMetrics.offerAcceptanceRate}%`
-                : '—'}
+              value={
+                stats?.placementMetrics?.offerAcceptanceRate !== undefined
+                  ? `${stats.placementMetrics.offerAcceptanceRate}%`
+                  : '—'
+              }
               icon={<FiTrendingUp />}
             />
           </>

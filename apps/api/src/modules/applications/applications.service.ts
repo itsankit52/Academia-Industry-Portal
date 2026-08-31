@@ -131,7 +131,7 @@ async function notifyHostOfApplication(
   if (opp.postedBy) {
     await createNotification(
       String(opp.postedBy),
-      'NEW_MATCHING_JOB',
+      'FACULTY_APPLICATION_SUBMITTED',
       'New application received',
       `${applicantName} applied to ${opp.title}.`,
       `/${opp.hostType === 'INSTITUTION' ? 'institution' : 'company'}/faculty-opportunities/${String(opportunityDoc._id)}`,
@@ -682,6 +682,28 @@ export async function updateStatus(
         `Congratulations! You were selected for ${title}.`,
         `/${applicantHome}/applications/${String(app._id)}`,
       );
+      // Phase 14A: for faculty-model opportunities, send the dedicated
+      // engagement-started notification so faculty see a distinct career track.
+      if (usesFacultyModel(type) && applicantHome === 'faculty') {
+        await createNotification(
+          applicantUserId,
+          'FACULTY_ENGAGEMENT_STARTED',
+          'Faculty engagement started',
+          `Your engagement for ${title} has been accepted. The host will reach out with next steps.`,
+          `/${applicantHome}/applications/${String(app._id)}`,
+        );
+      }
+    } else if (currentStatus === 'WITHDRAWAL_REQUESTED' && input.status === 'OFFER_ACCEPTED') {
+      // Phase 14A: company rejected the student's withdrawal request; the
+      // student needs a specific decision notice, not the generic status
+      // changed banner.
+      await createNotification(
+        applicantUserId,
+        'WITHDRAWAL_REJECTED',
+        'Withdrawal request declined',
+        `The company declined your request to withdraw from the accepted offer for ${title}.`,
+        `/${applicantHome}/applications/${String(app._id)}`,
+      );
     } else if (input.status === 'REJECTED') {
       await createNotification(
         applicantUserId,
@@ -706,6 +728,17 @@ export async function updateStatus(
         `Your internship for ${title} has started.`,
         `/${applicantHome}/applications/${String(app._id)}`,
       );
+      // Phase 14A: notify the assigned mentor (if any) so they are aware an
+      // intern has started, not just the student.
+      if (app.mentor) {
+        await createNotification(
+          String(app.mentor),
+          'INTERNSHIP_STARTED',
+          'An intern has started',
+          `A new intern has started for ${title}. Interim reports will be available for your review.`,
+          `/faculty/applications/${String(app._id)}/reports`,
+        );
+      }
     } else if (input.status === 'ONGOING') {
       await createNotification(
         applicantUserId,
@@ -944,7 +977,7 @@ export async function getCandidateDetails(
       matchedSkills,
       missingSkills,
       ...(resume ? { resume } : {}),
-      timeline: ((app.timeline ?? []) as unknown) as TimelineEntry[],
+      timeline: (app.timeline ?? []) as unknown as TimelineEntry[],
       createdAt: (app as unknown as { createdAt: Date }).createdAt,
       ...buildOfferDetails(app as unknown as Record<string, unknown>),
       ...buildOfferLetterRef(app as unknown as Record<string, unknown>),
@@ -1240,7 +1273,8 @@ export async function startInternshipForApplication(
   app.timeline.push({ status: 'INTERNSHIP_STARTED', at: new Date(), note: 'Internship started' });
   (app as unknown as { startedAt: Date }).startedAt = new Date();
   if (startDate) (app as unknown as { startDate: Date }).startDate = startDate;
-  if (expectedEndDate) (app as unknown as { expectedEndDate: Date }).expectedEndDate = expectedEndDate;
+  if (expectedEndDate)
+    (app as unknown as { expectedEndDate: Date }).expectedEndDate = expectedEndDate;
 
   await app.save();
 
@@ -1343,11 +1377,7 @@ export function isOfferExpired(application: {
   // student has accepted/rejected or the company has withdrawn the offer,
   // the deadline is moot. Also: a missing deadline means "no deadline".
   // OFFER_EXPIRED is also treated as expired for read-time checks.
-  if (
-    application.status !== 'SELECTED' &&
-    application.status !== 'OFFER_EXPIRED'
-  )
-    return false;
+  if (application.status !== 'SELECTED' && application.status !== 'OFFER_EXPIRED') return false;
   const deadline = application.offerExpiresAt;
   if (!deadline) return false;
   return deadline.getTime() < Date.now();
@@ -1429,10 +1459,7 @@ export async function respondToOffer(
   app.timeline.push({
     status: newStatus,
     at: new Date(),
-    note:
-      response === 'ACCEPT'
-        ? 'Student accepted the offer'
-        : 'Student declined the offer',
+    note: response === 'ACCEPT' ? 'Student accepted the offer' : 'Student declined the offer',
   });
   await app.save();
 
@@ -1469,7 +1496,8 @@ async function resolveCompanyUserIdForApp(
   if (type === 'INTERNSHIP') {
     const internship = await Internship.findById(app.opportunity).select('company').lean();
     if (!internship) return null;
-    const company = await CompanyProfile.findById(internship.company).select('user').lean();
+    // lean() returns a plain object, not a Query — re-query to call .select().
+    const company = await CompanyProfile.findById(internship.company).select('user');
     return company?.user ? String(company.user) : null;
   }
   // Faculty-model opportunities are owned by postedBy directly
@@ -1523,8 +1551,10 @@ export async function assignMentorToApplication(
   applicationId: string,
   input: AssignMentorInput,
 ) {
-  const app = await Application.findById(applicationId)
-    .populate({ path: 'student', populate: { path: 'user', select: '_id' } });
+  const app = await Application.findById(applicationId).populate({
+    path: 'student',
+    populate: { path: 'user', select: '_id' },
+  });
   if (!app) throw AppError.notFound('Application not found');
 
   if (app.opportunityType !== 'INTERNSHIP') {
@@ -1630,8 +1660,10 @@ export async function completeInternshipForApplication(
   applicationId: string,
   input: CompleteInternshipInput = {},
 ) {
-  const app = await Application.findById(applicationId)
-    .populate({ path: 'student', populate: { path: 'user', select: '_id' } });
+  const app = await Application.findById(applicationId).populate({
+    path: 'student',
+    populate: { path: 'user', select: '_id' },
+  });
   if (!app) throw AppError.notFound('Application not found');
 
   if (app.opportunityType !== 'INTERNSHIP') {
@@ -1667,14 +1699,15 @@ export async function completeInternshipForApplication(
 
   // Notify student
   const student = app.student as unknown as { user: { _id: unknown } } | null;
+  let oppTitle = 'the internship';
+  const opp = await Internship.findById(app.opportunity).select('title');
+  if (opp?.title) oppTitle = opp.title;
   if (student?.user) {
-    const opp = await Internship.findById(app.opportunity).select('title');
-    const title = opp?.title ?? 'the internship';
     await createNotification(
       String(student.user._id),
       'INTERNSHIP_COMPLETED',
       'Internship completed',
-      `Congratulations! You have successfully completed your internship (${title}).`,
+      `Congratulations! You have successfully completed your internship (${oppTitle}).`,
       `/student/applications/${String(app._id)}`,
     );
     await createNotification(
@@ -1683,6 +1716,35 @@ export async function completeInternshipForApplication(
       'Certificate available',
       'Your completion certificate is now available to download.',
       `/student/applications/${String(app._id)}`,
+    );
+  }
+
+  // Phase 14A: notify the assigned mentor (if any) that the internship has
+  // concluded so they know no further reports are expected.
+  if (app.mentor) {
+    await createNotification(
+      String(app.mentor),
+      'INTERNSHIP_COMPLETED',
+      'Mentored internship completed',
+      `The internship (${oppTitle}) you were mentoring has been completed.`,
+      `/faculty/applications/${String(app._id)}/reports`,
+    );
+  }
+
+  // Phase 14A: notify the company that the internship has concluded and is
+  // ready for any placement verification. Done in addition to the student
+  // notification so the company gets a clean handoff signal.
+  const companyUserId = await resolveCompanyUserIdForApp(
+    app.opportunityType as OpportunityType,
+    app,
+  );
+  if (companyUserId) {
+    await createNotification(
+      companyUserId,
+      'INTERNSHIP_COMPLETED',
+      'Internship completed',
+      `The internship (${oppTitle}) has been completed and is ready for placement verification.`,
+      `/company/active-interns`,
     );
   }
 
@@ -1733,7 +1795,9 @@ export async function listActiveInternsForCompany(
   const appIds = rows.map((r) => r._id);
   const oppIds = rows.map((r) => r.opportunity);
   const [opps, reportCounts, mentorProfiles] = await Promise.all([
-    Internship.find({ _id: { $in: oppIds } }).select('title durationMonths stipend currency').lean(),
+    Internship.find({ _id: { $in: oppIds } })
+      .select('title durationMonths stipend currency')
+      .lean(),
     appIds.length
       ? InterimReport.aggregate<{ _id: unknown; count: number }>([
           { $match: { application: { $in: appIds } } },
@@ -1741,10 +1805,7 @@ export async function listActiveInternsForCompany(
         ])
       : Promise.resolve([]),
     // Pull mentor profiles for assigned mentors
-    rows
-      .map((r) => r.mentor)
-      .filter((m) => Boolean(m))
-      .length
+    rows.map((r) => r.mentor).filter((m) => Boolean(m)).length
       ? MentorProfile.find({ user: { $in: rows.map((r) => r.mentor).filter(Boolean) } })
           .select('user bio expertise yearsExperience')
           .lean()
@@ -1757,9 +1818,7 @@ export async function listActiveInternsForCompany(
   const items = rows.map((r) => {
     const opp = oppMap.get(String(r.opportunity));
     const mentorRef = r.mentor as unknown as { _id?: unknown } | null;
-    const mentorProfile = mentorRef?._id
-      ? mentorMap.get(String(mentorRef._id))
-      : null;
+    const mentorProfile = mentorRef?._id ? mentorMap.get(String(mentorRef._id)) : null;
     const student = r.student as unknown as {
       _id: unknown;
       fullName?: string;
@@ -1803,10 +1862,7 @@ export async function listActiveInternsForCompany(
 /**
  * List internships assigned to the calling mentor (Faculty/mentor user).
  */
-export async function listAssignedInternsForMentor(
-  userId: string,
-  pag: PaginationInput,
-) {
+export async function listAssignedInternsForMentor(userId: string, pag: PaginationInput) {
   const { page, pageSize, skip, limit, sort } = applyPagination(pag);
   const where = {
     opportunityType: 'INTERNSHIP',
@@ -1887,9 +1943,7 @@ export async function getMentorForApplication(
   applicationId: string,
   requester: { userId: string; role: Role },
 ) {
-  const app = await Application.findById(applicationId)
-    .populate('mentor', 'email role')
-    .lean();
+  const app = await Application.findById(applicationId).populate('mentor', 'email role').lean();
   if (!app) throw AppError.notFound('Application not found');
   if (app.opportunityType !== 'INTERNSHIP') {
     throw AppError.notFound('Not an internship application');
@@ -1916,12 +1970,12 @@ export async function getMentorForApplication(
   }
 
   if (!app.mentor) return null;
-  const mentorUserId = String(
-    (app.mentor as unknown as { _id?: unknown })._id ?? app.mentor,
-  );
+  const mentorUserId = String((app.mentor as unknown as { _id?: unknown })._id ?? app.mentor);
   const [mentorUser, mentorProfile, fullName] = await Promise.all([
     User.findById(mentorUserId).select('email role').lean(),
-    MentorProfile.findOne({ user: mentorUserId }).select('bio expertise yearsExperience availability').lean(),
+    MentorProfile.findOne({ user: mentorUserId })
+      .select('bio expertise yearsExperience availability')
+      .lean(),
     resolveDisplayName(mentorUserId),
   ]);
   return {
@@ -1998,8 +2052,10 @@ export async function setOfferDetails(
   applicationId: string,
   input: SetOfferDetailsInput,
 ) {
-  const app = await Application.findById(applicationId)
-    .populate({ path: 'student', populate: { path: 'user', select: '_id' } });
+  const app = await Application.findById(applicationId).populate({
+    path: 'student',
+    populate: { path: 'user', select: '_id' },
+  });
   if (!app) throw AppError.notFound('Application not found');
 
   if (role === 'COMPANY') {
@@ -2184,7 +2240,9 @@ export async function attachOfferLetter(
   }
 
   if (app.status !== 'SELECTED') {
-    throw AppError.badRequest('Offer letter can only be attached while the application is SELECTED');
+    throw AppError.badRequest(
+      'Offer letter can only be attached while the application is SELECTED',
+    );
   }
 
   // Load the document, verify it belongs to the same company and is an offer
@@ -2226,8 +2284,10 @@ export async function getOfferLetterForApplication(
   applicationId: string,
   requester: { userId: string; role: Role },
 ) {
-  const app = await Application.findById(applicationId)
-    .populate({ path: 'student', populate: { path: 'user', select: '_id' } });
+  const app = await Application.findById(applicationId).populate({
+    path: 'student',
+    populate: { path: 'user', select: '_id' },
+  });
   if (!app) throw AppError.notFound('Application not found');
 
   // Authorization: student who owns the app, the company that owns the
@@ -2270,17 +2330,12 @@ export async function getOfferLetterForApplication(
    Phase 7B — Placement completion, recruitment source, verification
    ============================================================ */
 
-async function assertInstitutionOwnsStudent(
-  userId: string,
-  studentId: unknown,
-): Promise<void> {
+async function assertInstitutionOwnsStudent(userId: string, studentId: unknown): Promise<void> {
   const user = await User.findById(userId).select('institution').lean();
   if (!user?.institution) {
     throw AppError.forbidden('No institution linked to your account');
   }
-  const student = await StudentProfile.findById(studentId)
-    .select('institution')
-    .lean();
+  const student = await StudentProfile.findById(studentId).select('institution').lean();
   if (!student) throw AppError.notFound('Student not found');
   if (String(student.institution) !== String(user.institution)) {
     throw AppError.forbidden('Student belongs to a different institution');
@@ -2364,9 +2419,7 @@ export async function completePlacementForApplication(
   }
 
   if (app.status !== 'OFFER_ACCEPTED') {
-    throw AppError.badRequest(
-      'Placement can only be completed after the offer has been accepted',
-    );
+    throw AppError.badRequest('Placement can only be completed after the offer has been accepted');
   }
 
   const type = app.opportunityType as OpportunityType;
@@ -2393,15 +2446,24 @@ export async function completePlacementForApplication(
   }
   // Phase 7B — initialise verification to PENDING when a placement is completed,
   // so the institution has a clear "needs review" record.
-  (app as unknown as {
-    placementVerification: { status: VerificationStatus; verifiedBy?: unknown; verifiedAt?: Date; note?: string };
-  }).placementVerification = {
+  (
+    app as unknown as {
+      placementVerification: {
+        status: VerificationStatus;
+        verifiedBy?: unknown;
+        verifiedAt?: Date;
+        note?: string;
+      };
+    }
+  ).placementVerification = {
     status: 'PENDING',
   };
   app.timeline.push({
     status: 'COMPLETED',
     at: new Date(),
-    ...(input.notes ? { note: `Placement completed: ${input.notes}` } : { note: 'Placement completed' }),
+    ...(input.notes
+      ? { note: `Placement completed: ${input.notes}` }
+      : { note: 'Placement completed' }),
   });
   await app.save();
 
@@ -2476,9 +2538,16 @@ export async function verifyPlacement(
     );
   }
 
-  const currentVerification = (app as unknown as {
-    placementVerification?: { status?: VerificationStatus; verifiedBy?: unknown; verifiedAt?: Date; note?: string };
-  }).placementVerification;
+  const currentVerification = (
+    app as unknown as {
+      placementVerification?: {
+        status?: VerificationStatus;
+        verifiedBy?: unknown;
+        verifiedAt?: Date;
+        note?: string;
+      };
+    }
+  ).placementVerification;
   const currentStatus: VerificationStatus = currentVerification?.status ?? 'PENDING';
 
   // Idempotent: already in the target state — return without modification.
@@ -2486,14 +2555,16 @@ export async function verifyPlacement(
     return app.toJSON();
   }
 
-  (app as unknown as {
-    placementVerification: {
-      status: VerificationStatus;
-      verifiedBy: unknown;
-      verifiedAt: Date;
-      note?: string;
-    };
-  }).placementVerification = {
+  (
+    app as unknown as {
+      placementVerification: {
+        status: VerificationStatus;
+        verifiedBy: unknown;
+        verifiedAt: Date;
+        note?: string;
+      };
+    }
+  ).placementVerification = {
     status: input.status,
     verifiedBy: userId,
     verifiedAt: new Date(),

@@ -11,6 +11,7 @@ import {
   getSkillGapTrends,
   getPlacementMetrics,
   getFdpParticipation,
+  getFacultyEngagementMetrics,
 } from './institution-analytics.service';
 import type { ListStudentsQuery, ListFacultyQuery, DashboardScope } from '@aip/validation';
 
@@ -87,4 +88,10 @@ export const fdpParticipation = asyncHandler(async (req: Request, res: Response)
   const { institutionId: qId } = req.query as DashboardScope;
   const institutionId = await resolveInstitutionId(req.user!.id, req.user!.role, qId);
   ok(res, await getFdpParticipation(institutionId));
+});
+
+export const facultyEngagementMetrics = asyncHandler(async (req: Request, res: Response) => {
+  const { institutionId: qId } = req.query as DashboardScope;
+  const institutionId = await resolveInstitutionId(req.user!.id, req.user!.role, qId);
+  ok(res, await getFacultyEngagementMetrics(institutionId));
 });

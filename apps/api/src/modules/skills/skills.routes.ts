@@ -12,6 +12,7 @@ import { requireAuth } from '../../middleware/requireAuth';
 import { requireRole } from '../../middleware/requireRole';
 import { validate } from '../../middleware/validate';
 import * as ctrl from './skills.controller';
+import * as evidenceCtrl from './skillEvidence.controller';
 
 const router = Router();
 
@@ -50,6 +51,18 @@ router.delete(
 router.get('/me/student-skills', requireAuth, requireRole('STUDENT'), ctrl.listMyStudentSkills);
 router.get('/me/profile', requireAuth, requireRole('STUDENT'), ctrl.getMyProfile);
 router.get('/me/skill-timeline', requireAuth, requireRole('STUDENT'), ctrl.getMySkillTimeline);
+router.get(
+  '/me/skill-evidence',
+  requireAuth,
+  requireRole('STUDENT'),
+  evidenceCtrl.getMySkillEvidence,
+);
+router.get(
+  '/me/skills-to-reassess',
+  requireAuth,
+  requireRole('STUDENT'),
+  evidenceCtrl.getSkillsToReassess,
+);
 router.post(
   '/me/skills-from-resume',
   requireAuth,

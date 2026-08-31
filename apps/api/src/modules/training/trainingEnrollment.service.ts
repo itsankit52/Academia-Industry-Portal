@@ -14,6 +14,10 @@
  *   - Reuses the existing Document system with documentType='CERTIFICATE'.
  *   - Reuses the existing CERTIFICATE_AVAILABLE notification type.
  *   - The Document model already has unique-ish access controls.
+ *
+ * Phase 15B — Skill Evidence:
+ *   - On completion, adds evidence to student's skill profile.
+ *   - Does NOT auto-upgrade proficiency — only creates evidence record.
  */
 import { Types } from 'mongoose';
 import type { TrainingEnrollmentStatus, NotificationType } from '@aip/config';
@@ -184,7 +188,9 @@ export async function completeTrainingEnrollment(
     throw AppError.badRequest('Cannot complete a dropped training');
   }
 
-  const training = (await TrainingProgram.findById(enrollment.training)) as TrainingProgramDoc | null;
+  const training = (await TrainingProgram.findById(
+    enrollment.training,
+  )) as TrainingProgramDoc | null;
   if (!training) throw AppError.notFound('Training not found');
 
   const student = await StudentProfile.findById(studentProfileId).select('fullName user');
@@ -256,8 +262,7 @@ export async function getEnrollmentById(
   if (!enrollment) throw AppError.notFound('Enrollment not found');
 
   // Resolve the student user id from the populated student
-  const studentUserId = (enrollment.student as unknown as { user?: { _id?: unknown } })
-    ?.user?._id;
+  const studentUserId = (enrollment.student as unknown as { user?: { _id?: unknown } })?.user?._id;
   if (requesterRole !== 'ADMIN' && String(studentUserId) !== requesterUserId) {
     throw AppError.forbidden('Not your enrollment');
   }

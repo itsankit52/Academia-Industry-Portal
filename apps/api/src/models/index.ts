@@ -26,7 +26,20 @@ export { InterimReport, type InterimReportDoc } from './InterimReport';
 export { CollaborationEvent, type CollaborationEventDoc } from './CollaborationEvent';
 export { EventRegistration, type EventRegistrationDoc } from './EventRegistration';
 export { TrainingEnrollment, type TrainingEnrollmentDoc } from './TrainingEnrollment';
-export { PlacementDriveOutcome, type PlacementDriveOutcomeDoc } from './placement/PlacementDriveOutcome';
+export { TrainingModule, type TrainingModuleDoc } from './TrainingModule';
+export {
+  TrainingLesson,
+  type TrainingLessonDoc,
+  TRAINING_LESSON_TYPES,
+  type TrainingLessonType,
+} from './TrainingLesson';
+export {
+  PlacementDriveOutcome,
+  type PlacementDriveOutcomeDoc,
+} from './placement/PlacementDriveOutcome';
 export { PlacementActionItem, type PlacementActionItemDoc } from './placement/PlacementActionItem';
-export { PlacementParticipant, type PlacementParticipantDoc } from './placement/PlacementParticipant';
+export {
+  PlacementParticipant,
+  type PlacementParticipantDoc,
+} from './placement/PlacementParticipant';
 export { PlacementDrive, type PlacementDriveDoc } from './placement/PlacementDrive';

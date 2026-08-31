@@ -96,12 +96,41 @@ export function parseErpStudentSyncPayload(raw: unknown): ErpStudentSyncPayload 
 
 export async function handleLmsCertificate(payload: LmsCertificatePayload): Promise<{
   documentId: string;
+  isDuplicate: boolean;
 }> {
+  // Idempotency check: if we've already processed this exact certificate, return the existing one
+  const key = getLmsIdempotencyKey(payload.studentEmail, payload.verificationCode);
+  cleanExpiredEntries(processedLmsCertificates, LMS_IDEMPOTENCY_TTL_MS);
+
+  const existing = processedLmsCertificates.get(key);
+  if (existing) {
+    logger.info(
+      { key, documentId: existing.documentId },
+      'LMS certificate already processed, returning existing',
+    );
+    return { documentId: existing.documentId, isDuplicate: true };
+  }
+
   const user = await User.findOne({ email: payload.studentEmail, role: 'STUDENT' }).select('_id');
   if (!user) throw AppError.notFound('Student user not found for provided email');
 
   const profile = await StudentProfile.findOne({ user: user._id }).select('_id');
   if (!profile) throw AppError.notFound('Student profile not found');
+
+  // Also check if a certificate with the same verification code already exists
+  const existingCert = await DocumentModel.findOne({
+    title: payload.courseName,
+    issuer: payload.provider,
+    verificationStatus: 'VERIFIED',
+  }).select('_id');
+  if (existingCert) {
+    // Store in idempotency map and return existing
+    processedLmsCertificates.set(key, {
+      documentId: String(existingCert._id),
+      processedAt: new Date(),
+    });
+    return { documentId: String(existingCert._id), isDuplicate: true };
+  }
 
   const bodyBuffer = Buffer.from(JSON.stringify(payload), 'utf-8');
   const filename = `${payload.courseName.replace(/[^a-zA-Z0-9]+/g, '_')}_${payload.verificationCode}.json`;
@@ -120,7 +149,10 @@ export async function handleLmsCertificate(payload: LmsCertificatePayload): Prom
     verifiedAt: new Date(),
   });
 
-  return { documentId: String(doc._id) };
+  // Store in idempotency map
+  processedLmsCertificates.set(key, { documentId: String(doc._id), processedAt: new Date() });
+
+  return { documentId: String(doc._id), isDuplicate: false };
 }
 
 /**
@@ -144,17 +176,59 @@ function unusablePlaceholderSecret(): string {
   return `erp-import:${randomBytes(32).toString('base64url')}`;
 }
 
+// ---------------------------------------------------------------------------
+// Idempotency helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * LMS webhook idempotency: stores processed verification codes to prevent
+ * duplicate certificate creation. Uses an in-memory Map for simplicity;
+ * in production this would be a Redis cache or database table.
+ */
+const processedLmsCertificates = new Map<string, { documentId: string; processedAt: Date }>();
+const LMS_IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+/**
+ * ERP webhook idempotency: stores processed email+institution combinations.
+ */
+const processedErpEntries = new Map<string, { processedAt: Date }>();
+const ERP_IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+function cleanExpiredEntries<K>(map: Map<K, { processedAt: Date }>, ttl: number): void {
+  const now = Date.now();
+  for (const [key, value] of map.entries()) {
+    if (now - value.processedAt.getTime() > ttl) {
+      map.delete(key);
+    }
+  }
+}
+
+function getLmsIdempotencyKey(email: string, verificationCode: string): string {
+  return `${email.toLowerCase()}:${verificationCode}`;
+}
+
 export async function handleErpStudentSync(
   payload: ErpStudentSyncPayload,
 ): Promise<ErpSyncSummary> {
   const institution = await Institution.findOne({ code: payload.institutionCode });
   if (!institution) throw AppError.notFound('Institution not found for provided code');
 
+  // Clean expired idempotency entries
+  cleanExpiredEntries(processedErpEntries, ERP_IDEMPOTENCY_TTL_MS);
+
   let createdCount = 0;
   let updatedCount = 0;
   let skippedCount = 0;
+  let duplicateCount = 0;
 
   for (const entry of payload.students) {
+    // Idempotency check: skip if already processed
+    const ikey = `${institution._id}:${entry.email.toLowerCase()}`;
+    if (processedErpEntries.has(ikey)) {
+      duplicateCount += 1;
+      continue;
+    }
+
     try {
       let user = await User.findOne({ email: entry.email });
       let isNewUser = false;
@@ -190,6 +264,9 @@ export async function handleErpStudentSync(
         createdCount += 1;
       }
 
+      // Mark as processed for idempotency
+      processedErpEntries.set(ikey, { processedAt: new Date() });
+
       if (isNewUser && !existingProfile) {
         continue;
       }
@@ -199,7 +276,7 @@ export async function handleErpStudentSync(
     }
   }
 
-  return { created: createdCount, updated: updatedCount, skipped: skippedCount };
+  return { created: createdCount, updated: updatedCount, skipped: skippedCount + duplicateCount };
 }
 
 export function institutionExistsByCode(code: string): Promise<{ _id: Types.ObjectId } | null> {

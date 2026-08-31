@@ -12,7 +12,10 @@ import Pagination from '@/components/ui/Pagination';
 import { useMyEnrollments } from '@/hooks/queries/useTrainingEnrollment';
 import type { TrainingEnrollmentStatus } from '@aip/config';
 
-const statusConfig: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'info' | 'danger' }> = {
+const statusConfig: Record<
+  string,
+  { label: string; variant: 'default' | 'success' | 'warning' | 'info' | 'danger' }
+> = {
   ENROLLED: { label: 'Enrolled', variant: 'info' },
   IN_PROGRESS: { label: 'In Progress', variant: 'warning' },
   COMPLETED: { label: 'Completed', variant: 'success' },
@@ -45,7 +48,10 @@ export default function StudentMyTrainings() {
       {/* Status filter chips */}
       <div className="flex flex-wrap gap-2">
         <button
-          onClick={() => { setStatusFilter(''); setPage(1); }}
+          onClick={() => {
+            setStatusFilter('');
+            setPage(1);
+          }}
           className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
             !statusFilter
               ? 'bg-indigo-600 text-white'
@@ -57,7 +63,10 @@ export default function StudentMyTrainings() {
         {STATUS_FILTERS.map((f) => (
           <button
             key={f.value}
-            onClick={() => { setStatusFilter(f.value); setPage(1); }}
+            onClick={() => {
+              setStatusFilter(f.value);
+              setPage(1);
+            }}
             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
               statusFilter === f.value
                 ? 'bg-indigo-600 text-white'
@@ -73,7 +82,9 @@ export default function StudentMyTrainings() {
 
       {isLoading && (
         <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)}
+          {Array.from({ length: 3 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
         </div>
       )}
 
@@ -94,7 +105,18 @@ export default function StudentMyTrainings() {
         <>
           <div className="space-y-3">
             {data.items.map((enrollment) => {
-              const cfg = statusConfig[enrollment.status] ?? { label: enrollment.status, variant: 'default' as const };
+              const cfg = statusConfig[enrollment.status] ?? {
+                label: enrollment.status,
+                variant: 'default' as const,
+              };
+              const trainingTitle =
+                typeof enrollment.training === 'object' && enrollment.training !== null
+                  ? enrollment.training.title
+                  : null;
+              const trainingRef =
+                typeof enrollment.training === 'object' && enrollment.training !== null
+                  ? enrollment.training.id
+                  : enrollment.training;
               return (
                 <div
                   key={enrollment.id}
@@ -104,29 +126,42 @@ export default function StudentMyTrainings() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-semibold text-slate-900 text-sm dark:text-slate-100">
-                          Training #{enrollment.training.slice(-8)}
+                          {trainingTitle ?? `Training #${String(trainingRef).slice(-8)}`}
                         </h3>
-                        <Badge variant={cfg.variant} size="sm">{cfg.label}</Badge>
+                        <Badge variant={cfg.variant} size="sm">
+                          {cfg.label}
+                        </Badge>
                         {enrollment.certificateId && (
-                          <Badge variant="success" size="sm">Certificate Ready</Badge>
+                          <Badge variant="success" size="sm">
+                            Certificate Ready
+                          </Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
-                        <span>Enrolled: {format(new Date(enrollment.enrolledAt), 'MMM d, yyyy')}</span>
+                        <span>
+                          Enrolled: {format(new Date(enrollment.enrolledAt), 'MMM d, yyyy')}
+                        </span>
                         {enrollment.startedAt && (
-                          <span>Started: {format(new Date(enrollment.startedAt), 'MMM d, yyyy')}</span>
+                          <span>
+                            Started: {format(new Date(enrollment.startedAt), 'MMM d, yyyy')}
+                          </span>
                         )}
                         {enrollment.completedAt && (
-                          <span>Completed: {format(new Date(enrollment.completedAt), 'MMM d, yyyy')}</span>
+                          <span>
+                            Completed: {format(new Date(enrollment.completedAt), 'MMM d, yyyy')}
+                          </span>
                         )}
                       </div>
 
                       {/* Progress bar */}
-                      {(enrollment.status === 'IN_PROGRESS' || enrollment.status === 'COMPLETED') && (
+                      {(enrollment.status === 'IN_PROGRESS' ||
+                        enrollment.status === 'COMPLETED') && (
                         <div className="mt-3">
                           <div className="flex items-center justify-between text-xs mb-1">
                             <span className="text-slate-500 dark:text-slate-400">Progress</span>
-                            <span className="font-medium text-slate-700 dark:text-slate-200">{enrollment.progress}%</span>
+                            <span className="font-medium text-slate-700 dark:text-slate-200">
+                              {enrollment.progress}%
+                            </span>
                           </div>
                           <div className="h-2 bg-slate-100 rounded-full dark:bg-slate-800">
                             <div
@@ -156,7 +191,11 @@ export default function StudentMyTrainings() {
             })}
           </div>
           <div className="flex justify-center">
-            <Pagination page={data.page} totalPages={Math.ceil(data.total / data.pageSize)} onChange={setPage} />
+            <Pagination
+              page={data.page}
+              totalPages={Math.ceil(data.total / data.pageSize)}
+              onChange={setPage}
+            />
           </div>
         </>
       )}

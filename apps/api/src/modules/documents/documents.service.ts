@@ -18,6 +18,7 @@ import {
 } from '../../models';
 import { AppError } from '../../utils/AppError';
 import { applyPagination, buildPaginated } from '../../utils/pagination';
+import { createNotification } from '../notifications/notifications.service';
 
 const MAX_SIZE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set([
@@ -98,7 +99,10 @@ async function assertMetaAccess(
   const ownerId = String(doc.user);
   if (ownerId === requesterUserId) return;
   if (requesterRole === 'ADMIN') return;
-  if ((requesterRole === 'COMPANY' || requesterRole === 'INSTITUTION') && doc.verificationStatus === 'PENDING') {
+  if (
+    (requesterRole === 'COMPANY' || requesterRole === 'INSTITUTION') &&
+    doc.verificationStatus === 'PENDING'
+  ) {
     if (await verifierCanReview(requesterUserId, requesterRole, ownerId)) return;
   }
   throw AppError.forbidden('Not allowed to access this document');
@@ -112,8 +116,12 @@ async function verifierCanReview(
   if (verifierRole === 'INSTITUTION') {
     const verifier = await User.findById(verifierUserId).select('institution');
     if (!verifier?.institution) return false;
-    const owner = await StudentProfile.findOne({ user: new Types.ObjectId(ownerUserId) }).select('institution');
-    return Boolean(owner?.institution) && String(owner!.institution) === String(verifier.institution);
+    const owner = await StudentProfile.findOne({ user: new Types.ObjectId(ownerUserId) }).select(
+      'institution',
+    );
+    return (
+      Boolean(owner?.institution) && String(owner!.institution) === String(verifier.institution)
+    );
   }
   return isApplicantOfCompanyUser(ownerUserId, verifierUserId);
 }
@@ -123,7 +131,9 @@ async function isApplicantOfCompanyUser(
   companyUserId: string,
 ): Promise<boolean> {
   const [companyProfile, studentProfile] = await Promise.all([
-    (await import('../../models')).CompanyProfile.findOne({ user: new Types.ObjectId(companyUserId) }).select('_id'),
+    (await import('../../models')).CompanyProfile.findOne({
+      user: new Types.ObjectId(companyUserId),
+    }).select('_id'),
     StudentProfile.findOne({ user: new Types.ObjectId(studentUserId) }).select('_id'),
   ]);
   if (!companyProfile || !studentProfile) return false;
@@ -132,10 +142,7 @@ async function isApplicantOfCompanyUser(
     Job.find({ company: companyProfile._id }).select('_id').lean(),
     Internship.find({ company: companyProfile._id }).select('_id').lean(),
   ]);
-  const opportunityIds = [
-    ...jobIds.map((j) => j._id),
-    ...internshipIds.map((i) => i._id),
-  ];
+  const opportunityIds = [...jobIds.map((j) => j._id), ...internshipIds.map((i) => i._id)];
   if (opportunityIds.length === 0) return false;
 
   const count = await Application.countDocuments({
@@ -203,11 +210,15 @@ export async function listVerificationQueue(
   if (requesterRole === 'INSTITUTION') {
     const verifier = await User.findById(requesterUserId).select('institution');
     if (!verifier?.institution) return buildPaginated([], 0, pg.page, pg.pageSize);
-    const students = await StudentProfile.find({ institution: verifier.institution }).select('user').lean();
+    const students = await StudentProfile.find({ institution: verifier.institution })
+      .select('user')
+      .lean();
     where.user = { $in: students.map((s) => s.user) };
   } else if (requesterRole === 'COMPANY') {
     const { CompanyProfile } = await import('../../models');
-    const companyProfile = await CompanyProfile.findOne({ user: new Types.ObjectId(requesterUserId) }).select('_id');
+    const companyProfile = await CompanyProfile.findOne({
+      user: new Types.ObjectId(requesterUserId),
+    }).select('_id');
     if (!companyProfile) return buildPaginated([], 0, pg.page, pg.pageSize);
 
     const [jobIds, internshipIds] = await Promise.all([
@@ -217,11 +228,17 @@ export async function listVerificationQueue(
     const opportunityIds = [...jobIds.map((j) => j._id), ...internshipIds.map((i) => i._id)];
     if (opportunityIds.length === 0) return buildPaginated([], 0, pg.page, pg.pageSize);
 
-    const apps = await Application.find({ opportunity: { $in: opportunityIds } }).select('student').lean();
-    const studentIds = Array.from(new Set(apps.map((a) => String(a.student)))).map((s) => new Types.ObjectId(s));
+    const apps = await Application.find({ opportunity: { $in: opportunityIds } })
+      .select('student')
+      .lean();
+    const studentIds = Array.from(new Set(apps.map((a) => String(a.student)))).map(
+      (s) => new Types.ObjectId(s),
+    );
     if (studentIds.length === 0) return buildPaginated([], 0, pg.page, pg.pageSize);
 
-    const students = await StudentProfile.find({ _id: { $in: studentIds } }).select('user').lean();
+    const students = await StudentProfile.find({ _id: { $in: studentIds } })
+      .select('user')
+      .lean();
     where.user = { $in: students.map((s) => s.user) };
     where.documentType = filters.documentType ?? 'CERTIFICATE';
   }
@@ -264,10 +281,61 @@ export async function verifyDocument(
     if (!canReview) throw AppError.forbidden('Not allowed to verify this document');
   }
 
+  const previousStatus = doc.verificationStatus;
   doc.verificationStatus = input.verificationStatus;
   doc.verifiedBy = new Types.ObjectId(verifierUserId);
   doc.verifiedAt = new Date();
   if (input.verificationNotes !== undefined) doc.verificationNotes = input.verificationNotes;
   await doc.save();
+
+  // Phase 14A: notify the document owner when verification status changes so
+  // they don't have to poll the verification queue to learn the outcome.
+  // Only fire if the status actually changed to avoid duplicate noise when an
+  // admin re-confirms an already-verified record.
+  if (previousStatus !== input.verificationStatus) {
+    const ownerId = String(doc.user);
+    const docLabel = doc.title || doc.filename || 'document';
+    if (input.verificationStatus === 'VERIFIED') {
+      await createNotification(
+        ownerId,
+        'DOCUMENT_VERIFIED',
+        'Document verified',
+        `Your document "${docLabel}" was verified.`,
+        // Link to the right place per role: students and faculty use the
+        // documents surface; company users go to the verification queue.
+        await buildDocumentLink(doc.user, verifierRole),
+      );
+    } else if (input.verificationStatus === 'REJECTED') {
+      await createNotification(
+        ownerId,
+        'DOCUMENT_REJECTED',
+        'Document rejected',
+        `Your document "${docLabel}" was rejected${input.verificationNotes ? `: ${input.verificationNotes}` : '.'}`,
+        await buildDocumentLink(doc.user, verifierRole),
+      );
+    }
+  }
+
   return doc;
+}
+
+/**
+ * Phase 14A: best-effort deep link for the notification body. We look at the
+ * owner's role when possible so the student gets `/student/documents` and a
+ * faculty owner gets `/faculty/settings` (or fallback to the documents page).
+ */
+async function buildDocumentLink(
+  ownerUserId: Types.ObjectId | string,
+  verifierRole: VerifierRole,
+): Promise<string> {
+  // Verifier-side deep link to the queue row so the verifier can audit who
+  // they notified. We look up the owner role to pick the right student/faculty
+  // surface.
+  if (verifierRole !== 'ADMIN') {
+    return verifierRole === 'COMPANY' ? '/company/verifications' : '/institution/verifications';
+  }
+  const owner = await User.findById(ownerUserId).select('role').lean();
+  const role = (owner as { role?: string } | null)?.role;
+  if (role === 'FACULTY') return '/faculty/settings';
+  return '/student/documents';
 }

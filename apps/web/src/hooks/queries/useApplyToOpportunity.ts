@@ -24,6 +24,10 @@ export function useApplyToOpportunity() {
     mutationFn: (data: ApplyInput) => apiPost<Application>('/applications', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['student', 'applications'] });
+      // Phase 13: invalidate faculty application queries too
+      queryClient.invalidateQueries({ queryKey: ['faculty', 'applications'] });
+      queryClient.invalidateQueries({ queryKey: ['faculty', 'engagements'] });
+      queryClient.invalidateQueries({ queryKey: ['faculty', 'opportunities'] });
       toast.success('Application submitted successfully.');
     },
     onError: (err: Error) => {

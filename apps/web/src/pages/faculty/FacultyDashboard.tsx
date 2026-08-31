@@ -1,5 +1,13 @@
 import { Link } from 'react-router-dom';
-import { FiBriefcase, FiActivity, FiCalendar, FiUser, FiCompass, FiUsers } from 'react-icons/fi';
+import {
+  FiBriefcase,
+  FiActivity,
+  FiCalendar,
+  FiUser,
+  FiCompass,
+  FiUsers,
+  FiCheckCircle,
+} from 'react-icons/fi';
 import PageHeader from '@/components/ui/PageHeader';
 import StatCard from '@/components/ui/StatCard';
 import EmptyState from '@/components/ui/EmptyState';
@@ -42,11 +50,7 @@ export default function FacultyDashboard() {
               icon={<FiBriefcase />}
             />
             <StatCard label="Active" value={data.activeApplications} icon={<FiActivity />} />
-            <StatCard
-              label="Upcoming Interviews"
-              value={data.upcomingInterviewsCount}
-              icon={<FiCalendar />}
-            />
+            <StatCard label="Engagements" value={data.activeEngagements} icon={<FiCheckCircle />} />
             <StatCard
               label="Profile Completion"
               value={`${data.profileCompletion}%`}
@@ -89,6 +93,12 @@ export default function FacultyDashboard() {
                 icon={<FiBriefcase className="w-5 h-5" />}
                 label="My Applications"
                 description="Track your applications"
+              />
+              <QuickActionCard
+                to="/faculty/engagements"
+                icon={<FiCheckCircle className="w-5 h-5" />}
+                label="My Engagements"
+                description="Active collaborations"
               />
             </div>
           </div>

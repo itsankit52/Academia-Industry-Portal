@@ -85,6 +85,19 @@ export const NOTIFICATION_TYPES = [
   'PLACEMENT_ACTION_ITEM_ASSIGNED',
   'PLACEMENT_ACTION_ITEM_DUE_SOON',
   'PLACEMENT_ACTION_ITEM_RESOLVED',
+  // Phase 13 — Faculty-industry collaboration
+  'FACULTY_APPLICATION_SUBMITTED',
+  'FACULTY_APPLICATION_WITHDRAWN',
+  'FACULTY_ENGAGEMENT_STARTED',
+  'FACULTY_ENGAGEMENT_COMPLETED',
+  // Phase 14A — Document verification + mentorship lifecycle
+  'DOCUMENT_VERIFIED',
+  'DOCUMENT_REJECTED',
+  'MENTORSHIP_REQUEST_RECEIVED',
+  'MENTORSHIP_REQUEST_ACCEPTED',
+  'MENTORSHIP_REQUEST_DECLINED',
+  'MENTORSHIP_MESSAGE_RECEIVED',
+  'MENTORSHIP_COMPLETED',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -179,6 +192,11 @@ export const AUDIT_ACTIONS = [
   'PLACEMENT_ACTION_ITEM_CREATED',
   'PLACEMENT_ACTION_ITEM_RESOLVED',
   'PLACEMENT_ACTION_ITEM_DISMISSED',
+  // Phase 13 — Faculty-industry collaboration
+  'FACULTY_APPLICATION_CREATED',
+  'FACULTY_APPLICATION_WITHDRAWN',
+  'FACULTY_APPLICATION_STATUS_UPDATED',
+  'FACULTY_ENGAGEMENT_COMPLETED',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
@@ -280,6 +298,23 @@ export const TRAINING_ENROLLMENT_STATUSES = [
 ] as const;
 export type TrainingEnrollmentStatus = (typeof TRAINING_ENROLLMENT_STATUSES)[number];
 
+// Phase 15B — Training content types
+export const TRAINING_CONTENT_TYPES = ['INTERNAL', 'EXTERNAL', 'HYBRID'] as const;
+export type TrainingContentType = (typeof TRAINING_CONTENT_TYPES)[number];
+
+// Phase 15B — Training difficulty levels
+export const TRAINING_DIFFICULTY_LEVELS = [
+  'BEGINNER',
+  'INTERMEDIATE',
+  'ADVANCED',
+  'EXPERT',
+] as const;
+export type TrainingDifficulty = (typeof TRAINING_DIFFICULTY_LEVELS)[number];
+
+// Phase 15B — Training lesson types
+export const TRAINING_LESSON_TYPES = ['VIDEO', 'ARTICLE', 'QUIZ', 'RESOURCE'] as const;
+export type TrainingLessonType = (typeof TRAINING_LESSON_TYPES)[number];
+
 // Phase 11 — Placement Drive lifecycle
 export const PLACEMENT_DRIVE_MODES = ['ONLINE', 'ONSITE', 'HYBRID'] as const;
 export type PlacementDriveMode = (typeof PLACEMENT_DRIVE_MODES)[number];
@@ -368,7 +403,13 @@ export type PlacementActionItemType = (typeof PLACEMENT_ACTION_ITEM_TYPES)[numbe
 export const PLACEMENT_ACTION_ITEM_SEVERITY = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const;
 export type PlacementActionItemSeverity = (typeof PLACEMENT_ACTION_ITEM_SEVERITY)[number];
 
-export const PLACEMENT_ACTION_ITEM_STATUSES = ['OPEN', 'ACKNOWLEDGED', 'IN_PROGRESS', 'RESOLVED', 'DISMISSED'] as const;
+export const PLACEMENT_ACTION_ITEM_STATUSES = [
+  'OPEN',
+  'ACKNOWLEDGED',
+  'IN_PROGRESS',
+  'RESOLVED',
+  'DISMISSED',
+] as const;
 export type PlacementActionItemStatus = (typeof PLACEMENT_ACTION_ITEM_STATUSES)[number];
 
 // Phase 11 — Notification Types (placement drive events)

@@ -47,7 +47,7 @@ router.post(
 router.patch(
   '/:id/status',
   requireAuth,
-  requireRole('COMPANY', 'ADMIN'),
+  requireRole('COMPANY', 'INSTITUTION', 'ADMIN'),
   validate(idParamSchema, 'params'),
   validate(updateApplicationStatusSchema),
   ctrl.patchStatus,
@@ -98,12 +98,7 @@ router.delete(
   validate(idParamSchema, 'params'),
   ctrl.removeMentor,
 );
-router.get(
-  '/:id/mentor',
-  requireAuth,
-  validate(idParamSchema, 'params'),
-  ctrl.getMentor,
-);
+router.get('/:id/mentor', requireAuth, validate(idParamSchema, 'params'), ctrl.getMentor);
 // Active interns listing
 router.get(
   '/company/active-interns',

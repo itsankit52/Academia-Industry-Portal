@@ -42,6 +42,23 @@ const trainingEnrollmentSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: 'Document',
     },
+    // Phase 15B — Track completed lessons for granular progress
+    completedLessons: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'TrainingLesson' }],
+      default: [],
+    },
+    // Track current position for resume functionality
+    currentLesson: {
+      type: Schema.Types.ObjectId,
+      ref: 'TrainingLesson',
+      default: undefined,
+    },
+    // Total lessons in the training (for progress calculation)
+    totalLessons: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   {
     timestamps: true,
@@ -62,5 +79,7 @@ trainingEnrollmentSchema.index({ student: 1, training: 1 }, { unique: true });
 trainingEnrollmentSchema.index({ training: 1, status: 1 });
 trainingEnrollmentSchema.index({ student: 1, status: 1 });
 
-export type TrainingEnrollmentDoc = HydratedDocument<InferSchemaType<typeof trainingEnrollmentSchema>>;
+export type TrainingEnrollmentDoc = HydratedDocument<
+  InferSchemaType<typeof trainingEnrollmentSchema>
+>;
 export const TrainingEnrollment = model('TrainingEnrollment', trainingEnrollmentSchema);

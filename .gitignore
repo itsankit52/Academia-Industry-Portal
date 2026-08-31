@@ -44,3 +44,5 @@ lerna-debug.log*
 apps/api/uploads/
 
 .claude
+
+PRODUCTION_HARDENING_REPORT.md

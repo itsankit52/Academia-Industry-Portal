@@ -18,7 +18,7 @@ function student(email: string) {
   return { email, fullName: `Student ${email}` };
 }
 
-/** Collects the `passwordHash` handed to every `User.create` call. */
+/** Collects `passwordHash` values from all `User.create` calls made during the test. */
 function createdHashes(): string[] {
   return vi
     .mocked(User.create)
@@ -26,15 +26,22 @@ function createdHashes(): string[] {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  // `mockClear()` only removes call history; it preserves mock implementations.
+  vi.mocked(User.create).mockClear();
+  vi.mocked(StudentProfile.create).mockClear();
+  vi.mocked(StudentProfile.updateOne).mockClear();
+  vi.mocked(User.findOne).mockClear();
+  vi.mocked(StudentProfile.findOne).mockClear();
+  // Resolve values (not mockImplementation — that would override mockResolvedValue)
   vi.mocked(Institution.findOne).mockResolvedValue({ _id: institutionId } as never);
-  // No account and no profile exists yet, so every entry takes the create path.
   vi.mocked(User.findOne).mockResolvedValue(null as never);
   vi.mocked(StudentProfile.findOne).mockResolvedValue(null as never);
-  vi.mocked(User.create).mockImplementation((() =>
-    Promise.resolve({ _id: new Types.ObjectId() })) as never);
-  vi.mocked(StudentProfile.create).mockImplementation((() =>
-    Promise.resolve({ _id: new Types.ObjectId() })) as never);
+  // Both create methods must return a truthy object so the service chain proceeds
+  // past its guard `if (!user)` / `if (!existingProfile)`.
+  vi.mocked(User.create).mockResolvedValue(Promise.resolve({ _id: new Types.ObjectId() }) as never);
+  vi.mocked(StudentProfile.create).mockResolvedValue(
+    Promise.resolve({ _id: new Types.ObjectId() }) as never,
+  );
 });
 
 describe('handleErpStudentSync password handling', () => {

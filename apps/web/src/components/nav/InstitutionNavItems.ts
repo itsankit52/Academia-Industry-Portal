@@ -26,6 +26,7 @@ export const institutionNavItems: NavItem[] = [
   { to: '/institution/action-items', label: 'Action Items', icon: FiZap },
   { to: '/institution/fdps', label: 'Faculty FDPs', icon: FiBookOpen },
   { to: '/institution/faculty-opportunities', label: 'Faculty Programs', icon: FiBookmark },
+  { to: '/institution/faculty-engagements', label: 'Faculty Engagements', icon: FiActivity },
   { to: '/institution/events', label: 'Events', icon: FiCalendar },
   { to: '/institution/collaboration', label: 'Collab Hub', icon: FiZap },
   { to: '/institution/verifications', label: 'Verifications', icon: FiCheckCircle },

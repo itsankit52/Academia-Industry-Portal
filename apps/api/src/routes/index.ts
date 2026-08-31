@@ -29,6 +29,9 @@ import collaborationRouter from '../modules/collaboration/collaboration.routes';
 import webhooksRouter from '../modules/webhooks/webhooks.routes';
 import interimReportsRouter from '../modules/interim-reports/interim-reports.routes';
 import institutionAnalyticsRouter from '../modules/institution-analytics/institution-analytics.routes';
+import facultyApplicationsRouter from '../modules/faculty-applications/faculty-applications.routes';
+import facultyOpportunityApplicantsRouter from '../modules/faculty-applications/faculty-opportunity-applicants.routes';
+import studentOpportunitiesRouter from '../modules/student-opportunities/student-opportunities.routes';
 import {
   studentRouter as placementReadinessRouter,
   studentOutcomesRouter as placementOutcomesRouter,
@@ -81,6 +84,14 @@ const mounts: Array<[string, ExpressRouter]> = [
   ['/placement-action-items', actionQueueRouter],
   ['/institution-analytics/placement-drives', institutionReportsRouter],
   ['/webhooks', webhooksRouter],
+  // Phase 13 — Faculty-industry collaboration
+  // Withdraw + engagements live under /applications/* (the model is the same),
+  // while applicants for a faculty opportunity live under
+  // /faculty-opportunities/* (consistent with the postings collection).
+  ['/applications', facultyApplicationsRouter],
+  ['/faculty-opportunities', facultyOpportunityApplicantsRouter],
+  // Phase 15B — Student opportunity discovery
+  ['/student-faculty-opportunities', studentOpportunitiesRouter],
 ];
 
 for (const [path, subRouter] of mounts) {

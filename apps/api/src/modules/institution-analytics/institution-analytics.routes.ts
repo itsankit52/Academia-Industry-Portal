@@ -25,7 +25,11 @@ router.get(
   validate(listFacultyQuerySchema, 'query'),
   controller.listFacultyHandler,
 );
-router.get('/dashboard/skill-gaps', validate(dashboardScopeSchema, 'query'), controller.skillGapTrends);
+router.get(
+  '/dashboard/skill-gaps',
+  validate(dashboardScopeSchema, 'query'),
+  controller.skillGapTrends,
+);
 router.get(
   '/dashboard/placement-metrics',
   validate(dashboardScopeSchema, 'query'),
@@ -35,6 +39,11 @@ router.get(
   '/dashboard/fdp-participation',
   validate(dashboardScopeSchema, 'query'),
   controller.fdpParticipation,
+);
+router.get(
+  '/dashboard/faculty-engagements',
+  validate(dashboardScopeSchema, 'query'),
+  controller.facultyEngagementMetrics,
 );
 router.get(
   '/students/:id',

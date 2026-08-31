@@ -1,6 +1,22 @@
 import type { TrainingEnrollmentStatus } from '@aip/config';
 
-export interface TrainingEnrollment {
+/**
+ * The full TrainingEnrollment interface (with Phase 15B lesson-tracking
+ * fields) lives in `./training.ts` to keep all training-related types in
+ * one module. This file re-exports the canonical interface and adds the
+ * `WithDetails` view used by the API and web clients.
+ */
+export type {
+  TrainingEnrollment,
+  TrainingProgram,
+  TrainingModule,
+  TrainingLesson,
+  TrainingContentType,
+  TrainingDifficulty,
+  TrainingLessonType,
+} from './training';
+
+export interface TrainingEnrollmentWithDetails {
   id: string;
   student: string;
   training: string;
@@ -10,12 +26,9 @@ export interface TrainingEnrollment {
   startedAt?: string;
   completedAt?: string;
   certificateId?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface TrainingEnrollmentWithDetails extends TrainingEnrollment {
+  certificateUrl?: string;
   trainingTitle?: string;
   trainingProvider?: string;
-  certificateUrl?: string;
+  createdAt: string;
+  updatedAt: string;
 }

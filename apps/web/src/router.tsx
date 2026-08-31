@@ -151,11 +151,21 @@ const InstitutionCreateFacultyOpp = lazy(
 const InstitutionEditFacultyOpp = lazy(
   () => import('@/pages/institution/InstitutionEditFacultyOpp'),
 );
+const InstitutionFacultyEngagements = lazy(
+  () => import('@/pages/institution/InstitutionFacultyEngagements'),
+);
 
 const StudentMentorship = lazy(() => import('@/pages/student/StudentMentorship'));
 const StudentMentorshipDetails = lazy(() => import('@/pages/student/StudentMentorshipDetails'));
 const StudentMyTrainings = lazy(() => import('@/pages/student/StudentMyTrainings'));
 const StudentMyTrainingDetails = lazy(() => import('@/pages/student/StudentMyTrainingDetails'));
+// Phase 15B — Student opportunity discovery
+const StudentFacultyOpportunities = lazy(
+  () => import('@/pages/student/StudentFacultyOpportunities'),
+);
+const StudentFacultyOpportunityDetails = lazy(
+  () => import('@/pages/student/StudentFacultyOpportunityDetails'),
+);
 const StudentInterimReports = lazy(() => import('@/pages/student/StudentInterimReports'));
 const StudentEvents = lazy(() => import('@/pages/student/StudentEvents'));
 const StudentMyRegistrations = lazy(() => import('@/pages/student/StudentMyRegistrations'));
@@ -170,9 +180,14 @@ const FacultyEventEdit = lazy(() => import('@/pages/faculty/FacultyEventEdit'));
 const FacultyEventDetails = lazy(() => import('@/pages/faculty/FacultyEventDetails'));
 const FacultyMentorInterns = lazy(() => import('@/pages/faculty/FacultyMentorInterns'));
 const FacultyInterimReports = lazy(() => import('@/pages/faculty/FacultyInterimReports'));
+const FacultyEngagements = lazy(() => import('@/pages/faculty/FacultyEngagements'));
 
 const CompanyMentorship = lazy(() => import('@/pages/company/CompanyMentorship'));
 const CompanyMentorshipDetails = lazy(() => import('@/pages/company/CompanyMentorshipDetails'));
+const CompanyFacultyApplicants = lazy(() => import('@/pages/company/CompanyFacultyApplicants'));
+const CompanyFacultyApplicantDetails = lazy(
+  () => import('@/pages/company/CompanyFacultyApplicantDetails'),
+);
 const CompanyEvents = lazy(() => import('@/pages/company/CompanyEvents'));
 const CompanyEventCreate = lazy(() => import('@/pages/company/CompanyEventCreate'));
 const CompanyEventEdit = lazy(() => import('@/pages/company/CompanyEventEdit'));
@@ -262,6 +277,9 @@ export const router = createBrowserRouter([
           { path: 'training', element: s(StudentTraining) },
           { path: 'my-trainings', element: s(StudentMyTrainings) },
           { path: 'my-trainings/:enrollmentId', element: s(StudentMyTrainingDetails) },
+          // Phase 15B — Student faculty/institution opportunity discovery
+          { path: 'faculty-opportunities', element: s(StudentFacultyOpportunities) },
+          { path: 'faculty-opportunities/:id', element: s(StudentFacultyOpportunityDetails) },
           { path: 'learning', element: s(StudentLearning) },
           { path: 'mentorship', element: s(StudentMentorship) },
           { path: 'mentorship/:requestId', element: s(StudentMentorshipDetails) },
@@ -309,6 +327,11 @@ export const router = createBrowserRouter([
           { path: 'faculty-opportunities', element: s(CompanyManageFacultyOpps) },
           { path: 'faculty-opportunities/new', element: s(CompanyCreateFacultyOpp) },
           { path: 'faculty-opportunities/:id/edit', element: s(CompanyEditFacultyOpp) },
+          { path: 'faculty-opportunities/:id/applicants', element: s(CompanyFacultyApplicants) },
+          {
+            path: 'faculty-opportunities/:id/applicants/:appId',
+            element: s(CompanyFacultyApplicantDetails),
+          },
           { path: 'mentorship', element: s(CompanyMentorship) },
           { path: 'mentorship/:requestId', element: s(CompanyMentorshipDetails) },
           { path: 'events', element: s(CompanyEvents) },
@@ -370,6 +393,7 @@ export const router = createBrowserRouter([
           { path: 'opportunities/:id', element: s(FacultyOpportunityDetails) },
           { path: 'applications', element: s(FacultyApplications) },
           { path: 'applications/:id', element: s(FacultyApplicationDetails) },
+          { path: 'engagements', element: s(FacultyEngagements) },
           { path: 'assigned-interns', element: s(FacultyMentorInterns) },
           { path: 'applications/:appId/reports', element: s(FacultyInterimReports) },
           { path: 'profile', element: s(FacultyProfile) },
@@ -412,6 +436,7 @@ export const router = createBrowserRouter([
           { path: 'faculty-opportunities', element: s(InstitutionFacultyOpportunities) },
           { path: 'faculty-opportunities/new', element: s(InstitutionCreateFacultyOpp) },
           { path: 'faculty-opportunities/:id/edit', element: s(InstitutionEditFacultyOpp) },
+          { path: 'faculty-engagements', element: s(InstitutionFacultyEngagements) },
           { path: 'verifications', element: s(InstitutionVerifications) },
           { path: 'events', element: s(InstitutionEvents) },
           { path: 'events/new', element: s(InstitutionEventCreate) },

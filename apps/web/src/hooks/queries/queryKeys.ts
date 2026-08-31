@@ -66,6 +66,7 @@ export const queryKeys = {
     opportunities: (filters?: object) => ['faculty', 'opportunities', filters] as const,
     opportunity: (id: string) => ['faculty', 'opportunity', id] as const,
     countByStatus: () => ['faculty', 'count-by-status'] as const,
+    engagements: (tab?: string) => ['faculty', 'engagements', tab] as const,
   },
 
   admin: {
@@ -91,6 +92,8 @@ export const queryKeys = {
     skillGaps: (institutionId?: string) => ['institution', 'skill-gaps', institutionId] as const,
     placements: (institutionId?: string) => ['institution', 'placements', institutionId] as const,
     fdps: (institutionId?: string) => ['institution', 'fdps', institutionId] as const,
+    facultyEngagements: (institutionId?: string) =>
+      ['institution', 'faculty-engagements', institutionId] as const,
     facultyOpps: (filters?: object) => ['institution', 'faculty-opps', filters] as const,
     facultyOpp: (id: string) => ['institution', 'faculty-opp', id] as const,
   },

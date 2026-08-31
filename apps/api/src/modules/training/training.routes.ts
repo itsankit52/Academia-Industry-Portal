@@ -9,9 +9,15 @@ import {
   updateTrainingSchema,
   enrollmentQuerySchema,
   updateProgressSchema,
+  createTrainingModuleSchema,
+  updateTrainingModuleSchema,
+  createTrainingLessonSchema,
+  updateTrainingLessonSchema,
+  completeLessonSchema,
 } from '@aip/validation';
 import * as controller from './training.controller';
 import * as enrollmentController from './trainingEnrollment.controller';
+import * as contentController from './trainingContent.controller';
 
 const router = Router();
 
@@ -54,6 +60,97 @@ router.delete(
     resolveEntityId: (req) => req.params.id,
   }),
   controller.remove,
+);
+
+// Phase 15B — Training content (modules + lessons)
+router.get('/:id/content', validate(idParamSchema, 'params'), contentController.listModules);
+
+router.post(
+  '/:id/modules',
+  requireAuth,
+  requireRole('ADMIN'),
+  validate(idParamSchema, 'params'),
+  validate(createTrainingModuleSchema),
+  contentController.createModuleHandler,
+);
+
+router.patch(
+  '/:id/modules/:moduleId',
+  requireAuth,
+  requireRole('ADMIN'),
+  validate(idParamSchema, 'params'),
+  validate(updateTrainingModuleSchema),
+  contentController.updateModuleHandler,
+);
+
+router.delete(
+  '/:id/modules/:moduleId',
+  requireAuth,
+  requireRole('ADMIN'),
+  validate(idParamSchema, 'params'),
+  contentController.deleteModuleHandler,
+);
+
+router.post(
+  '/:id/lessons',
+  requireAuth,
+  requireRole('ADMIN'),
+  validate(idParamSchema, 'params'),
+  validate(createTrainingLessonSchema),
+  contentController.createLessonHandler,
+);
+
+router.patch(
+  '/lessons/:lessonId',
+  requireAuth,
+  requireRole('ADMIN'),
+  validate(idParamSchema, 'params'),
+  validate(updateTrainingLessonSchema),
+  contentController.updateLessonHandler,
+);
+
+router.delete(
+  '/lessons/:lessonId',
+  requireAuth,
+  requireRole('ADMIN'),
+  validate(idParamSchema, 'params'),
+  contentController.deleteLessonHandler,
+);
+
+router.get(
+  '/modules/:moduleId/lessons',
+  validate(idParamSchema, 'params'),
+  contentController.listLessons,
+);
+
+router.get(
+  '/lessons/:lessonId',
+  validate(idParamSchema, 'params'),
+  contentController.getLessonHandler,
+);
+
+// Phase 15B — Student lesson completion (idempotent)
+router.post(
+  '/:id/lessons/complete',
+  requireAuth,
+  requireRole('STUDENT'),
+  validate(idParamSchema, 'params'),
+  validate(completeLessonSchema),
+  auditLog({
+    action: 'TRAINING_PROGRESS_UPDATED',
+    entity: 'TrainingLesson',
+    resolveEntityId: (req) => (req.body as { lessonId?: string })?.lessonId,
+  }),
+  contentController.completeLessonHandler,
+);
+
+// Phase 15B — Reassess skills after training completion
+router.get(
+  '/enrollments/:enrollmentId/reassess',
+  requireAuth,
+  requireRole('STUDENT'),
+  validate(idParamSchema, 'params'),
+  contentController.reassessmentHandler,
 );
 
 // Phase 8 — Training enrollment endpoints

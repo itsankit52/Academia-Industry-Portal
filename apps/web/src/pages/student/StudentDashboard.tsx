@@ -8,6 +8,7 @@ import {
   FiTarget,
   FiTrendingUp,
   FiBookOpen,
+  FiClock,
 } from 'react-icons/fi';
 import { Link, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
@@ -58,13 +59,25 @@ export default function StudentDashboard() {
   const { data: assessmentSummary } = useAssessmentSummary();
   const { data: skillProfile, isLoading: skillProfileLoading } = useSkillProfile();
   // Phase 9B — personalized recommendations now carries career insights, benchmark, progression
-  const { data: personalized, isLoading: recsLoading, isError: recsError, refetch: refetchRecs } =
-    usePersonalizedRecommendations();
+  const {
+    data: personalized,
+    isLoading: recsLoading,
+    isError: recsError,
+    refetch: refetchRecs,
+  } = usePersonalizedRecommendations();
   // Phase 10 — placement readiness + outcome hooks
-  const { data: readiness, isLoading: readinessLoading, isError: readinessError, refetch: refetchReadiness } =
-    usePlacementReadiness();
-  const { data: outcomes, isLoading: outcomesLoading, isError: outcomesError, refetch: refetchOutcomes } =
-    usePlacementOutcomes();
+  const {
+    data: readiness,
+    isLoading: readinessLoading,
+    isError: readinessError,
+    refetch: refetchReadiness,
+  } = usePlacementReadiness();
+  const {
+    data: outcomes,
+    isLoading: outcomesLoading,
+    isError: outcomesError,
+    refetch: refetchOutcomes,
+  } = usePlacementOutcomes();
 
   const firstName = user?.email.split('@')[0] ?? 'Student';
 
@@ -109,6 +122,35 @@ export default function StudentDashboard() {
               icon={<FiAlertCircle />}
             />
           </div>
+
+          {/* Phase 14A: Internship lifecycle sub-row — surfaces how many
+              applications have moved past selection into an actual internship
+              (selected/ongoing/completed), separated from the generic
+              appliedCount which includes rejects/withdrawals. */}
+          {(() => {
+            const recent = data.recentApplications ?? [];
+            const selected = recent.filter((a) => a.status === 'SELECTED').length;
+            const ongoing = recent.filter(
+              (a) =>
+                a.status === 'INTERNSHIP_STARTED' ||
+                a.status === 'ONGOING' ||
+                a.status === 'OFFER_ACCEPTED',
+            ).length;
+            const completed = recent.filter((a) => a.status === 'COMPLETED').length;
+            const activeInternships = Math.max(ongoing, selected);
+            if (activeInternships === 0 && completed === 0) return null;
+            return (
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                <StatCard label="Selected for Internship" value={selected} icon={<FiBriefcase />} />
+                <StatCard
+                  label="Active Internships"
+                  value={activeInternships}
+                  icon={<FiActivity />}
+                />
+                <StatCard label="Completed Internships" value={completed} icon={<FiClock />} />
+              </div>
+            );
+          })()}
 
           {/* Skill Readiness Snapshot */}
           <Card>

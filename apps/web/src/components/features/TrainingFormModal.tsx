@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { createTrainingSchema, type CreateTrainingInput } from '@aip/validation';
 import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
@@ -16,8 +17,26 @@ interface Props {
   training?: TrainingProgram;
 }
 
-const formSchema = createTrainingSchema.omit({ skills: true });
-type FormData = Omit<CreateTrainingInput, 'skills'>;
+// Mirror the createTrainingSchema fields except `skills` so we don't need to
+// call `.omit()` on the ZodEffects (which has no omit method).  The
+// superRefine rule (EXTERNAL requires registrationUrl) doesn't apply in the
+// modal since we omit `contentType` and only expose the URL as optional.
+const formSchema = z.object({
+  title: z.string().min(3).max(200),
+  description: z.string().min(20).max(5000),
+  provider: z.string().min(1).max(200),
+  durationWeeks: z.number().int().min(1).max(104),
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
+  registrationDeadline: z.string().datetime().optional(),
+  registrationUrl: z.string().url().optional(),
+  status: z.enum(['ACTIVE', 'ARCHIVED']).default('ACTIVE'),
+  contentType: z.enum(['INTERNAL', 'EXTERNAL', 'HYBRID']).default('INTERNAL'),
+  difficulty: z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'EXPERT']).default('INTERMEDIATE'),
+  estimatedHours: z.number().min(0).max(10000).optional(),
+  certificateAvailable: z.boolean().default(false),
+});
+type FormData = z.infer<typeof formSchema>;
 
 export default function TrainingFormModal({ open, onClose, training }: Props) {
   const createTraining = useCreateTraining();

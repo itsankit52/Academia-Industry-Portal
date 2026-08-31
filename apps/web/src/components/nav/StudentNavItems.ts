@@ -47,6 +47,8 @@ export const studentNavItems: NavItem[] = [
   { to: '/student/aptitude', label: 'Aptitude', icon: FiTarget },
   { to: '/student/training', label: 'Training', icon: FiAward },
   { to: '/student/my-trainings', label: 'My Trainings', icon: FiBookOpen },
+  // Phase 15B — Student faculty/institution opportunity discovery
+  { to: '/student/faculty-opportunities', label: 'Faculty Opps', icon: FiTarget },
   { to: '/student/learning', label: 'Learning', icon: FiZap },
   { to: '/student/mentorship', label: 'Mentorship', icon: FiUser },
   { to: '/student/placements', label: 'Placement Drives', icon: FiDrive },

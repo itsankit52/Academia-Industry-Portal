@@ -21,3 +21,4 @@ export * from './facultyOpportunity';
 export * from './document';
 export * from './aptitude';
 export * from './placement';
+export * from './facultyApplication';

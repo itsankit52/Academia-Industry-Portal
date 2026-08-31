@@ -7,6 +7,7 @@ import { queryKeys } from './queryKeys';
 export interface FacultyDashboardData {
   totalApplications: number;
   activeApplications: number;
+  activeEngagements: number;
   upcomingInterviewsCount: number;
   profileCompletion: number;
   recentApplications: Application[];
@@ -18,6 +19,13 @@ const ACTIVE_STATUSES: ApplicationStatus[] = [
   'UNDER_REVIEW',
   'SHORTLISTED',
   'INTERVIEW_SCHEDULED',
+];
+
+const ACTIVE_ENGAGEMENT_STATUSES: ApplicationStatus[] = [
+  'SELECTED',
+  'OFFER_ACCEPTED',
+  'INTERNSHIP_STARTED',
+  'ONGOING',
 ];
 
 function computeProfileCompletion(profile: FacultyProfile | undefined): number {
@@ -53,13 +61,17 @@ export function useFacultyDashboard() {
         })),
       ]);
 
-      const totalApplications =
-        (Object.values(counts) as number[]).reduce((sum, v) => sum + v, 0);
+      const totalApplications = (Object.values(counts) as number[]).reduce((sum, v) => sum + v, 0);
       const activeApplications = ACTIVE_STATUSES.reduce((sum, s) => sum + (counts[s] ?? 0), 0);
+      const activeEngagements = ACTIVE_ENGAGEMENT_STATUSES.reduce(
+        (sum, s) => sum + (counts[s] ?? 0),
+        0,
+      );
 
       return {
         totalApplications,
         activeApplications,
+        activeEngagements,
         upcomingInterviewsCount: interviews.items.length,
         profileCompletion: computeProfileCompletion(profile),
         recentApplications: apps.items,

@@ -163,6 +163,28 @@ export interface FdpParticipation {
   byFacultyDept: { department: string; applied: number; accepted: number; completed: number }[];
 }
 
+export interface FacultyEngagementMetrics {
+  totalFaculty: number;
+  totalOpportunities: number;
+  totalApplications: number;
+  selected: number;
+  active: number;
+  completed: number;
+  byOpportunityType: { opportunityType: string; count: number }[];
+  byCompany: { companyId: string; companyName: string; count: number }[];
+  byFaculty: { facultyProfileId: string; fullName: string; count: number }[];
+}
+
+export interface FacultyEngagementRow {
+  facultyProfileId: string;
+  fullName: string;
+  department: string;
+  applied: number;
+  selected: number;
+  active: number;
+  completed: number;
+}
+
 export interface InstitutionStatsFilters {
   institutionId?: string;
   department?: string;
@@ -287,5 +309,15 @@ export function useInstitutionFdps(institutionId?: string) {
     queryKey: queryKeys.institution.fdps(institutionId),
     queryFn: () =>
       apiGet<FdpParticipation>(`/institution/dashboard/fdp-participation${qs({ institutionId })}`),
+  });
+}
+
+export function useInstitutionFacultyEngagements(institutionId?: string) {
+  return useQuery({
+    queryKey: queryKeys.institution.facultyEngagements(institutionId),
+    queryFn: () =>
+      apiGet<FacultyEngagementMetrics>(
+        `/institution/dashboard/faculty-engagements${qs({ institutionId })}`,
+      ),
   });
 }

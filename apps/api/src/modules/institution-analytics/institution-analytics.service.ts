@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 import {
   Application,
   AptitudeTest,
+  CompanyProfile,
   FacultyProfile,
   Interview,
   Internship,
@@ -825,5 +826,179 @@ export async function getFdpParticipation(
     acceptedToFdps,
     completedFdps,
     byFacultyDept: [],
+  };
+}
+
+/**
+ * Phase 13 — Faculty-industry engagement overview.
+ *
+ * Aggregates the institution's view of how its faculty members are
+ * participating in industry opportunities. Reuses the
+ * `FacultyOpportunity` collection directly so this works even when
+ * faculty apply to *industry* opportunities (the most common case) and
+ * also covers applications to institution-posted opportunities.
+ *
+ * Institution isolation is enforced by anchoring every read to the
+ * faculty profile's `institution` field; the institutionId is never
+ * taken from the client. Admin callers scope by institutionId via the
+ * same path-parameter pattern as the other analytics endpoints.
+ */
+export interface FacultyEngagementRow {
+  facultyProfileId: string;
+  fullName: string;
+  department: string;
+  applied: number;
+  selected: number;
+  active: number;
+  completed: number;
+}
+
+export interface FacultyEngagementMetrics {
+  totalFaculty: number;
+  totalOpportunities: number;
+  totalApplications: number;
+  selected: number;
+  active: number;
+  completed: number;
+  byOpportunityType: { opportunityType: string; count: number }[];
+  byCompany: { companyId: string; companyName: string; count: number }[];
+  byFaculty: FacultyEngagementRow[];
+}
+
+export async function getFacultyEngagementMetrics(
+  institutionId: Types.ObjectId,
+): Promise<FacultyEngagementMetrics> {
+  const facultyProfiles = await FacultyProfile.find({ institution: institutionId })
+    .select('_id fullName department')
+    .lean();
+  const facultyIds = facultyProfiles.map((f) => f._id);
+  const totalFaculty = facultyProfiles.length;
+
+  if (facultyIds.length === 0) {
+    return {
+      totalFaculty: 0,
+      totalOpportunities: 0,
+      totalApplications: 0,
+      selected: 0,
+      active: 0,
+      completed: 0,
+      byOpportunityType: [],
+      byCompany: [],
+      byFaculty: [],
+    };
+  }
+
+  const facultyMatch = { faculty: { $in: facultyIds } };
+
+  const [totalApplications, selected, active, completed, byTypeRaw, byCompanyRaw, byFacultyRaw] =
+    await Promise.all([
+      Application.countDocuments(facultyMatch),
+      Application.countDocuments({ ...facultyMatch, status: 'SELECTED' }),
+      Application.countDocuments({
+        ...facultyMatch,
+        status: { $in: ['OFFER_ACCEPTED', 'INTERNSHIP_STARTED', 'ONGOING'] },
+      }),
+      Application.countDocuments({ ...facultyMatch, status: 'COMPLETED' }),
+      Application.aggregate<{ _id: string; count: number }>([
+        { $match: facultyMatch },
+        { $group: { _id: '$opportunityType', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+      ]),
+      Application.aggregate<{ _id: unknown; count: number }>([
+        { $match: facultyMatch },
+        {
+          $lookup: {
+            from: 'facultyopportunities',
+            localField: 'opportunity',
+            foreignField: '_id',
+            as: 'opp',
+          },
+        },
+        { $unwind: '$opp' },
+        { $match: { 'opp.hostType': 'COMPANY' } },
+        { $group: { _id: '$opp.host', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 10 },
+      ]),
+      Application.aggregate<{
+        _id: unknown;
+        total: number;
+        selected: number;
+        active: number;
+        completed: number;
+      }>([
+        { $match: facultyMatch },
+        {
+          $group: {
+            _id: '$faculty',
+            total: { $sum: 1 },
+            selected: {
+              $sum: { $cond: [{ $eq: ['$status', 'SELECTED'] }, 1, 0] },
+            },
+            active: {
+              $sum: {
+                $cond: [
+                  { $in: ['$status', ['OFFER_ACCEPTED', 'INTERNSHIP_STARTED', 'ONGOING']] },
+                  1,
+                  0,
+                ],
+              },
+            },
+            completed: { $sum: { $cond: [{ $eq: ['$status', 'COMPLETED'] }, 1, 0] } },
+          },
+        },
+        { $sort: { total: -1 } },
+      ]),
+    ]);
+
+  // Look up the company names for the byCompany breakdown. Wrapped so a
+  // missing company record does not blow up the entire response — the
+  // name just shows as "Unknown" in that case.
+  const companyIds = byCompanyRaw.map((r) => r._id).filter(Boolean) as Types.ObjectId[];
+  type CompanyNameRow = { _id: Types.ObjectId; companyName: string };
+  const companyDocs: CompanyNameRow[] = companyIds.length
+    ? await CompanyProfile.find({ _id: { $in: companyIds } })
+        .select('companyName')
+        .lean<CompanyNameRow[]>()
+    : [];
+  const companyNameMap = new Map(companyDocs.map((c) => [String(c._id), c.companyName] as const));
+
+  const facultyMap = new Map(facultyProfiles.map((f) => [String(f._id), f]));
+  const byFaculty: FacultyEngagementRow[] = byFacultyRaw.map((r) => {
+    const profile = facultyMap.get(String(r._id));
+    return {
+      facultyProfileId: String(r._id),
+      fullName: profile?.fullName ?? '—',
+      department: profile?.department ?? '—',
+      applied: r.total,
+      selected: r.selected,
+      active: r.active,
+      completed: r.completed,
+    };
+  });
+
+  // `totalOpportunities` is the count of distinct industry opportunities
+  // the institution's faculty have applied to — useful for the dashboard
+  // card and as a denominator for the engagement rate.
+  const distinctOpportunitiesAgg = await Application.distinct('opportunity', facultyMatch);
+  const totalOpportunities = distinctOpportunitiesAgg.length;
+
+  return {
+    totalFaculty,
+    totalOpportunities,
+    totalApplications,
+    selected,
+    active,
+    completed,
+    byOpportunityType: byTypeRaw.map((r) => ({
+      opportunityType: r._id,
+      count: r.count,
+    })),
+    byCompany: byCompanyRaw.map((r) => ({
+      companyId: String(r._id),
+      companyName: companyNameMap.get(String(r._id)) ?? 'Unknown',
+      count: r.count,
+    })),
+    byFaculty,
   };
 }

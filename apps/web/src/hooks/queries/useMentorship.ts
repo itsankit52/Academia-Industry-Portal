@@ -41,9 +41,10 @@ export function useMentors(filters: MentorFilters = {}) {
 export function useMentor(userId: string) {
   return useQuery({
     queryKey: queryKeys.mentorship.mentor(userId),
-    queryFn: () => apiGet<MentorProfile & { fullName: string; activeCount: number }>(
-      `/mentorship/mentors/${userId}`,
-    ),
+    queryFn: () =>
+      apiGet<MentorProfile & { fullName: string; activeCount: number }>(
+        `/mentorship/mentors/${userId}`,
+      ),
     enabled: !!userId,
   });
 }
@@ -69,7 +70,8 @@ export interface BecomeMentorInput {
 export function useBecomeMentor() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: BecomeMentorInput) => apiPost<MentorProfile>('/mentorship/mentors/me', input),
+    mutationFn: (input: BecomeMentorInput) =>
+      apiPost<MentorProfile>('/mentorship/mentors/me', input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['mentorship', 'mentors'] });
       toast.success('You are now available as a mentor.');
@@ -138,14 +140,14 @@ export function useMyRequestsAsMentor(filters: MyRequestFilters = {}) {
   });
 }
 
-export function useMentorshipRequest(id: string) {
+export function useMentorshipRequest(requestId: string) {
   return useQuery({
-    queryKey: queryKeys.mentorship.request(id),
+    queryKey: queryKeys.mentorship.request(requestId),
     queryFn: () =>
       apiGet<MentorshipRequest & { mentorName: string; menteeName: string }>(
-        `/mentorship/requests/${id}`,
+        `/mentorship/requests/${requestId}`,
       ),
-    enabled: !!id,
+    enabled: !!requestId,
   });
 }
 

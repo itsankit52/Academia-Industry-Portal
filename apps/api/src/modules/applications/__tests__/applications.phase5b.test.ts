@@ -34,13 +34,7 @@ vi.mock('../../notifications/notifications.service', () => ({
   createNotification: vi.fn(() => Promise.resolve()),
 }));
 
-import {
-  Application,
-  CompanyProfile,
-  Internship,
-  MentorProfile,
-  User,
-} from '../../../models';
+import { Application, CompanyProfile, Internship, MentorProfile, User } from '../../../models';
 import { createNotification } from '../../notifications/notifications.service';
 import {
   assignMentorToApplication,
@@ -94,13 +88,32 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(CompanyProfile.findOne).mockImplementation((() =>
     Promise.resolve({ _id: COMPANY_ID })) as never);
-  vi.mocked(Internship.findById).mockImplementation((() => ({
-    select: () => Promise.resolve({ _id: INTERNSHIP_ID, company: COMPANY_ID, title: 'Backend Intern' }),
-  })) as never);
+  // Phase 14A: CompanyProfile.findById is called with .select('user').lean()
+  // by resolveCompanyUserIdForApp — return a chainable Query mock.
+  vi.mocked(CompanyProfile.findById).mockImplementation((() => {
+    const doc = { _id: COMPANY_ID, user: COMPANY_USER };
+    const chain: Record<string, unknown> = {};
+    chain.lean = () => Promise.resolve(doc);
+    chain.then = (resolve: (v: unknown) => unknown) => Promise.resolve(doc).then(resolve);
+    return { select: () => chain };
+  }) as never);
+  // Dual-shape mock: supports both `.select(...).lean()` (used by
+  // resolveCompanyUserIdForApp) and the existing `.select(...)` chain that
+  // pre-Phase-14A code awaited directly.
+  vi.mocked(Internship.findById).mockImplementation((() => {
+    const doc = { _id: INTERNSHIP_ID, company: COMPANY_ID, title: 'Backend Intern' };
+    const chain: Record<string, unknown> = {};
+    chain.lean = () => Promise.resolve(doc);
+    chain.then = (resolve: (v: unknown) => unknown) => Promise.resolve(doc).then(resolve);
+    return {
+      select: () => chain,
+    };
+  }) as never);
   vi.mocked(MentorProfile.findOne).mockImplementation((() =>
     Promise.resolve({ user: MENTOR_USER, expertise: ['node', 'react'] })) as never);
   vi.mocked(User.findById).mockImplementation((() => ({
-    select: () => Promise.resolve({ _id: MENTOR_USER, email: 'mentor@example.com', role: 'FACULTY' }),
+    select: () =>
+      Promise.resolve({ _id: MENTOR_USER, email: 'mentor@example.com', role: 'FACULTY' }),
   })) as never);
   vi.mocked(createNotification).mockResolvedValue(undefined as never);
 });
@@ -108,6 +121,8 @@ beforeEach(() => {
 describe('Phase 5B — ONGOING → COMPLETED transition', () => {
   it('lets the owning company complete an ONGOING internship', async () => {
     const app = applicationDoc('ONGOING');
+    // Assign a mentor so the Phase 14A mentor-completion notification fires.
+    app.mentor = MENTOR_USER;
 
     const result = (await completeInternshipForApplication(
       COMPANY_USER,
@@ -120,36 +135,31 @@ describe('Phase 5B — ONGOING → COMPLETED transition', () => {
     expect(app.status).toBe('COMPLETED');
     expect((app as { completedAt?: Date }).completedAt).toBeInstanceOf(Date);
     expect((app as { save: () => unknown }).save).toHaveBeenCalled();
-    // Two notifications: completion + certificate available
-    expect(createNotification).toHaveBeenCalledTimes(2);
+    // Phase 14A: Four notifications now sent — completion + certificate for student,
+    // plus completion notifications to assigned mentor and owning company.
+    expect(createNotification).toHaveBeenCalledTimes(4);
   });
 
   it('refuses completion when the application is not ONGOING', async () => {
     applicationDoc('SELECTED');
     await expect(
-      completeInternshipForApplication(
-        COMPANY_USER,
-        'COMPANY',
-        String(APPLICATION_ID),
-        {},
-      ),
+      completeInternshipForApplication(COMPANY_USER, 'COMPANY', String(APPLICATION_ID), {}),
     ).rejects.toMatchObject({ statusCode: 400 });
   });
 
   it('refuses completion from a company that does not own the internship', async () => {
     applicationDoc('ONGOING');
     // The owning company is COMPANY_ID; this one resolves a different id.
-    vi.mocked(Internship.findById).mockImplementation((() => ({
-      select: () => Promise.resolve({ _id: INTERNSHIP_ID, company: new Types.ObjectId() }),
-    })) as never);
+    vi.mocked(Internship.findById).mockImplementation((() => {
+      const doc = { _id: INTERNSHIP_ID, company: new Types.ObjectId() };
+      const chain: Record<string, unknown> = {};
+      chain.lean = () => Promise.resolve(doc);
+      chain.then = (resolve: (v: unknown) => unknown) => Promise.resolve(doc).then(resolve);
+      return { select: () => chain };
+    }) as never);
 
     await expect(
-      completeInternshipForApplication(
-        COMPANY_USER,
-        'COMPANY',
-        String(APPLICATION_ID),
-        {},
-      ),
+      completeInternshipForApplication(COMPANY_USER, 'COMPANY', String(APPLICATION_ID), {}),
     ).rejects.toMatchObject({ statusCode: 403, message: 'Not your application' });
   });
 });
@@ -178,12 +188,9 @@ describe('Phase 5B — Mentor assignment', () => {
     vi.mocked(MentorProfile.findOne).mockImplementation((() => Promise.resolve(null)) as never);
 
     await expect(
-      assignMentorToApplication(
-        COMPANY_USER,
-        'COMPANY',
-        String(APPLICATION_ID),
-        { mentorUserId: MENTOR_USER.toHexString() },
-      ),
+      assignMentorToApplication(COMPANY_USER, 'COMPANY', String(APPLICATION_ID), {
+        mentorUserId: MENTOR_USER.toHexString(),
+      }),
     ).rejects.toMatchObject({
       statusCode: 400,
       message: 'The selected user is not registered as a mentor',
@@ -194,12 +201,9 @@ describe('Phase 5B — Mentor assignment', () => {
   it('rejects assignment for an application that has not started yet', async () => {
     applicationDoc('SELECTED');
     await expect(
-      assignMentorToApplication(
-        COMPANY_USER,
-        'COMPANY',
-        String(APPLICATION_ID),
-        { mentorUserId: MENTOR_USER.toHexString() },
-      ),
+      assignMentorToApplication(COMPANY_USER, 'COMPANY', String(APPLICATION_ID), {
+        mentorUserId: MENTOR_USER.toHexString(),
+      }),
     ).rejects.toMatchObject({ statusCode: 400 });
   });
 
@@ -207,11 +211,7 @@ describe('Phase 5B — Mentor assignment', () => {
     const app = applicationDoc('ONGOING');
     app.mentor = MENTOR_USER;
 
-    await removeMentorFromApplication(
-      COMPANY_USER,
-      'COMPANY',
-      String(APPLICATION_ID),
-    );
+    await removeMentorFromApplication(COMPANY_USER, 'COMPANY', String(APPLICATION_ID));
 
     expect(app.mentor).toBeUndefined();
     expect((app as { mentorAssignedAt?: Date }).mentorAssignedAt).toBeUndefined();
@@ -220,16 +220,16 @@ describe('Phase 5B — Mentor assignment', () => {
   it('refuses to remove a mentor from a different company', async () => {
     const app = applicationDoc('ONGOING');
     app.mentor = MENTOR_USER;
-    vi.mocked(Internship.findById).mockImplementation((() => ({
-      select: () => Promise.resolve({ _id: INTERNSHIP_ID, company: new Types.ObjectId() }),
-    })) as never);
+    vi.mocked(Internship.findById).mockImplementation((() => {
+      const doc = { _id: INTERNSHIP_ID, company: new Types.ObjectId() };
+      const chain: Record<string, unknown> = {};
+      chain.lean = () => Promise.resolve(doc);
+      chain.then = (resolve: (v: unknown) => unknown) => Promise.resolve(doc).then(resolve);
+      return { select: () => chain };
+    }) as never);
 
     await expect(
-      removeMentorFromApplication(
-        COMPANY_USER,
-        'COMPANY',
-        String(APPLICATION_ID),
-      ),
+      removeMentorFromApplication(COMPANY_USER, 'COMPANY', String(APPLICATION_ID)),
     ).rejects.toMatchObject({ statusCode: 403 });
   });
 });
