@@ -200,8 +200,8 @@ export default function Landing() {
               Now open for placements
             </div>
             <h1 className="text-3xl lg:text-4xl font-bold leading-tight mb-6 tracking-tight">
-              The Academia &ndash; Industry Portal that connects students, faculty, institutions,
-              and companies &mdash; from skill assessment to placement.
+              The AcadIn &ndash; that connects students, faculty, institutions, and companies
+              &mdash; from skill assessment to placement.
             </h1>
             <p className="text-lg text-neutral-600 leading-relaxed mb-10 max-w-2xl dark:text-neutral-400">
               A single platform where every stakeholder in the placement lifecycle works from the

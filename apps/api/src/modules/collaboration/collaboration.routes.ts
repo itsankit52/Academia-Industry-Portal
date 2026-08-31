@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   createEventSchema,
   updateEventSchema,
+  updateEventSkillsSchema,
   listEventsQuerySchema,
   registerForEventSchema,
   listMyRegistrationsQuerySchema,
@@ -45,6 +46,16 @@ router.patch(
   validate(idParamSchema, 'params'),
   validate(updateEventSchema),
   ctrl.update,
+);
+
+// Phase 15C — Attach skills to an event for skill development tracking.
+router.patch(
+  '/:id/skills',
+  requireAuth,
+  requireRole('COMPANY', 'INSTITUTION', 'FACULTY', 'ADMIN'),
+  validate(idParamSchema, 'params'),
+  validate(updateEventSkillsSchema),
+  ctrl.updateEventSkills,
 );
 
 router.post(

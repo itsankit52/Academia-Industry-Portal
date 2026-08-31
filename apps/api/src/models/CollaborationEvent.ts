@@ -2,13 +2,13 @@ import { Schema, model, type HydratedDocument, type InferSchemaType } from 'mong
 import { COLLAB_EVENT_TYPES, ROLES } from '@aip/config';
 
 export const COLLAB_EVENT_HOST_TYPES = ['COMPANY', 'INSTITUTION'] as const;
-export type CollabEventHostType = typeof COLLAB_EVENT_HOST_TYPES[number];
+export type CollabEventHostType = (typeof COLLAB_EVENT_HOST_TYPES)[number];
 
 export const COLLAB_EVENT_MODES = ['ONLINE', 'ONSITE', 'HYBRID'] as const;
-export type CollabEventMode = typeof COLLAB_EVENT_MODES[number];
+export type CollabEventMode = (typeof COLLAB_EVENT_MODES)[number];
 
 export const COLLAB_EVENT_STATUSES = ['DRAFT', 'PUBLISHED', 'CANCELLED', 'COMPLETED'] as const;
-export type CollabEventStatus = typeof COLLAB_EVENT_STATUSES[number];
+export type CollabEventStatus = (typeof COLLAB_EVENT_STATUSES)[number];
 
 const collaborationEventSchema = new Schema(
   {
@@ -36,6 +36,12 @@ const collaborationEventSchema = new Schema(
       default: [],
       set: (arr: string[]) => (arr ?? []).map((s) => s.trim().toLowerCase()).filter(Boolean),
     },
+    /** Phase 15C — Skills associated with this event for skill development tracking. */
+    skills: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'Skill' }],
+      default: [],
+      index: true,
+    },
     status: {
       type: String,
       enum: [...COLLAB_EVENT_STATUSES],
@@ -61,5 +67,7 @@ const collaborationEventSchema = new Schema(
 collaborationEventSchema.index({ title: 'text', description: 'text' });
 collaborationEventSchema.index({ status: 1, startAt: 1 });
 
-export type CollaborationEventDoc = HydratedDocument<InferSchemaType<typeof collaborationEventSchema>>;
+export type CollaborationEventDoc = HydratedDocument<
+  InferSchemaType<typeof collaborationEventSchema>
+>;
 export const CollaborationEvent = model('CollaborationEvent', collaborationEventSchema);

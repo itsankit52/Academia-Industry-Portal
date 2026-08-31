@@ -54,3 +54,37 @@ export interface AptitudeTestSummary {
   submittedAt?: string;
   createdAt: string;
 }
+
+/**
+ * Phase 15C — Summary of aptitude performance across all categories.
+ * Used in placement-readiness and career-analysis.
+ */
+export interface AptitudePerformanceSummary {
+  /** Overall aptitude score: weighted average across all SUBMITTED tests (0-100). */
+  overallScore: number;
+  /** When insufficient aptitude data exists. */
+  insufficientData: boolean;
+  /** Reasons why data is insufficient. */
+  insufficientReasons: string[];
+  /** Per-category breakdown. */
+  categories: AptitudeCategoryScore[];
+  /** Total tests taken across all categories. */
+  totalTestsTaken: number;
+  /** Number of categories where student passed. */
+  categoriesPassed: number;
+  /** ISO timestamp. */
+  generatedAt: string;
+}
+
+/** Per-category aptitude score. */
+export interface AptitudeCategoryScore {
+  category: AptitudeCategory;
+  score: number;
+  passed: boolean;
+  totalQuestions: number;
+  correctCount: number;
+  /** Number of attempts in this category. */
+  attempts: number;
+  /** Best score achieved in this category. */
+  bestScore: number;
+}

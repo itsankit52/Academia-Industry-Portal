@@ -16,11 +16,7 @@ import type { ApplicationStatus, OpportunityType, Proficiency } from '@aip/confi
  * can present a single consistent verdict.
  */
 export type PlacementReadinessLevel =
-  | 'PLACEMENT_READY'
-  | 'NEARLY_READY'
-  | 'DEVELOPING'
-  | 'NEEDS_IMPROVEMENT'
-  | 'NOT_READY';
+  'PLACEMENT_READY' | 'NEARLY_READY' | 'DEVELOPING' | 'NEEDS_IMPROVEMENT' | 'NOT_READY';
 
 export const PLACEMENT_READINESS_BANDS: {
   level: PlacementReadinessLevel;
@@ -63,11 +59,15 @@ export const PLACEMENT_READINESS_BANDS: {
 /* ─── Component Scores ────────────────────────────────────────────────── */
 
 /**
- * Deterministic component weights. Total = 100. Weights were selected so
+ * Deterministic component weights. Total = 1. Weights were selected so
  * Skills + Assessments + Industry Alignment are the dominant signals (they
  * are the most predictive in the existing data) while training, internships,
- * career target, and application history provide calibration. The exact
- * weights live here so the API, the UI, and the tests agree.
+ * career target, application history, and aptitude provide calibration.
+ *
+ * Phase 15C: Aptitude is now an explicit component. To preserve the existing
+ * 7-component architecture without changing the overall weighting, the
+ * `applicationHistory` weight is reduced and the `aptitude` weight is added.
+ * Sum is still 1.0.
  */
 export const PLACEMENT_READINESS_WEIGHTS = {
   skills: 0.3,
@@ -76,7 +76,8 @@ export const PLACEMENT_READINESS_WEIGHTS = {
   training: 0.1,
   internshipExperience: 0.1,
   careerTarget: 0.1,
-  applicationHistory: 0.05,
+  applicationHistory: 0.03,
+  aptitude: 0.02,
 } as const;
 
 export interface PlacementComponentScore {
@@ -88,7 +89,8 @@ export interface PlacementComponentScore {
     | 'TRAINING'
     | 'INTERNSHIP_EXPERIENCE'
     | 'CAREER_TARGET'
-    | 'APPLICATION_HISTORY';
+    | 'APPLICATION_HISTORY'
+    | 'APTITUDE';
   /** Component label (UI-friendly). */
   label: string;
   /** 0-100 normalized score. */
@@ -294,6 +296,8 @@ export interface SkillOutcomeMetric {
   category?: string;
   /** How many published opportunities require this skill. */
   skillDemandCount: number;
+  /** Distinct opportunities requiring this skill (job + internship). */
+  opportunityCount: number;
   /** Distinct applicants (StudentSkill matches + application). */
   applicantsWithSkill: number;
   /** Distinct applicants selected (status SELECTED or OFFER_ACCEPTED). */
@@ -306,6 +310,14 @@ export interface SkillOutcomeMetric {
    * causation — UI must render this as a *correlation/association* signal.
    */
   skillOutcomeStrength: number;
+  /**
+   * Phase 15C: Demand trend over the last 6 months.
+   * - "increasing" — demand grew month-over-month in most recent quarter
+   * - "stable" — demand is relatively flat
+   * - "decreasing" — demand fell in the most recent quarter
+   * - null — insufficient historical data to determine trend
+   */
+  trend?: 'increasing' | 'stable' | 'decreasing' | null;
 }
 
 export interface SkillOutcomeAnalytics {
@@ -314,6 +326,7 @@ export interface SkillOutcomeAnalytics {
   /** Sample-size floor — when the underlying dataset is too small, we
    *  return this state instead of fabricating numbers. */
   insufficientData: boolean;
+  insufficientReasons: string[];
   minimumSampleSize: number;
   generatedAt: string;
 }
@@ -567,11 +580,7 @@ export interface PlacementDriveOutcome {
 
 /* ─── Action Items ──────────────────────────────────────────────────────── */
 
-export type {
-  PlacementActionItemType,
-  PlacementActionItemSeverity,
-  PlacementActionItemStatus,
-};
+export type { PlacementActionItemType, PlacementActionItemSeverity, PlacementActionItemStatus };
 
 export interface PlacementActionItem {
   id: string;

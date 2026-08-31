@@ -8,9 +8,7 @@ export default function Footer() {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="text-lg font-bold text-indigo-600">AIP</span>
-            <span className="text-sm text-slate-500 dark:text-slate-400">
-              Academia-Industry Portal
-            </span>
+            <span className="text-sm text-slate-500 dark:text-slate-400">AcadIn</span>
           </div>
           <nav className="flex items-center gap-6 text-sm text-slate-500 dark:text-slate-400">
             <Link
@@ -39,7 +37,7 @@ export default function Footer() {
             </Link>
           </nav>
           <p className="text-xs text-slate-400 dark:text-slate-500">
-            &copy; {year} Academia-Industry. All rights reserved.
+            &copy; {year} AcadIn. All rights reserved.
           </p>
         </div>
       </div>

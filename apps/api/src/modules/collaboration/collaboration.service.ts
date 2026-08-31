@@ -18,8 +18,10 @@ import {
   User,
   StudentProfile,
   FacultyProfile,
+  Skill,
 } from '../../models';
 import { createNotification } from '../notifications/notifications.service';
+import { processEventSkillsForRegistration } from './eventSkill.service';
 
 interface HostRef {
   hostType: 'COMPANY' | 'INSTITUTION';
@@ -77,6 +79,26 @@ async function assertHostOrAdmin(eventId: string, userId: string, role: Role) {
     if (user?.institution && String(event.host) === String(user.institution)) return event;
   }
   throw AppError.forbidden('Not your event');
+}
+
+export async function updateEventSkills(
+  eventId: string,
+  userId: string,
+  role: Role,
+  skillIds: string[],
+) {
+  const event = await assertHostOrAdmin(eventId, userId, role);
+  const validSkillIds = skillIds
+    .filter((id) => /^[a-f\d]{24}$/i.test(id))
+    .map((id) => new Types.ObjectId(id));
+  const existingSkills = await Skill.find({ _id: { $in: validSkillIds } })
+    .select('_id')
+    .lean();
+  const existingIds = new Set(existingSkills.map((s) => String(s._id)));
+  const finalIds = validSkillIds.filter((id) => existingIds.has(String(id)));
+  event.skills = finalIds;
+  await event.save();
+  return event.toJSON();
 }
 
 export async function createEvent(userId: string, role: Role, input: CreateEventInput) {
@@ -318,6 +340,21 @@ export async function markAttended(
   if (!reg) throw AppError.notFound('Registration not found');
   reg.attendedAt = new Date();
   await reg.save();
+  // Phase 15C: process event-attached skills into the student's skill
+  // profile as evidence of skill development. Idempotent — safe to call
+  // multiple times.
+  let skillDevelopment: {
+    processed: number;
+    skipped: number;
+    added: string[];
+    alreadyPresent: string[];
+  } | null = null;
+  try {
+    skillDevelopment = await processEventSkillsForRegistration(String(reg._id));
+  } catch {
+    // Best-effort: never fail attendance because skill processing broke.
+    skillDevelopment = null;
+  }
   await createNotification(
     attendeeUserId,
     'ANNOUNCEMENT',
@@ -325,7 +362,17 @@ export async function markAttended(
     'Your attendance has been recorded for a recent event.',
     '/student/events/registrations',
   );
-  return reg.toJSON();
+  const json = reg.toJSON() as Record<string, unknown>;
+  if (skillDevelopment && skillDevelopment.processed > 0) {
+    return {
+      ...json,
+      skillDevelopment: {
+        processed: skillDevelopment.processed,
+        addedCount: skillDevelopment.added.length,
+      },
+    };
+  }
+  return json;
 }
 
 // Phase 8 — Event feedback
@@ -385,9 +432,7 @@ export async function submitEventFeedback(
   if (!reg.attendedAt) {
     const isPast = event.endAt ? event.endAt < new Date() : event.startAt < new Date();
     if (!isPast) {
-      throw AppError.badRequest(
-        'Feedback is only available after attending the event',
-      );
+      throw AppError.badRequest('Feedback is only available after attending the event');
     }
   }
 

@@ -31,6 +31,16 @@ export const updateEventSchema = createEventSchema.partial().extend({
   status: statusEnum.optional(),
 });
 
+// Phase 15C — Attach skills to an event for skill-development tracking.
+export const updateEventSkillsSchema = z
+  .object({
+    skillIds: z
+      .array(z.string().regex(/^[a-f\d]{24}$/i, 'Invalid skill id'))
+      .max(20)
+      .default([]),
+  })
+  .strict();
+
 export const listEventsQuerySchema = z
   .object({
     page: z.coerce.number().int().min(1).default(1),
@@ -86,6 +96,7 @@ export type SubmitFeedbackInput = z.infer<typeof submitFeedbackSchema>;
 
 export type CreateEventInput = z.infer<typeof createEventSchema>;
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;
+export type UpdateEventSkillsInput = z.infer<typeof updateEventSkillsSchema>;
 export type ListEventsQuery = z.infer<typeof listEventsQuerySchema>;
 export type RegisterForEventInput = z.infer<typeof registerForEventSchema>;
 export type ListMyRegistrationsQuery = z.infer<typeof listMyRegistrationsQuerySchema>;

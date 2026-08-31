@@ -11,6 +11,11 @@ const eventRegistrationSchema = new Schema(
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     registeredAt: { type: Date, default: Date.now },
     attendedAt: { type: Date },
+    /** Phase 15C — IDs of event skills already processed for this registration. */
+    skillsProcessed: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'Skill' }],
+      default: [],
+    },
     feedback: { type: String, trim: true, maxlength: 2000 },
     rating: { type: Number, min: 1, max: 5 },
   },
@@ -30,5 +35,7 @@ const eventRegistrationSchema = new Schema(
 
 eventRegistrationSchema.index({ event: 1, user: 1 }, { unique: true });
 
-export type EventRegistrationDoc = HydratedDocument<InferSchemaType<typeof eventRegistrationSchema>>;
+export type EventRegistrationDoc = HydratedDocument<
+  InferSchemaType<typeof eventRegistrationSchema>
+>;
 export const EventRegistration = model('EventRegistration', eventRegistrationSchema);

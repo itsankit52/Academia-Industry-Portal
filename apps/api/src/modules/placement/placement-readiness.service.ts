@@ -15,6 +15,8 @@
  */
 
 import { Types } from 'mongoose';
+import { APTITUDE_CATEGORIES } from '@aip/config';
+import type { AptitudeCategory } from '@aip/config';
 import type {
   PlacementReadiness,
   PlacementReadinessLevel,
@@ -24,13 +26,11 @@ import type {
   PlacementNextAction,
   StudentProficiencyRow,
 } from '@aip/types';
-import {
-  PLACEMENT_READINESS_BANDS,
-  PLACEMENT_READINESS_WEIGHTS,
-} from '@aip/types';
+import { PLACEMENT_READINESS_BANDS, PLACEMENT_READINESS_WEIGHTS } from '@aip/types';
 import {
   Application,
   Assessment,
+  AptitudeTest,
   Internship,
   Job,
   StudentProfile,
@@ -144,7 +144,9 @@ async function buildSkillsComponent(
     evidence.push(`${profile.totals.totalSkills} skills on profile.`);
   }
   if (profile.totals.assessedSkillsCount > 0) {
-    evidence.push(`${profile.totals.assessedSkillsCount} skill${profile.totals.assessedSkillsCount === 1 ? '' : 's'} verified by assessment.`);
+    evidence.push(
+      `${profile.totals.assessedSkillsCount} skill${profile.totals.assessedSkillsCount === 1 ? '' : 's'} verified by assessment.`,
+    );
   } else {
     evidence.push('No assessments yet — verifying skills strengthens your profile.');
   }
@@ -343,8 +345,8 @@ async function buildInternshipExperienceComponent(studentProfileId: Types.Object
   }
 
   const completed = internships.filter((i) => i.status === 'COMPLETED').length;
-  const ongoing = internships.filter((i) =>
-    i.status === 'INTERNSHIP_STARTED' || i.status === 'ONGOING',
+  const ongoing = internships.filter(
+    (i) => i.status === 'INTERNSHIP_STARTED' || i.status === 'ONGOING',
   ).length;
   const selected = internships.filter((i) => i.status === 'SELECTED').length;
   const withMentor = internships.filter((i) => Boolean(i.mentor)).length;
@@ -363,7 +365,9 @@ async function buildInternshipExperienceComponent(studentProfileId: Types.Object
     evidence.push(`${ongoing} internship${ongoing === 1 ? '' : 's'} currently ongoing.`);
   }
   if (selected > 0 && ongoing === 0 && completed === 0) {
-    evidence.push(`Selected for ${selected} internship${selected === 1 ? '' : 's'} (not yet started).`);
+    evidence.push(
+      `Selected for ${selected} internship${selected === 1 ? '' : 's'} (not yet started).`,
+    );
   }
   if (withMentor > 0) {
     evidence.push(`Mentor assigned for ${withMentor} internship${withMentor === 1 ? '' : 's'}.`);
@@ -409,9 +413,7 @@ async function buildCareerTargetComponent(
 
   const regex = new RegExp(tokens.map(escapeRegex).join('|'), 'i');
   const [jobTitles, internTitles] = await Promise.all([
-    Job.find({ status: 'PUBLISHED', title: regex })
-      .select('requiredSkills preferredSkills')
-      .lean(),
+    Job.find({ status: 'PUBLISHED', title: regex }).select('requiredSkills preferredSkills').lean(),
     Internship.find({ status: 'PUBLISHED', title: regex })
       .select('requiredSkills preferredSkills')
       .lean(),
@@ -426,9 +428,7 @@ async function buildCareerTargetComponent(
   if (requiredIds.size === 0) {
     return {
       score: clamp01to100(Math.min(70, studentSkillIds.length * 6)),
-      evidence: [
-        'No published opportunities match your preferred roles — broaden your search.',
-      ],
+      evidence: ['No published opportunities match your preferred roles — broaden your search.'],
       insufficient: [],
     };
   }
@@ -441,7 +441,8 @@ async function buildCareerTargetComponent(
   const evidence: string[] = [
     `Target role readiness: ${Math.round(ratio * 100)}% — ${match} of ${requiredIds.size} required/preferred skills matched.`,
   ];
-  if (match === 0) evidence.push('No skill overlap with current opportunities matching your preferred roles.');
+  if (match === 0)
+    evidence.push('No skill overlap with current opportunities matching your preferred roles.');
 
   return { score, evidence, insufficient: [] };
 }
@@ -476,7 +477,9 @@ async function buildApplicationHistoryComponent(studentProfileId: Types.ObjectId
   if (totalCount < MIN_APPLICATIONS_FOR_OUTCOME_SAMPLE) {
     return {
       score: 0,
-      evidence: [`Only ${totalCount} application${totalCount === 1 ? '' : 's'} on file — outcomes need a larger sample.`],
+      evidence: [
+        `Only ${totalCount} application${totalCount === 1 ? '' : 's'} on file — outcomes need a larger sample.`,
+      ],
       insufficient: totalCount === 0 ? ['No applications.'] : [],
     };
   }
@@ -491,9 +494,7 @@ async function buildApplicationHistoryComponent(studentProfileId: Types.ObjectId
   const expiredPenalty = Math.min(15, expiredCount * 5);
   const score = clamp01to100(volumeScore + successScore + interviewScore - expiredPenalty);
 
-  const evidence: string[] = [
-    `${totalCount} application${totalCount === 1 ? '' : 's'} submitted.`,
-  ];
+  const evidence: string[] = [`${totalCount} application${totalCount === 1 ? '' : 's'} submitted.`];
   if (interviewCount > 0) {
     evidence.push(`${interviewCount} reached the interview stage.`);
   }
@@ -505,6 +506,102 @@ async function buildApplicationHistoryComponent(studentProfileId: Types.ObjectId
   }
 
   return { score, evidence, insufficient: [] };
+}
+
+/**
+ * Phase 15C — Aptitude component.
+ *
+ * Deterministic formula:
+ *   - Aggregate SUBMITTED aptitude tests by category.
+ *   - Per-category score = best score achieved in that category.
+ *   - Component score = weighted average across all APTITUDE_CATEGORIES,
+ *     where weight per category = 1/N (N = number of APTITUDE_CATEGORIES).
+ *     When a student hasn't attempted a category, that category contributes
+ *     0 and the student is flagged as "insufficient" — we do NOT assume a
+ *     zero score represents weak aptitude.
+ *   - Bonus: +5 if all categories have at least one submitted test.
+ *
+ * The component is intentionally small (weight 0.02 in the overall
+ * readiness) — its role is to expose aptitude performance as a
+ * placement-readiness signal without dominating the existing 7 components.
+ */
+async function buildAptitudeComponent(studentUserId: Types.ObjectId): Promise<{
+  score: number;
+  evidence: string[];
+  insufficient: string[];
+  perCategory: Array<{ category: AptitudeCategory; score: number; attempts: number }>;
+}> {
+  const tests = await AptitudeTest.find({
+    user: studentUserId,
+    status: 'SUBMITTED',
+  })
+    .select('category score correctCount totalQuestions')
+    .lean();
+
+  if (tests.length === 0) {
+    return {
+      score: 0,
+      evidence: ['No aptitude tests attempted yet.'],
+      insufficient: ['No submitted aptitude tests.'],
+      perCategory: [],
+    };
+  }
+
+  // Best score per category.
+  const bestByCategory = new Map<AptitudeCategory, { score: number; attempts: number }>();
+  for (const t of tests) {
+    const cat = t.category as AptitudeCategory;
+    const score = Number(t.score ?? 0);
+    const cur = bestByCategory.get(cat);
+    if (!cur) {
+      bestByCategory.set(cat, { score, attempts: 1 });
+    } else {
+      cur.attempts += 1;
+      if (score > cur.score) cur.score = score;
+    }
+  }
+
+  // Weighted average — equal weight per category. Missing categories count
+  // as zero but contribute to the "insufficient" reason.
+  const allCategories = APTITUDE_CATEGORIES as readonly AptitudeCategory[];
+  let total = 0;
+  const perCategory: Array<{ category: AptitudeCategory; score: number; attempts: number }> = [];
+  const missingCategories: AptitudeCategory[] = [];
+  for (const c of allCategories) {
+    const rec = bestByCategory.get(c);
+    if (rec) {
+      total += rec.score;
+      perCategory.push({ category: c, score: rec.score, attempts: rec.attempts });
+    } else {
+      missingCategories.push(c);
+    }
+  }
+  const averageScore = total / allCategories.length;
+
+  // All-categories bonus: +5 if all categories attempted at least once.
+  const allCoveredBonus = missingCategories.length === 0 ? 5 : 0;
+  const score = clamp01to100(averageScore + allCoveredBonus);
+
+  const evidence: string[] = [];
+  evidence.push(
+    `Aptitude average: ${Math.round(averageScore)}% across ${bestByCategory.size} of ${allCategories.length} categor${allCategories.length === 1 ? 'y' : 'ies'}.`,
+  );
+  if (missingCategories.length > 0) {
+    evidence.push(`Not yet attempted: ${missingCategories.join(', ')}.`);
+  }
+  if (allCoveredBonus > 0) {
+    evidence.push('Bonus: all aptitude categories attempted.');
+  }
+
+  return {
+    score,
+    evidence,
+    insufficient:
+      missingCategories.length > 0
+        ? [`Missing aptitude categories: ${missingCategories.join(', ')}.`]
+        : [],
+    perCategory,
+  };
 }
 
 /* ─── Aggregation ───────────────────────────────────────────────────── */
@@ -614,10 +711,7 @@ function buildBlockers(
     });
   }
 
-  if (
-    assessmentScore > 0 &&
-    assessmentScore < BLOCKER_THRESHOLDS.ASSESSMENT_FLOOR
-  ) {
+  if (assessmentScore > 0 && assessmentScore < BLOCKER_THRESHOLDS.ASSESSMENT_FLOOR) {
     blockers.push({
       key: 'assessment:low',
       label: 'Assessment performance below floor',
@@ -626,10 +720,7 @@ function buildBlockers(
     });
   }
 
-  if (
-    trainingScore < 25 &&
-    internshipScore < 25
-  ) {
+  if (trainingScore < 25 && internshipScore < 25) {
     blockers.push({
       key: 'experience:low',
       label: 'Limited industry exposure',
@@ -726,9 +817,7 @@ function buildNextActions(
   return actions.slice(0, 6);
 }
 
-function componentToActionType(
-  key: PlacementComponentScore['key'],
-): PlacementNextAction['type'] {
+function componentToActionType(key: PlacementComponentScore['key']): PlacementNextAction['type'] {
   switch (key) {
     case 'SKILLS':
     case 'INDUSTRY_ALIGNMENT':
@@ -742,6 +831,8 @@ function componentToActionType(
       return 'OPPORTUNITY';
     case 'APPLICATION_HISTORY':
       return 'OPPORTUNITY';
+    case 'APTITUDE':
+      return 'ASSESSMENT';
     default:
       return 'SKILL';
   }
@@ -761,6 +852,8 @@ function componentToCtaPath(key: PlacementComponentScore['key']): string {
       return '/student/internships';
     case 'APPLICATION_HISTORY':
       return '/student/applications';
+    case 'APTITUDE':
+      return '/student/aptitude';
     default:
       return '/student/skill-profile';
   }
@@ -827,17 +920,16 @@ export async function buildPlacementReadiness(
     internship,
     careerTarget,
     applications,
+    aptitude,
   ] = await Promise.all([
     buildSkillsComponent(input.studentUserId),
     buildAssessmentComponent(profile._id),
     buildIndustryAlignmentComponent(profile._id),
     buildTrainingComponent(profile._id),
     buildInternshipExperienceComponent(profile._id),
-    buildCareerTargetComponent(
-      profile._id,
-      (profile.preferredRoles ?? []).map(String),
-    ),
+    buildCareerTargetComponent(profile._id, (profile.preferredRoles ?? []).map(String)),
     buildApplicationHistoryComponent(profile._id),
+    buildAptitudeComponent(studentUserId),
   ]);
 
   const raw: ComponentBuildResult[] = [
@@ -890,6 +982,13 @@ export async function buildPlacementReadiness(
       weight: PLACEMENT_READINESS_WEIGHTS.applicationHistory,
       evidence: applications.evidence,
     },
+    {
+      key: 'APTITUDE',
+      label: 'Aptitude',
+      score: aptitude.score,
+      weight: PLACEMENT_READINESS_WEIGHTS.aptitude,
+      evidence: aptitude.evidence,
+    },
   ];
 
   const components = buildComponents(raw);
@@ -905,6 +1004,7 @@ export async function buildPlacementReadiness(
     ...internship.insufficient,
     ...careerTarget.insufficient,
     ...applications.insufficient,
+    ...aptitude.insufficient,
   ];
   const insufficientData = insufficientReasons.length >= 3; // 3+ empty components => meaningful
 
@@ -947,10 +1047,15 @@ export interface InstitutionReadinessOptions {
   institutionId: Types.ObjectId;
   /** Optional precomputed per-student profile ids; when omitted we resolve them. */
   studentProfileIds?: Types.ObjectId[];
+  /** Phase 15C: Limit to first N students. Defaults to 200. Use pagination for larger institutions. */
+  limit?: number;
+  /** Phase 15C: Skip first N students (for pagination). */
+  skip?: number;
 }
 
 export interface InstitutionReadinessResult {
   totalStudents: number;
+  returnedStudents: number;
   perStudent: Array<{ studentUserId: string; score: number; level: PlacementReadinessLevel }>;
   perBranch: Array<{ branch: string; total: number; score: number }>;
 }
@@ -959,22 +1064,40 @@ export interface InstitutionReadinessResult {
  * Build readiness for every student in the institution. Uses parallelism
  * via Promise.all but caps fan-out to avoid overloading the database —
  * callers should be ready to paginate in the future if needed.
+ *
+ * Phase 15C optimization: avoid N+1 by fetching all profiles in one query.
  */
 export async function buildInstitutionReadiness(
   options: InstitutionReadinessOptions,
 ): Promise<InstitutionReadinessResult> {
-  let studentProfileIds = options.studentProfileIds;
-  if (!studentProfileIds) {
-    const profiles = await StudentProfile.find({ institution: options.institutionId })
-      .select('user')
-      .lean();
-    studentProfileIds = profiles.map((p) => p._id) as Types.ObjectId[];
+  const limit = options.limit ?? 200;
+  const skip = options.skip ?? 0;
+
+  let profiles: Array<{ _id: Types.ObjectId; user: Types.ObjectId; branch?: string }>;
+  if (options.studentProfileIds) {
+    // When caller pre-computes ids, fetch only the requested slice.
+    profiles = (await StudentProfile.find({
+      _id: { $in: options.studentProfileIds.slice(skip, skip + limit) },
+    })
+      .select('user branch')
+      .lean()) as typeof profiles;
+  } else {
+    // One query for all profiles in the institution, with skip/limit.
+    profiles = (await StudentProfile.find({ institution: options.institutionId })
+      .select('user branch')
+      .lean()
+      .skip(skip)
+      .limit(limit)) as typeof profiles;
   }
 
+  const totalCount = await StudentProfile.countDocuments({
+    institution: options.institutionId,
+  });
+
+  // Batch all readiness calculations in parallel. Each call hits multiple
+  // collections so parallelism here provides meaningful speedup.
   const perStudentRaw = await Promise.all(
-    studentProfileIds.map(async (sid) => {
-      const profile = await StudentProfile.findById(sid).select('user branch').lean();
-      if (!profile) return null;
+    profiles.map(async (profile) => {
       const readiness = await buildPlacementReadiness({
         studentUserId: String(profile.user),
       });
@@ -987,14 +1110,9 @@ export async function buildInstitutionReadiness(
     }),
   );
 
-  const perStudent = perStudentRaw.filter(
-    (s): s is { studentUserId: string; score: number; level: PlacementReadinessLevel; branch: string } =>
-      s !== null,
-  );
-
   // Branch aggregation.
   const branchMap = new Map<string, { total: number; scoreSum: number }>();
-  for (const s of perStudent) {
+  for (const s of perStudentRaw) {
     const cur = branchMap.get(s.branch) ?? { total: 0, scoreSum: 0 };
     cur.total += 1;
     cur.scoreSum += s.score;
@@ -1007,8 +1125,9 @@ export async function buildInstitutionReadiness(
   }));
 
   return {
-    totalStudents: perStudent.length,
-    perStudent: perStudent.map((s) => ({
+    totalStudents: totalCount,
+    returnedStudents: perStudentRaw.length,
+    perStudent: perStudentRaw.map((s) => ({
       studentUserId: s.studentUserId,
       score: s.score,
       level: s.level,

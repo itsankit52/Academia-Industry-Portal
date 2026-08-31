@@ -85,9 +85,7 @@ export default function Register() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
             Create your account
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
-            Join the Academia-Industry Portal today.
-          </p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Join the AcadIn today.</p>
         </div>
 
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-8">

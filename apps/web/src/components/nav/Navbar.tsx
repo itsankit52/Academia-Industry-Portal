@@ -32,7 +32,7 @@ export default function Navbar() {
             <Link to="/" className="flex items-center gap-2 no-underline" aria-label="Home">
               <span className="text-xl font-bold text-indigo-600">AIP</span>
               <span className="hidden sm:block text-sm font-medium text-slate-600 dark:text-slate-400">
-                Academia-Industry Portal
+                AcadIn
               </span>
             </Link>
 

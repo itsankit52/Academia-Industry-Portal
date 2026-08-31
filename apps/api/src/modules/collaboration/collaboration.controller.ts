@@ -54,11 +54,7 @@ export const cancel = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const register = asyncHandler(async (req: Request, res: Response) => {
-  const data = await service.registerForEvent(
-    req.user!.id,
-    req.user!.role as Role,
-    req.params.id!,
-  );
+  const data = await service.registerForEvent(req.user!.id, req.user!.role as Role, req.params.id!);
   return created(res, data);
 });
 
@@ -97,11 +93,7 @@ export const markAttended = asyncHandler(async (req: Request, res: Response) => 
 
 export const submitFeedback = asyncHandler(async (req: Request, res: Response) => {
   const body = req.body as SubmitFeedbackInput;
-  const data = await service.submitEventFeedback(
-    req.user!.id,
-    req.params.id!,
-    body,
-  );
+  const data = await service.submitEventFeedback(req.user!.id, req.params.id!, body);
   return ok(res, data);
 });
 
@@ -110,6 +102,17 @@ export const feedbackSummary = asyncHandler(async (req: Request, res: Response) 
     req.params.id!,
     req.user!.id,
     req.user!.role as Role,
+  );
+  return ok(res, data);
+});
+
+export const updateEventSkills = asyncHandler(async (req: Request, res: Response) => {
+  const body = req.body as { skillIds: string[] };
+  const data = await service.updateEventSkills(
+    req.params.id!,
+    req.user!.id,
+    req.user!.role as Role,
+    body.skillIds,
   );
   return ok(res, data);
 });

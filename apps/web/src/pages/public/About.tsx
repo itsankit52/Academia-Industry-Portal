@@ -43,29 +43,41 @@ export default function About() {
           Bridging the gap between academia and industry
         </h1>
         <p className="text-lg text-slate-600 leading-relaxed mb-4 dark:text-slate-400">
-          The Academia-Industry Collaboration Portal is a centralised platform designed to streamline every touchpoint
-          between educational institutions, students, and industry partners. We eliminate friction in the placement
-          process so students can focus on building careers, companies can find the right talent efficiently, and
-          administrators can deliver measurable outcomes.
+          The AcadIn is a centralised platform designed to streamline every touchpoint between
+          educational institutions, students, and industry partners. We eliminate friction in the
+          placement process so students can focus on building careers, companies can find the right
+          talent efficiently, and administrators can deliver measurable outcomes.
         </p>
         <p className="text-base text-slate-500 leading-relaxed dark:text-slate-400">
-          Built from the ground up with modern technology and deep domain insight, our platform is the single source of
-          truth for placement operations — from a student's first application to a company's final offer.
+          Built from the ground up with modern technology and deep domain insight, our platform is
+          the single source of truth for placement operations — from a student's first application
+          to a company's final offer.
         </p>
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 mb-8 dark:text-slate-100">Who it's built for</h2>
+        <h2 className="text-2xl font-bold text-slate-900 mb-8 dark:text-slate-100">
+          Who it's built for
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {roles.map((role) => {
             const Icon = role.icon;
             return (
-              <div key={role.title} className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 dark:bg-slate-900 dark:border-slate-800">
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${role.color}`}>
+              <div
+                key={role.title}
+                className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 dark:bg-slate-900 dark:border-slate-800"
+              >
+                <div
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${role.color}`}
+                >
                   <Icon className="w-5 h-5" />
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900 mb-2 dark:text-slate-100">{role.title}</h3>
-                <p className="text-sm text-slate-600 leading-relaxed dark:text-slate-400">{role.description}</p>
+                <h3 className="text-lg font-semibold text-slate-900 mb-2 dark:text-slate-100">
+                  {role.title}
+                </h3>
+                <p className="text-sm text-slate-600 leading-relaxed dark:text-slate-400">
+                  {role.description}
+                </p>
               </div>
             );
           })}
