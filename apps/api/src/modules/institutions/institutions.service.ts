@@ -88,13 +88,18 @@ export async function assertInstitutionAndCode(
 }
 
 export async function listVerifiedPublic(): Promise<PublicInstitution[]> {
+  // Deliberately do not project the `code` field here. The code is a shared
+  // secret the institution gives to its students so they can self-verify on
+  // signup — exposing it in the public catalogue would let any browser pick
+  // it up and bypass the institution-code gate. The signup flow asks the
+  // student to enter the code and the backend re-checks the (institutionId,
+  // code) pair at write time.
   const rows = await Institution.find({ verificationStatus: 'VERIFIED' })
-    .select('_id name code')
+    .select('_id name')
     .sort({ name: 1 })
     .lean();
   return rows.map((r) => ({
     id: String(r._id),
     name: r.name as string,
-    code: r.code as string,
   }));
 }

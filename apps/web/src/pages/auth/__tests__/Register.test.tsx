@@ -17,7 +17,7 @@ vi.mock('@/hooks/mutations/useRegister', () => ({
 // STUDENT signup could never satisfy the required institutionId.
 vi.mock('@/hooks/queries/useInstitutionsCatalog', () => ({
   useInstitutionsCatalog: () => ({
-    data: [{ id: INSTITUTION_ID, name: 'Test Institute', code: 'TI' }],
+    data: [{ id: INSTITUTION_ID, name: 'Test Institute' }],
     isLoading: false,
   }),
 }));

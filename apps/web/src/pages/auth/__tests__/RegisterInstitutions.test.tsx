@@ -29,9 +29,9 @@ vi.mock('@/lib/api', () => ({
 }));
 
 const INSTITUTIONS = [
-  { id: '507f1f77bcf86cd799439011', name: 'Alpha Institute of Technology', code: 'ALPHATECH' },
-  { id: '507f1f77bcf86cd799439012', name: 'Beta University', code: 'BETAUNIV' },
-  { id: '507f1f77bcf86cd799439013', name: 'Gamma College of Engineering', code: 'GAMMACOE' },
+  { id: '507f1f77bcf86cd799439011', name: 'Alpha Institute of Technology' },
+  { id: '507f1f77bcf86cd799439012', name: 'Beta University' },
+  { id: '507f1f77bcf86cd799439013', name: 'Gamma College of Engineering' },
 ];
 
 function institutionSelect(): HTMLSelectElement {
@@ -54,10 +54,10 @@ describe('Register — Institution select data path', () => {
   it('renders every institution the API returns as a selectable option', async () => {
     renderWithProviders(<Register />);
 
-    await screen.findByRole('option', { name: 'Alpha Institute of Technology (ALPHATECH)' });
-    expect(screen.getByRole('option', { name: 'Beta University (BETAUNIV)' })).toBeInTheDocument();
+    await screen.findByRole('option', { name: 'Alpha Institute of Technology' });
+    expect(screen.getByRole('option', { name: 'Beta University' })).toBeInTheDocument();
     expect(
-      screen.getByRole('option', { name: 'Gamma College of Engineering (GAMMACOE)' }),
+      screen.getByRole('option', { name: 'Gamma College of Engineering' }),
     ).toBeInTheDocument();
 
     const options = Array.from(institutionSelect().querySelectorAll('option'));
@@ -71,10 +71,24 @@ describe('Register — Institution select data path', () => {
   it('keeps the chosen institution selected', async () => {
     const user = userEvent.setup();
     renderWithProviders(<Register />);
-    await screen.findByRole('option', { name: 'Beta University (BETAUNIV)' });
+    await screen.findByRole('option', { name: 'Beta University' });
 
     await user.selectOptions(institutionSelect(), INSTITUTIONS[1]!.id);
     expect(institutionSelect().value).toBe(INSTITUTIONS[1]!.id);
+  });
+
+  it('never renders an institution code in any option label', async () => {
+    renderWithProviders(<Register />);
+    await screen.findByRole('option', { name: 'Alpha Institute of Technology' });
+
+    const labels = Array.from(institutionSelect().querySelectorAll('option')).map(
+      (o) => o.textContent ?? '',
+    );
+    // No institution code, no parens-with-code, no ALPHATECH-style string in
+    // any label. The catalogue the public API returns deliberately omits
+    // `code` for the same reason.
+    expect(labels.join('|')).not.toMatch(/ALPHATECH|BETAUNIV|GAMMACOE/);
+    expect(labels.join('|')).not.toMatch(/\([A-Z0-9]+\)/);
   });
 
   it('reports a failed request instead of looking like an empty catalogue', async () => {
@@ -114,7 +128,7 @@ describe('Register — Institution select data path', () => {
   it('leaves the FACULTY branch on the same working select', async () => {
     const user = userEvent.setup();
     renderWithProviders(<Register />);
-    await screen.findByRole('option', { name: 'Beta University (BETAUNIV)' });
+    await screen.findByRole('option', { name: 'Beta University' });
 
     await user.click(screen.getByLabelText(/^faculty/i));
     expect(institutionSelect()).toBeInTheDocument();
@@ -126,7 +140,7 @@ describe('Register — Institution select data path', () => {
   it('leaves the COMPANY branch without an Institution field', async () => {
     const user = userEvent.setup();
     renderWithProviders(<Register />);
-    await screen.findByRole('option', { name: 'Beta University (BETAUNIV)' });
+    await screen.findByRole('option', { name: 'Beta University' });
 
     await user.click(screen.getByLabelText(/^company/i));
     expect(screen.queryByLabelText(/university \/ institution/i)).not.toBeInTheDocument();
@@ -147,7 +161,7 @@ describe('Register — Institution select data path', () => {
 
   it('still blocks a STUDENT submit while no institution is chosen', async () => {
     renderWithProviders(<Register />);
-    await screen.findByRole('option', { name: 'Beta University (BETAUNIV)' });
+    await screen.findByRole('option', { name: 'Beta University' });
 
     // The submit button is disabled for STUDENT until the institution code is verified.
     // The blocking is the disabled button, not a Zod validation error shown after

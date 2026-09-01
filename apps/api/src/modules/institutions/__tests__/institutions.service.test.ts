@@ -175,7 +175,12 @@ describe('listVerifiedPublic', () => {
     const result = await listVerifiedPublic();
     expect(result).toHaveLength(2);
     expect(result[0]?.name).toBe('Alpha University');
-    expect(result[1]?.code).toBe('BETA0001');
+    expect(result[1]?.name).toBe('Beta College');
+    // The public catalogue must NOT carry the institution code — the code is
+    // a shared secret the student enters themselves and the backend
+    // re-checks on submission.
+    expect(result[0]).not.toHaveProperty('code');
+    expect(result[1]).not.toHaveProperty('code');
     // It must have filtered to verified only
     expect(Institution.find).toHaveBeenCalledWith({ verificationStatus: 'VERIFIED' });
   });

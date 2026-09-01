@@ -74,8 +74,7 @@ export default function Register() {
     resetVerification();
   }, [institutionId, institutionCode, resetVerification]);
 
-  const institutionOptions =
-    institutions.data?.map((i) => ({ value: i.id, label: `${i.name} (${i.code})` })) ?? [];
+  const institutionOptions = institutions.data?.map((i) => ({ value: i.id, label: i.name })) ?? [];
 
   const handleVerifyInstitution = async () => {
     if (!institutionId || !institutionCode) return;

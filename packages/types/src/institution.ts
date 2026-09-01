@@ -17,8 +17,11 @@ export interface Institution {
   updatedAt: string;
 }
 
+/**
+ * Publicly safe institution data — returned to unauthenticated clients.
+ * Excludes: code, secret, verification details, contact info.
+ */
 export interface PublicInstitution {
   id: string;
   name: string;
-  code: string;
 }
