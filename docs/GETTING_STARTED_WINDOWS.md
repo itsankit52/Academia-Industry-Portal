@@ -1,4 +1,4 @@
-node 
+node
 
 # Getting Started on Windows
 
@@ -13,8 +13,8 @@ Estimated time: **20–30 minutes** (most of it waiting on downloads and MongoDB
 - Both dev servers running:
   - **Backend API** at [http://localhost:4000](http://localhost:4000)
   - **Frontend Web** at [http://localhost:5173](http://localhost:5173)
-- Pre-seeded demo data (1 admin, 3 companies, 6 students, jobs, internships, applications)
-- You logged in as admin / company / student to explore all three roles
+- Reference data (skill catalogue) seeded and ready
+- You can register your first real account and start exploring
 
 ---
 
@@ -139,6 +139,7 @@ This is your database. Free tier is more than enough for development.
    ```
 5. **Replace `<password>`** with the password you saved earlier.
 6. Add a database name after `.net/` — use `aip`:
+
    ```
    mongodb+srv://aipuser:MyPass123@cluster0.abcde.mongodb.net/aip?retryWrites=true&w=majority
    ```
@@ -175,11 +176,11 @@ notepad .env
 
 Update these values:
 
-| Variable               | Value                                                           |
-| ---------------------- | --------------------------------------------------------------- |
+| Variable             | Value                                                         |
+| -------------------- | ------------------------------------------------------------- |
 | `MONGODB_URI`        | Your Atlas string from above (with password +`/aip` inserted) |
-| `JWT_ACCESS_SECRET`  | Paste the first secret from setup output                        |
-| `JWT_REFRESH_SECRET` | Paste the second secret from setup output                       |
+| `JWT_ACCESS_SECRET`  | Paste the first secret from setup output                      |
+| `JWT_REFRESH_SECRET` | Paste the second secret from setup output                     |
 
 **These four should already have sensible defaults** — leave them:
 
@@ -221,10 +222,11 @@ If it errors, fix `.env` and re-run.
 pnpm seed
 ```
 
-You should see log lines like:
+You should see output confirming the skill catalogue was seeded (38 skills).
 
 ```
-Seeded 1 admin, 3 companies, 6 students, 38 skills, 8 jobs, 6 internships, 5 trainings, 10 applications, 2 interviews, 23 notifications
+✓ Skills seeded (38 reference skills)
+Seed complete — reference data only.
 ```
 
 **If this fails with `MongoServerError: bad auth`** — your password in `MONGODB_URI` is wrong. Re-copy from Atlas.
@@ -249,17 +251,13 @@ Leave this terminal open — it's running the app.
 
 ---
 
-## Log in and explore
+## Create your account and explore
 
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-Click **Login** in the top-right and use any of these accounts (password is `Demo@1234` for all three):
+Click **Register** to create a new account. Select your role (Student, Company, Faculty, or Institution Admin) and fill in your details. Students and faculty must select their institution from the list.
 
-| Role              | Email                | See what they see                                            |
-| ----------------- | -------------------- | ------------------------------------------------------------ |
-| **Admin**   | `admin@aip.demo`   | Analytics dashboard, all students/companies/jobs, audit logs |
-| **Company** | `hr@demotech.demo` | Post jobs, view applicants, shortlist, schedule interviews   |
-| **Student** | `arya@demo.edu`    | Browse jobs, apply, view match scores, track applications    |
+Once registered, sign in and explore the platform with your real account.
 
 ---
 

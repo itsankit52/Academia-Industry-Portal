@@ -39,9 +39,26 @@ function publicUser(user: { toJSON: () => unknown }) {
   return user.toJSON();
 }
 
-async function assertInstitutionExists(institutionId: string): Promise<void> {
-  const inst = await Institution.findById(institutionId).select('_id');
-  if (!inst) throw AppError.badRequest('Institution not found');
+/**
+ * Validates that the institution exists and is VERIFIED before allowing a
+ * student or faculty member to register against it.
+ *
+ * Defence-in-depth: the Zod schema already enforces that institutionId is
+ * present for STUDENT/FACULTY, so this function is always called with a value.
+ * The explicit guard here means the service is safe even if called directly
+ * (e.g. from tests or future service-to-service calls) without the middleware.
+ */
+async function assertInstitutionVerified(institutionId: string): Promise<void> {
+  const inst = await Institution.findById(institutionId).select('_id verificationStatus').lean();
+  if (!inst) {
+    throw AppError.badRequest('Institution not found');
+  }
+  if ((inst as Record<string, unknown>).verificationStatus !== 'VERIFIED') {
+    throw AppError.badRequest(
+      'The selected institution is pending verification and cannot accept registrations yet. ' +
+        'Please contact your institution administrator.',
+    );
+  }
 }
 
 export async function registerUser(input: RegisterInput, res: Response, ctx: AuthContext) {
@@ -49,8 +66,15 @@ export async function registerUser(input: RegisterInput, res: Response, ctx: Aut
   const existing = await User.findOne({ email });
   if (existing) throw AppError.conflict('Email already registered');
 
-  if ((input.role === 'STUDENT' || input.role === 'FACULTY') && input.institutionId) {
-    await assertInstitutionExists(input.institutionId);
+  // Always validate institutionId for roles that require it — the Zod schema
+  // enforces it is present, and this check confirms it resolves to a real,
+  // verified institution. The guard is unconditional (no &&) so a missing
+  // institutionId that slipped past schema validation is caught here too.
+  if (input.role === 'STUDENT' || input.role === 'FACULTY') {
+    if (!input.institutionId) {
+      throw AppError.badRequest('institutionId is required for STUDENT and FACULTY registration');
+    }
+    await assertInstitutionVerified(input.institutionId);
   }
 
   const passwordHash = await hashPassword(input.password);
@@ -59,7 +83,10 @@ export async function registerUser(input: RegisterInput, res: Response, ctx: Aut
     passwordHash,
     role: input.role,
     isActive: true,
-    ...(input.role === 'FACULTY' && input.institutionId
+    // Store the institution reference on the User record for both STUDENT and
+    // FACULTY so institution-isolation middleware can gate requests without
+    // fetching the profile document on every call.
+    ...((input.role === 'STUDENT' || input.role === 'FACULTY') && input.institutionId
       ? { institution: input.institutionId }
       : {}),
   });

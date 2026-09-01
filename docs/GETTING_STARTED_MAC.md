@@ -11,8 +11,8 @@ Estimated time: **20–30 minutes** (most of it waiting on downloads and MongoDB
 - Both dev servers running:
   - **Backend API** at <http://localhost:4000>
   - **Frontend Web** at <http://localhost:5173>
-- Pre-seeded demo data (1 admin, 3 companies, 6 students, jobs, internships, applications)
-- You logged in as admin / company / student to explore all three roles
+- Reference data (skill catalogue) seeded and ready
+- You can register your first real account and start exploring
 
 ---
 
@@ -21,6 +21,7 @@ Estimated time: **20–30 minutes** (most of it waiting on downloads and MongoDB
 ### 1. Install Homebrew (if you don't have it)
 
 Open **Terminal** (`Cmd+Space` → type "Terminal") and paste:
+
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
@@ -28,6 +29,7 @@ Open **Terminal** (`Cmd+Space` → type "Terminal") and paste:
 Follow the prompts. After it finishes it will print two `eval` commands (Apple Silicon) — run those so `brew` becomes available in your current terminal.
 
 **Verify:**
+
 ```bash
 brew --version
 ```
@@ -40,10 +42,12 @@ brew link node@20 --force
 ```
 
 Or, alternatively (any of these works — pick one):
+
 - Direct installer from <https://nodejs.org> (LTS)
 - Version manager: `brew install nvm` then `nvm install 20 && nvm use 20`
 
 **Verify:**
+
 ```bash
 node -v      # v20.x.x or newer
 ```
@@ -51,6 +55,7 @@ node -v      # v20.x.x or newer
 ### 3. Install Git (if not installed)
 
 Usually macOS already has it. Check:
+
 ```bash
 git --version
 ```
@@ -64,11 +69,13 @@ npm install -g pnpm@9
 ```
 
 **Verify:**
+
 ```bash
 pnpm --version    # 9.x.x
 ```
 
 If you get `EACCES` permission errors, prefix with `sudo`:
+
 ```bash
 sudo npm install -g pnpm@9
 ```
@@ -78,6 +85,7 @@ sudo npm install -g pnpm@9
 ## Get the project code
 
 **If you were given a Git URL:**
+
 ```bash
 cd ~/Developer 2>/dev/null || cd ~
 git clone <the-repo-url> academia-industry-portal
@@ -85,13 +93,16 @@ cd academia-industry-portal
 ```
 
 **If you were given a zip file:**
+
 1. Unzip it into `~/Developer/academia-industry-portal` (or anywhere convenient)
 2. In Terminal:
+
 ```bash
 cd ~/Developer/academia-industry-portal
 ```
 
 **Sanity check** — you should see `package.json`, `pnpm-workspace.yaml`, `README.md`:
+
 ```bash
 ls
 ```
@@ -153,6 +164,7 @@ bash scripts/setup.sh
 ```
 
 This will:
+
 - Confirm Node 20+ is installed
 - Confirm pnpm is installed
 - Install all dependencies (takes **3–5 minutes** the first time — 748 packages)
@@ -164,6 +176,7 @@ This will:
 ## Configure `.env`
 
 Open `.env` in your editor:
+
 ```bash
 # VS Code (if installed)
 code .env
@@ -177,13 +190,14 @@ open -e .env
 
 Update these values:
 
-| Variable | Value |
-|---|---|
-| `MONGODB_URI` | Your Atlas string from above (with password + `/aip` inserted) |
-| `JWT_ACCESS_SECRET` | Paste the first secret from setup output |
-| `JWT_REFRESH_SECRET` | Paste the second secret from setup output |
+| Variable             | Value                                                          |
+| -------------------- | -------------------------------------------------------------- |
+| `MONGODB_URI`        | Your Atlas string from above (with password + `/aip` inserted) |
+| `JWT_ACCESS_SECRET`  | Paste the first secret from setup output                       |
+| `JWT_REFRESH_SECRET` | Paste the second secret from setup output                      |
 
 **These four should already have sensible defaults** — leave them:
+
 ```env
 NODE_ENV=development
 PORT=4000
@@ -192,6 +206,7 @@ VITE_API_URL=http://localhost:4000/api/v1
 ```
 
 **Optional features** (leave empty if you don't need them):
+
 - `CLOUDINARY_*` — needed only for resume/logo uploads
 - `GEMINI_API_KEY` — needed only for AI features (skill extraction, chat)
 
@@ -204,6 +219,7 @@ node scripts/check-env.mjs
 ```
 
 Expected output:
+
 ```
 ✅ .env has all required variables
    Required: 6/6 set
@@ -220,9 +236,11 @@ If it errors, fix `.env` and re-run.
 pnpm seed
 ```
 
-You should see log lines like:
+You should see output confirming the skill catalogue was seeded (38 skills):
+
 ```
-Seeded 1 admin, 3 companies, 6 students, 38 skills, 8 jobs, 6 internships, 5 trainings, 10 applications, 2 interviews, 23 notifications
+✓ Skills seeded (38 reference skills)
+Seed complete — reference data only.
 ```
 
 **If this fails with `MongoServerError: bad auth`** — your password in `MONGODB_URI` is wrong. Re-copy from Atlas.
@@ -236,6 +254,7 @@ pnpm dev
 ```
 
 You should see **two servers boot in parallel**:
+
 ```
 apps/api dev: {"level":30,"msg":"API listening on http://localhost:4000"}
 apps/web dev:   VITE v5.4.x  ready in ...
@@ -246,17 +265,13 @@ Leave this terminal open — it's running the app.
 
 ---
 
-## Log in and explore
+## Create your account and explore
 
 Open <http://localhost:5173> in your browser.
 
-Click **Login** in the top-right and use any of these accounts (password is `Demo@1234` for all three):
+Click **Register** to create a new account. Select your role (Student, Company, Faculty, or Institution Admin) and fill in your details. Students and faculty must select their institution from the list.
 
-| Role | Email | See what they see |
-|---|---|---|
-| **Admin** | `admin@aip.demo` | Analytics dashboard, all students/companies/jobs, audit logs |
-| **Company** | `hr@demotech.demo` | Post jobs, view applicants, shortlist, schedule interviews |
-| **Student** | `arya@demo.edu` | Browse jobs, apply, view match scores, track applications |
+Once registered, sign in and explore the platform with your real account.
 
 ---
 
@@ -286,10 +301,12 @@ curl http://localhost:4000/api/v1/health
 ## Restarting later
 
 Every subsequent time you just need:
+
 ```bash
 cd ~/Developer/academia-industry-portal
 pnpm dev
 ```
+
 (no reinstall, no reseed unless you dropped the DB)
 
 ---
@@ -297,14 +314,18 @@ pnpm dev
 ## Troubleshooting (macOS-specific)
 
 ### `zsh: command not found: pnpm`
+
 `pnpm` global install went to a directory not on your PATH. Fix:
+
 ```bash
 echo 'export PATH="$(npm config get prefix)/bin:$PATH"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
 ### `EACCES: permission denied` on `npm install -g`
+
 Prefix with `sudo`, or fix npm's global directory permanently:
+
 ```bash
 mkdir -p ~/.npm-global
 npm config set prefix '~/.npm-global'
@@ -313,39 +334,51 @@ source ~/.zshrc
 ```
 
 ### Apple Silicon: `bad CPU type in executable`
+
 You have an Intel-only binary. For Node this shouldn't happen — reinstall via `brew install node@20`. For other tools try `arch -arm64 brew install <tool>`.
 
 ### `Error: MONGODB_URI is not set`
+
 Your `.env` file is missing or MONGODB_URI is empty. Re-run `node scripts/check-env.mjs` — it tells you exactly what's wrong.
 
 ### Port 4000 already in use
+
 ```bash
 lsof -i :4000
 kill -9 <PID>
 ```
+
 Or change `PORT=4001` in `.env`.
 
 ### Port 5173 already in use
+
 Same as above but for port 5173.
 
 ### `MongoServerError: bad auth`
+
 The password in `MONGODB_URI` is wrong. Common cause: your Atlas password has special characters that need URL-encoding. Regenerate in Atlas (Database Access → user → Edit → Autogenerate) and copy again.
 
 ### `Cannot GET /api/v1/...`
+
 Backend didn't start. Scroll up in the `pnpm dev` terminal — the error will be there. Usually a bad `.env` value.
 
 ### The web page loads but everything says "Unauthorized"
+
 Cookies aren't being sent. Check that `FRONTEND_URL` in `.env` **exactly** matches the URL in your browser (`http://localhost:5173`, not `http://127.0.0.1:5173`).
 
 ### `pnpm install` fails with SSL errors
+
 Corporate proxy or VPN interference. Try:
+
 ```bash
 pnpm config set registry https://registry.npmjs.org/
 pnpm install
 ```
+
 Or disable VPN temporarily.
 
 ### `docker: command not found`
+
 Good — you don't need Docker for this project. Skip.
 
 ---

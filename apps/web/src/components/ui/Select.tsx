@@ -15,13 +15,22 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 }
 
 const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, options, error, helperText, placeholder, className, id, ...props }, ref) => {
+  ({ label, options, error, helperText, placeholder, className, id, required, ...props }, ref) => {
     const inputId = id ?? label?.toLowerCase().replace(/\s+/g, '-');
     return (
       <div className="w-full">
         {label && (
-          <label htmlFor={inputId} className="block text-sm font-medium text-slate-700 mb-1.5 dark:text-slate-300">
+          <label
+            htmlFor={inputId}
+            className="block text-sm font-medium text-slate-700 mb-1.5 dark:text-slate-300"
+          >
             {label}
+            {required && (
+              <span className="ml-0.5 text-rose-500" aria-hidden="true">
+                {' '}
+                *
+              </span>
+            )}
           </label>
         )}
         <select
@@ -53,7 +62,11 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
           ))}
         </select>
         {error && (
-          <p id={`${inputId}-error`} className="mt-1.5 text-xs text-rose-600 dark:text-rose-400" role="alert">
+          <p
+            id={`${inputId}-error`}
+            className="mt-1.5 text-xs text-rose-600 dark:text-rose-400"
+            role="alert"
+          >
             {error}
           </p>
         )}

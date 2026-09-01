@@ -65,14 +65,14 @@ Both scripts verify Node 20+, install pnpm@9, install all workspace dependencies
 # 2. Validate your .env is complete
 node scripts/check-env.mjs
 
-# 3. Seed demo data and start both dev servers
+# 3. Seed reference data (skills catalogue) and start both dev servers
 pnpm seed
 pnpm dev
 ```
 
 Open http://localhost:5173. Backend health: http://localhost:4000/api/v1/health.
 
-Log in with any [demo account](#demo-accounts) — all passwords are `Demo@1234`.
+Register a new account via the signup page — select your actual institution from the list.
 
 ```bash
 # Verify everything before diving in
@@ -969,26 +969,26 @@ All variables belong in `.env` at the repo root. The setup scripts symlink it in
 
 ## Development Commands
 
-| Command                          | Effect                                                                                                                                                                                                                               | When to use                |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------- |
-| `pnpm dev`                       | Starts API (:4000) and web (:5173) in parallel                                                                                                                                                                                       | Day-to-day development     |
-| `pnpm --filter @aip/api dev`     | Backend only                                                                                                                                                                                                                         | Backend-only work          |
-| `pnpm --filter @aip/web dev`     | Frontend only                                                                                                                                                                                                                        | Frontend-only work         |
-| `pnpm build`                     | Builds all packages then all apps in dependency order                                                                                                                                                                                | Pre-deployment             |
-| `pnpm build:api`                 | Builds backend to`apps/api/dist/`                                                                                                                                                                                                    | Quick API build check      |
-| `pnpm build:web`                 | Builds frontend to`apps/web/dist/`                                                                                                                                                                                                   | Quick frontend build check |
-| `pnpm typecheck`                 | `tsc --noEmit` across all workspaces                                                                                                                                                                                                 | Before committing          |
-| `pnpm lint`                      | ESLint with`--max-warnings 0` across all workspaces                                                                                                                                                                                  | Before committing          |
-| `pnpm format`                    | Prettier writes all TS / JSON / MD / YAML                                                                                                                                                                                            | Code hygiene               |
-| `pnpm format:check`              | Prettier check only (no writes)                                                                                                                                                                                                      | CI                         |
-| `pnpm test`                      | All unit and integration tests                                                                                                                                                                                                       | Before pushing             |
-| `pnpm --filter @aip/api test`    | Backend tests only                                                                                                                                                                                                                   | After backend changes      |
-| `pnpm --filter @aip/web test`    | Frontend tests only                                                                                                                                                                                                                  | After frontend changes     |
-| `pnpm test:e2e`                  | Playwright end-to-end (needs`pnpm dev` and `pnpm seed` running)                                                                                                                                                                      | Feature validation         |
-| `pnpm seed`                      | **Deletes every collection**, including accounts created through signup, then repopulates demo data. Refused when `NODE_ENV=production`, and refused for a non-local `MONGODB_URI` unless you pass `--force` (or set `SEED_FORCE=1`) | After a DB reset           |
-| `pnpm start:api`                 | Runs compiled`apps/api/dist/server.js`                                                                                                                                                                                               | Production API             |
-| `pnpm --filter @aip/web preview` | Serves built`apps/web/dist/`                                                                                                                                                                                                         | Production build check     |
-| `pnpm clean`                     | Removes all`dist/` and `node_modules/`                                                                                                                                                                                               | Full reset                 |
+| Command                          | Effect                                                                                                                                                                                                                                                                               | When to use                |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------- |
+| `pnpm dev`                       | Starts API (:4000) and web (:5173) in parallel                                                                                                                                                                                                                                       | Day-to-day development     |
+| `pnpm --filter @aip/api dev`     | Backend only                                                                                                                                                                                                                                                                         | Backend-only work          |
+| `pnpm --filter @aip/web dev`     | Frontend only                                                                                                                                                                                                                                                                        | Frontend-only work         |
+| `pnpm build`                     | Builds all packages then all apps in dependency order                                                                                                                                                                                                                                | Pre-deployment             |
+| `pnpm build:api`                 | Builds backend to`apps/api/dist/`                                                                                                                                                                                                                                                    | Quick API build check      |
+| `pnpm build:web`                 | Builds frontend to`apps/web/dist/`                                                                                                                                                                                                                                                   | Quick frontend build check |
+| `pnpm typecheck`                 | `tsc --noEmit` across all workspaces                                                                                                                                                                                                                                                 | Before committing          |
+| `pnpm lint`                      | ESLint with`--max-warnings 0` across all workspaces                                                                                                                                                                                                                                  | Before committing          |
+| `pnpm format`                    | Prettier writes all TS / JSON / MD / YAML                                                                                                                                                                                                                                            | Code hygiene               |
+| `pnpm format:check`              | Prettier check only (no writes)                                                                                                                                                                                                                                                      | CI                         |
+| `pnpm test`                      | All unit and integration tests                                                                                                                                                                                                                                                       | Before pushing             |
+| `pnpm --filter @aip/api test`    | Backend tests only                                                                                                                                                                                                                                                                   | After backend changes      |
+| `pnpm --filter @aip/web test`    | Frontend tests only                                                                                                                                                                                                                                                                  | After frontend changes     |
+| `pnpm test:e2e`                  | Playwright end-to-end (needs`pnpm dev` and `pnpm seed` running)                                                                                                                                                                                                                      | Feature validation         |
+| `pnpm seed`                      | **Deletes every collection**, then seeds only reference data (the skill catalogue). Refused when `NODE_ENV=production`, and refused for a non-local `MONGODB_URI` unless you pass `--force` (or set `SEED_FORCE=1`). Does **not** create demo users, institutions, or business data. | After a DB reset           |
+| `pnpm start:api`                 | Runs compiled`apps/api/dist/server.js`                                                                                                                                                                                                                                               | Production API             |
+| `pnpm --filter @aip/web preview` | Serves built`apps/web/dist/`                                                                                                                                                                                                                                                         | Production build check     |
+| `pnpm clean`                     | Removes all`dist/` and `node_modules/`                                                                                                                                                                                                                                               | Full reset                 |
 
 **Utility scripts:**
 
@@ -1003,11 +1003,9 @@ All variables belong in `.env` at the repo root. The setup scripts symlink it in
 
 ## Functional Guide
 
-All walkthroughs start from a fresh `pnpm seed`. Use the credentials from [Demo Accounts](#demo-accounts).
+The walkthroughs below describe each role's full feature set. Register a real account through the signup flow and use your own credentials to follow along.
 
 ### Student Walkthrough
-
-Login: `arya@demo.edu` / `Demo@1234`
 
 1. **Sign in** — the app redirects to `/student/dashboard`.
 2. **Dashboard** — stat cards show total applications, scheduled interviews, recommendation count, skill count, and the latest AI assessment score. A Recharts panel shows application history over time.
@@ -1032,8 +1030,6 @@ Login: `arya@demo.edu` / `Demo@1234`
 
 ### Company Walkthrough
 
-Login: `hr@demotech.demo` / `Demo@1234`
-
 1. **Sign in** — redirects to `/company/dashboard` with stat cards for active postings, total applicants, interviews today, and shortlisted count.
 2. **Company Profile → Edit** — upload a logo, edit description, industry, website, phone, location, company size, and founded year. Save.
 3. **Jobs → New Job** — fill in title, description, location, work mode (REMOTE / ONSITE / HYBRID), employment type, salary range (min/max/currency), min CGPA, eligible branches, eligible graduation years, required skills (multi-select from the catalog), and preferred skills. Choose "Save as Draft" to keep it private or "Publish" to make it visible to students.
@@ -1051,8 +1047,6 @@ Login: `hr@demotech.demo` / `Demo@1234`
 15. **Notifications** — new-application alerts with direct links to each applicant.
 
 ### Admin Walkthrough
-
-Login: `admin@aip.demo` / `Demo@1234`
 
 1. **Sign in** — redirects to `/admin/dashboard` with six stat cards (total students, companies, active jobs, active internships, total applications, placements) and Recharts panels (applications over time, top demanded skills, placement rate by branch).
 2. **Students** — paginated table of all student accounts. Toggle active/inactive status. Click a row to view the full profile in read-only mode.
@@ -1072,8 +1066,6 @@ Login: `admin@aip.demo` / `Demo@1234`
 
 ### Faculty Walkthrough
 
-Login: `dr.sharma@demo.edu` / `Demo@1234`
-
 1. **Sign in** — redirects to `/faculty/dashboard` with stat cards for active applications, upcoming events, and pending mentoring requests.
 2. **Profile** (`/faculty/profile`) — view your linked institution, designation, department, qualifications, research interests, and bio. Click "Edit Profile" to update any field.
 3. **Browse Opportunities** (`/faculty/opportunities`) — list of all published faculty opportunities (FDPs, consultancies, collaborative research, faculty internships). Filter by opportunity type, work mode, and keyword. Click any card for full details: required expertise, duration, stipend, host name.
@@ -1085,8 +1077,6 @@ Login: `dr.sharma@demo.edu` / `Demo@1234`
 9. **Settings** (`/faculty/settings`) — update email, password, and notification preferences.
 
 ### Institution Walkthrough
-
-Login: `registrar@demo.edu` / `Demo@1234`
 
 > Institution accounts are admin-invite-only. The admin creates and verifies the institution record, then sends an invite that provisions the INSTITUTION-role user linked to that institution. There is no self-registration path.
 
@@ -1447,10 +1437,10 @@ In production, set `NODE_ENV=production`, `COOKIE_SECURE=true`, and `COOKIE_DOMA
 
 ### Institution dashboard
 
-| Symptom                                                                   | Platform | Fix                                                                                                                                                                                                                 |
-| ------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Institution dashboard shows zero students or faculty                      | Both     | The institution user must be linked to a verified institution. After login, confirm the user's profile contains a valid institution ObjectId. Re-run`pnpm seed` to restore default linkage for `registrar@demo.edu` |
-| Institution user cannot see documents from another institution's students | Both     | Intentional — document verification is scoped to the institution's own students and faculty. Only ADMIN users can verify documents cross-institution                                                                |
+| Symptom                                                                   | Platform | Fix                                                                                                                                                                                                                                |
+| ------------------------------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Institution dashboard shows zero students or faculty                      | Both     | The institution user must be linked to a verified institution. After login, confirm the user's profile contains a valid institution ObjectId. If the account was just created, wait for an admin to verify the institution record. |
+| Institution user cannot see documents from another institution's students | Both     | Intentional — document verification is scoped to the institution's own students and faculty. Only ADMIN users can verify documents cross-institution                                                                               |
 
 ### Role restrictions
 
@@ -1475,27 +1465,27 @@ In production, set `NODE_ENV=production`, `COOKIE_SECURE=true`, and `COOKIE_DOMA
 
 ---
 
-## Demo Accounts
+## Getting Started — Accounts
 
-Populated by `pnpm seed`. All passwords are `Demo@1234`.
+The seed script (`pnpm seed`) creates only reference data (the skill catalogue). There are no pre-seeded demo accounts.
 
-| Role        | Email                     | Password    | Notes                                    |
-| ----------- | ------------------------- | ----------- | ---------------------------------------- |
-| Admin       | `admin@aip.demo`          | `Demo@1234` | Full platform access                     |
-| Company     | `hr@demotech.demo`        | `Demo@1234` | Demo Technologies                        |
-| Company     | `careers@democloud.demo`  | `Demo@1234` | Demo Cloud                               |
-| Company     | `hiring@demofintech.demo` | `Demo@1234` | Demo Fintech                             |
-| Student     | `arya@demo.edu`           | `Demo@1234` | Demo University                          |
-| Student     | `rohan@demo.edu`          | `Demo@1234` | Demo University                          |
-| Student     | `priya@demo.edu`          | `Demo@1234` | Demo University                          |
-| Student     | `sneha@demo.edu`          | `Demo@1234` | Demo University                          |
-| Student     | `karan@demo.edu`          | `Demo@1234` | Demo University                          |
-| Student     | `divya@demo.edu`          | `Demo@1234` | Demo University                          |
-| Faculty     | `dr.sharma@demo.edu`      | `Demo@1234` | Prof, CSE — Demo University              |
-| Faculty     | `dr.iyer@demo.edu`        | `Demo@1234` | Assoc Prof, Mechanical — Demo University |
-| Institution | `registrar@demo.edu`      | `Demo@1234` | Demo University registrar                |
+**First-time setup:**
 
-> All seed records are labeled "Demo" — not real companies, not real people. Do not deploy to a public environment without changing or removing these accounts and rotating all secrets.
+1. Run `pnpm seed` to populate the skill catalogue.
+2. Start both servers with `pnpm dev`.
+3. Open the registration page at `/register` and create your first account.
+
+**Role-specific onboarding:**
+
+| Role        | How to create an account                                                                                  |
+| ----------- | --------------------------------------------------------------------------------------------------------- |
+| Student     | Self-register at `/register`. Select your institution from the verified list.                             |
+| Company     | Self-register at `/register`.                                                                             |
+| Faculty     | Self-register at `/register`. Select your institution from the verified list.                             |
+| Institution | An admin creates and verifies the institution record first, then provisions the INSTITUTION-role account. |
+| Admin       | Create via a direct DB script or promote an existing user's role from a superuser session.                |
+
+> No demo credentials are provided. No demo institutions are pre-loaded. All accounts and institutions must be created through the real registration and admin flows.
 
 ---
 

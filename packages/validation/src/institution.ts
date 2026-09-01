@@ -17,7 +17,7 @@ const domainSchema = z
   .max(253)
   .regex(
     /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/,
-    'Domain must be a valid FQDN (e.g. demo.edu)',
+    'Domain must be a valid FQDN (e.g. university.edu)',
   );
 
 const verificationStatusEnum = z.enum(

@@ -72,7 +72,9 @@ beforeEach(() => {
   vi.mocked(Institution.create).mockImplementation((() =>
     Promise.resolve({ _id: new Types.ObjectId() })) as never);
   vi.mocked(Institution.findById).mockReturnValue({
-    select: () => Promise.resolve({ _id: new Types.ObjectId() }),
+    select: () => ({
+      lean: () => Promise.resolve({ _id: new Types.ObjectId(), verificationStatus: 'VERIFIED' }),
+    }),
   } as never);
   vi.mocked(AuditLog.create).mockResolvedValue({} as never);
 });

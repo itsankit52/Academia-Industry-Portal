@@ -70,7 +70,7 @@ describe('Register page', () => {
     const user = userEvent.setup();
     renderWithProviders(<Register />);
     await user.type(screen.getByLabelText(/full name/i), 'Jane Smith');
-    await user.selectOptions(screen.getByLabelText(/^institution$/i), INSTITUTION_ID);
+    await user.selectOptions(screen.getByLabelText(/university \/ institution/i), INSTITUTION_ID);
     await user.type(screen.getByLabelText(/email address/i), 'jane@example.com');
     await user.type(screen.getByLabelText(/^password$/i), 'Password1!');
     await user.click(screen.getByRole('button', { name: /create account/i }));
@@ -95,11 +95,11 @@ describe('Register page', () => {
 
     // Land on STUDENT first, so both student-only inputs mount and register ''.
     expect(screen.getByLabelText(/full name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^institution$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/university \/ institution/i)).toBeInTheDocument();
 
     await user.click(screen.getByLabelText(/company/i));
     expect(screen.queryByLabelText(/full name/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/^institution$/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/university \/ institution/i)).not.toBeInTheDocument();
 
     await user.type(screen.getByLabelText(/company name/i), 'Acme Corp');
     await user.type(screen.getByLabelText(/email address/i), 'hiring@acme.com');
@@ -151,7 +151,7 @@ describe('Register page', () => {
     // STUDENT/COMPANY/FACULTY fields must not be visible.
     expect(screen.queryByLabelText(/full name/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/company name/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/^institution$/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/university \/ institution/i)).not.toBeInTheDocument();
   });
 
   it('submits the correct INSTITUTION registration payload', async () => {

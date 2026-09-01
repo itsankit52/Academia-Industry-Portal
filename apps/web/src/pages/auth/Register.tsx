@@ -128,15 +128,18 @@ export default function Register() {
 
             {needsInstitution && (
               <Select
-                label="Institution"
+                label="University / Institution"
+                required
                 placeholder={
-                  institutions.isLoading ? 'Loading institutions…' : 'Select your institution'
+                  institutions.isLoading
+                    ? 'Loading institutions…'
+                    : 'Select your university / institution'
                 }
                 options={institutionOptions}
                 error={errors.institutionId?.message ?? institutionNotice}
                 helperText={
                   institutionsEmpty
-                    ? 'No verified institutions are available yet. Ask an administrator to add and verify one before signing up.'
+                    ? 'No verified institutions are currently available. Please contact your institution administrator to register your institution first.'
                     : undefined
                 }
                 disabled={institutions.isLoading}

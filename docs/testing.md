@@ -8,12 +8,12 @@ Related: [architecture.md](./architecture.md)
 
 The project has three test layers:
 
-| Layer | Runner | Scope | Location |
-|-------|--------|-------|----------|
-| Backend unit | Vitest | Pure logic, services with mocked DB | `apps/api/src/modules/**/__tests__/*.test.ts` |
-| Backend integration | Vitest | Full Mongoose + real MongoDB | `apps/api/src/__tests__/*.spec.ts` |
-| Frontend unit | Vitest + RTL | Components, stores, forms | `apps/web/src/**/__tests__/*.test.tsx` |
-| E2E | Playwright | Full browser flows | `apps/web/e2e/specs/` |
+| Layer               | Runner       | Scope                               | Location                                      |
+| ------------------- | ------------ | ----------------------------------- | --------------------------------------------- |
+| Backend unit        | Vitest       | Pure logic, services with mocked DB | `apps/api/src/modules/**/__tests__/*.test.ts` |
+| Backend integration | Vitest       | Full Mongoose + real MongoDB        | `apps/api/src/__tests__/*.spec.ts`            |
+| Frontend unit       | Vitest + RTL | Components, stores, forms           | `apps/web/src/**/__tests__/*.test.tsx`        |
+| E2E                 | Playwright   | Full browser flows                  | `apps/web/e2e/specs/`                         |
 
 ---
 
@@ -99,12 +99,12 @@ Frontend tests run in a **jsdom** environment configured in `apps/web/vite.confi
 
 ### What is tested
 
-| Test type | Examples |
-|-----------|---------|
-| Component tests | Button variants, form field error display, Badge colour mapping |
-| Store tests | Zustand auth slice: login sets user, logout clears it |
-| Form tests | RHF + Zod schema integration: required fields, email format, min-length |
-| Hook tests | `useAuth`, query hook error states |
+| Test type       | Examples                                                                |
+| --------------- | ----------------------------------------------------------------------- |
+| Component tests | Button variants, form field error display, Badge colour mapping         |
+| Store tests     | Zustand auth slice: login sets user, logout clears it                   |
+| Form tests      | RHF + Zod schema integration: required fields, email format, min-length |
+| Hook tests      | `useAuth`, query hook error states                                      |
 
 ### File layout
 
@@ -130,7 +130,7 @@ E2E tests require:
 
 1. A running backend: `pnpm --filter @aip/api dev`
 2. A running frontend: `pnpm --filter @aip/web dev`
-3. Seeded data: `pnpm seed` (populates MongoDB with demo users, jobs, skills)
+3. Seeded data: `pnpm seed` (populates MongoDB with reference data — skill catalogue only; no demo users, jobs, or institutions)
 
 ### Running E2E tests
 
