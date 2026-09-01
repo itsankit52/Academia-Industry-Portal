@@ -6,7 +6,7 @@ vi.mock('../../../models', () => ({
   StudentProfile: { create: vi.fn(), findOne: vi.fn() },
   CompanyProfile: { create: vi.fn(), findOne: vi.fn() },
   FacultyProfile: { create: vi.fn(), findOne: vi.fn() },
-  Institution: { findById: vi.fn(), create: vi.fn() },
+  Institution: { findById: vi.fn(), findOne: vi.fn(), create: vi.fn() },
   AuditLog: { create: vi.fn() },
 }));
 
@@ -20,6 +20,12 @@ vi.mock('../../../utils/jwt', () => ({
   signAccessToken: vi.fn(() => 'access.token'),
   signRefreshToken: vi.fn(() => 'refresh.token'),
   verifyRefreshToken: vi.fn(),
+}));
+vi.mock('../../institutions/institutions.service', () => ({
+  generateUniqueInstitutionCode: vi.fn(() => Promise.resolve('AB12345')),
+  verifyInstitutionCode: vi.fn(),
+  assertInstitutionAndCode: vi.fn(),
+  listVerifiedPublic: vi.fn(),
 }));
 
 import {
@@ -73,8 +79,16 @@ beforeEach(() => {
     Promise.resolve({ _id: new Types.ObjectId() })) as never);
   vi.mocked(Institution.findById).mockReturnValue({
     select: () => ({
-      lean: () => Promise.resolve({ _id: new Types.ObjectId(), verificationStatus: 'VERIFIED' }),
+      lean: () =>
+        Promise.resolve({
+          _id: new Types.ObjectId(),
+          code: 'TESTCODE',
+          verificationStatus: 'VERIFIED',
+        }),
     }),
+  } as never);
+  vi.mocked(Institution.findOne).mockReturnValue({
+    select: () => ({ lean: () => Promise.resolve(null) }),
   } as never);
   vi.mocked(AuditLog.create).mockResolvedValue({} as never);
 });
@@ -153,6 +167,7 @@ describe('registerUser — COMPANY', () => {
 describe('registerUser — other roles keep the same guarantee', () => {
   it('rolls the User back when a StudentProfile cannot be created', async () => {
     vi.mocked(StudentProfile.create).mockRejectedValue(new Error('nope') as never);
+    const instId = new Types.ObjectId();
 
     await expect(
       registerUser(
@@ -161,7 +176,8 @@ describe('registerUser — other roles keep the same guarantee', () => {
           password: 'Password1!',
           role: 'STUDENT',
           fullName: 'Jane Smith',
-          institutionId: new Types.ObjectId().toHexString(),
+          institutionId: instId.toHexString(),
+          institutionCode: 'TESTCODE',
         },
         res,
         ctx,
@@ -172,13 +188,16 @@ describe('registerUser — other roles keep the same guarantee', () => {
   });
 
   it('leaves a successful signup alone', async () => {
+    const instId = new Types.ObjectId();
+
     await registerUser(
       {
         email: 'jane@example.com',
         password: 'Password1!',
         role: 'STUDENT',
         fullName: 'Jane Smith',
-        institutionId: new Types.ObjectId().toHexString(),
+        institutionId: instId.toHexString(),
+        institutionCode: 'TESTCODE',
       },
       res,
       ctx,
@@ -345,14 +364,22 @@ describe('registerUser — INSTITUTION', () => {
     password: 'Password1!',
     role: 'INSTITUTION' as const,
     institutionName: 'Mumbai Institute of Technology',
-    institutionCode: 'mitbom',
+    // institutionCode is now optional — server auto-generates one when not provided
     institutionDomain: 'mitbom.edu',
     institutionAddress: '123 MG Road',
     institutionCity: 'Mumbai',
     institutionState: 'Maharashtra',
   };
 
-  it('creates the Institution and links it to the User', async () => {
+  beforeEach(() => {
+    // Mock Institution.findOne to return null (no existing code) so the code
+    // generation path is taken.
+    vi.mocked(Institution.findOne).mockReturnValue({
+      select: () => ({ lean: () => Promise.resolve(null) }),
+    } as never);
+  });
+
+  it('creates the Institution with a generated code and links it to the User', async () => {
     const institutionId = new Types.ObjectId();
     vi.mocked(Institution.create).mockImplementation((() =>
       Promise.resolve({ _id: institutionId })) as never);
@@ -364,9 +391,8 @@ describe('registerUser — INSTITUTION', () => {
 
     expect(Institution.create).toHaveBeenCalledTimes(1);
     const created = vi.mocked(Institution.create).mock.calls[0]![0] as Record<string, unknown>;
-    // Code is uppercased before uniqueness check, domain is lowercased — matches
-    // the schema and the existing /institutions/public catalogue.
-    expect(created.code).toBe('MITBOM');
+    // Code is auto-generated (2 letters + 5 digits) since none was provided.
+    expect(created.code).toMatch(/^[A-Z]{2}\d{5}$/);
     expect(created.domain).toBe('mitbom.edu');
     expect(created.name).toBe('Mumbai Institute of Technology');
     expect(created.contactEmail).toBe('admin@mitbom.edu');

@@ -1,15 +1,18 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { registerSchema, type RegisterInput } from '@aip/validation';
 import { useRegister } from '@/hooks/mutations/useRegister';
 import { useInstitutionsCatalog } from '@/hooks/queries/useInstitutionsCatalog';
+import { useVerifyInstitutionCode } from '@/hooks/queries/useVerifyInstitutionCode';
 import { buildRegisterPayload } from './registerPayload';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import RadioGroup from '@/components/ui/RadioGroup';
 import Select from '@/components/ui/Select';
 import Logo from '@/components/ui/Logo';
+import { FiCheck, FiX } from 'react-icons/fi';
 
 type PublicRole = 'STUDENT' | 'COMPANY' | 'FACULTY' | 'INSTITUTION';
 
@@ -37,6 +40,13 @@ const registerResolver: Resolver<RegisterInput> = (values, context, options) =>
 export default function Register() {
   const register_ = useRegister();
   const institutions = useInstitutionsCatalog();
+  const {
+    verificationState,
+    isVerifying,
+    error: verifyError,
+    verifyCode,
+    reset: resetVerification,
+  } = useVerifyInstitutionCode();
 
   const {
     register,
@@ -54,10 +64,28 @@ export default function Register() {
   });
 
   const role = watch('role') as PublicRole;
+  const institutionId = watch('institutionId');
+  const institutionCode = watch('institutionCode');
   const needsInstitution = role === 'STUDENT' || role === 'FACULTY';
+  const isStudent = role === 'STUDENT';
+
+  // Reset verification whenever the institution selection or code changes.
+  useEffect(() => {
+    resetVerification();
+  }, [institutionId, institutionCode, resetVerification]);
 
   const institutionOptions =
     institutions.data?.map((i) => ({ value: i.id, label: `${i.name} (${i.code})` })) ?? [];
+
+  const handleVerifyInstitution = async () => {
+    if (!institutionId || !institutionCode) return;
+    await verifyCode(institutionCode, institutionId);
+  };
+
+  const isVerified =
+    isStudent &&
+    verificationState?.valid === true &&
+    verificationState?.institution?.id === institutionId;
 
   /**
    * A select holding nothing but its placeholder used to mean three different
@@ -103,7 +131,10 @@ export default function Register() {
               name="role"
               options={roleOptions}
               value={role}
-              onChange={(v) => setValue('role', v as PublicRole, { shouldValidate: true })}
+              onChange={(v) => {
+                setValue('role', v as PublicRole, { shouldValidate: true });
+                resetVerification();
+              }}
               error={errors.role?.message}
             />
 
@@ -147,6 +178,59 @@ export default function Register() {
               />
             )}
 
+            {/* Institution code — required for STUDENT registration */}
+            {isStudent && (
+              <>
+                <div>
+                  <Input
+                    label="Institution code"
+                    placeholder="e.g. AB12345"
+                    required
+                    helperText="Obtain this code from your institution administrator."
+                    error={errors.institutionCode?.message ?? verifyError ?? undefined}
+                    {...register('institutionCode')}
+                  />
+                </div>
+
+                {/* Verify button */}
+                <div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    loading={isVerifying}
+                    disabled={!institutionId || !institutionCode?.trim()}
+                    onClick={handleVerifyInstitution}
+                  >
+                    {isVerifying ? 'Verifying…' : 'Verify institution code'}
+                  </Button>
+                </div>
+
+                {/* Verification result */}
+                {isVerified && verificationState?.institution && (
+                  <div className="flex items-start gap-2 text-sm text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg px-3 py-2">
+                    <FiCheck className="mt-0.5 shrink-0" />
+                    <span>
+                      Institution verified:{' '}
+                      <span className="font-medium">{verificationState.institution.name}</span>
+                    </span>
+                  </div>
+                )}
+
+                {/* Invalid code */}
+                {verificationState?.valid === false && (
+                  <div className="flex items-start gap-2 text-sm text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded-lg px-3 py-2">
+                    <FiX className="mt-0.5 shrink-0" />
+                    <span>
+                      {verifyError ??
+                        'The institution code is invalid or does not match the selected institution.'}
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
+
             {role === 'FACULTY' && (
               <>
                 <Input
@@ -171,21 +255,15 @@ export default function Register() {
                   role="note"
                 >
                   Your institution will be created with <span className="font-medium">PENDING</span>{' '}
-                  verification. An administrator will review and verify the institution before it
-                  appears for students and faculty to select.
+                  verification. A unique institution code will be generated automatically. An
+                  administrator will review and verify the institution before it appears for
+                  students and faculty to select.
                 </p>
                 <Input
                   label="Institution name"
                   placeholder="Acme Institute of Technology"
                   error={errors.institutionName?.message}
                   {...register('institutionName')}
-                />
-                <Input
-                  label="Institution code"
-                  placeholder="IITBOM"
-                  helperText="Uppercase letters and digits, 3–20 characters."
-                  error={errors.institutionCode?.message}
-                  {...register('institutionCode')}
                 />
                 <Input
                   label="Primary email domain"
@@ -243,8 +321,16 @@ export default function Register() {
               </p>
             )}
 
-            <Button type="submit" className="w-full" loading={register_.isPending}>
-              Create account
+            {/* Disable submit for students until institution is verified */}
+            <Button
+              type="submit"
+              className="w-full"
+              loading={register_.isPending}
+              disabled={isStudent && !isVerified}
+            >
+              {isStudent && !isVerified && verificationState !== null
+                ? 'Verify institution to continue'
+                : 'Create account'}
             </Button>
           </form>
         </div>

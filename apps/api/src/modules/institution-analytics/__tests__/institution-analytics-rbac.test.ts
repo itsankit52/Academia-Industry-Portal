@@ -24,8 +24,17 @@ describe.skipIf(!hasTestDb)('institution-analytics rbac', () => {
   describe('INSTITUTION and ADMIN can access analytics endpoints', () => {
     it('INSTITUTION can GET /institution/dashboard/stats', async () => {
       const inst = await createUserAndLogin(app, 'INSTITUTION', { email: 'inst-stats@t.demo' });
+      // Look up the institution id bound to the user — must be used as query,
+      // not the hard-coded `institutionId` constant, since the isolation rule
+      // rejects mismatched ids with 403.
+      const userInst = await (
+        await import('../../../models')
+      ).User.findById(inst.userId)
+        .select('institution')
+        .lean();
+      const instId = String(userInst?.institution);
       const res = await request(app)
-        .get(`/api/v1/institution/dashboard/stats?institutionId=${institutionId}`)
+        .get(`/api/v1/institution/dashboard/stats?institutionId=${instId}`)
         .set('Cookie', inst.cookie);
       expect(res.status).toBe(200);
     });
@@ -40,8 +49,14 @@ describe.skipIf(!hasTestDb)('institution-analytics rbac', () => {
 
     it('INSTITUTION can GET /institution/dashboard/skill-gaps', async () => {
       const inst = await createUserAndLogin(app, 'INSTITUTION', { email: 'inst-skills@t.demo' });
+      const userInst = await (
+        await import('../../../models')
+      ).User.findById(inst.userId)
+        .select('institution')
+        .lean();
+      const instId = String(userInst?.institution);
       const res = await request(app)
-        .get(`/api/v1/institution/dashboard/skill-gaps?institutionId=${institutionId}`)
+        .get(`/api/v1/institution/dashboard/skill-gaps?institutionId=${instId}`)
         .set('Cookie', inst.cookie);
       expect(res.status).toBe(200);
     });
@@ -50,41 +65,71 @@ describe.skipIf(!hasTestDb)('institution-analytics rbac', () => {
       const inst = await createUserAndLogin(app, 'INSTITUTION', {
         email: 'inst-placements@t.demo',
       });
+      const userInst = await (
+        await import('../../../models')
+      ).User.findById(inst.userId)
+        .select('institution')
+        .lean();
+      const instId = String(userInst?.institution);
       const res = await request(app)
-        .get(`/api/v1/institution/dashboard/placement-metrics?institutionId=${institutionId}`)
+        .get(`/api/v1/institution/dashboard/placement-metrics?institutionId=${instId}`)
         .set('Cookie', inst.cookie);
       expect(res.status).toBe(200);
     });
 
     it('INSTITUTION can GET /institution/dashboard/fdp-participation', async () => {
       const inst = await createUserAndLogin(app, 'INSTITUTION', { email: 'inst-fdp@t.demo' });
+      const userInst = await (
+        await import('../../../models')
+      ).User.findById(inst.userId)
+        .select('institution')
+        .lean();
+      const instId = String(userInst?.institution);
       const res = await request(app)
-        .get(`/api/v1/institution/dashboard/fdp-participation?institutionId=${institutionId}`)
+        .get(`/api/v1/institution/dashboard/fdp-participation?institutionId=${instId}`)
         .set('Cookie', inst.cookie);
       expect(res.status).toBe(200);
     });
 
     it('INSTITUTION can GET /institution/dashboard/students', async () => {
       const inst = await createUserAndLogin(app, 'INSTITUTION', { email: 'inst-students@t.demo' });
+      const userInst = await (
+        await import('../../../models')
+      ).User.findById(inst.userId)
+        .select('institution')
+        .lean();
+      const instId = String(userInst?.institution);
       const res = await request(app)
-        .get(`/api/v1/institution/dashboard/students?institutionId=${institutionId}`)
+        .get(`/api/v1/institution/dashboard/students?institutionId=${instId}`)
         .set('Cookie', inst.cookie);
       expect(res.status).toBe(200);
     });
 
     it('INSTITUTION can GET /institution/dashboard/faculty', async () => {
       const inst = await createUserAndLogin(app, 'INSTITUTION', { email: 'inst-faculty@t.demo' });
+      const userInst = await (
+        await import('../../../models')
+      ).User.findById(inst.userId)
+        .select('institution')
+        .lean();
+      const instId = String(userInst?.institution);
       const res = await request(app)
-        .get(`/api/v1/institution/dashboard/faculty?institutionId=${institutionId}`)
+        .get(`/api/v1/institution/dashboard/faculty?institutionId=${instId}`)
         .set('Cookie', inst.cookie);
       expect(res.status).toBe(200);
     });
 
     it('INSTITUTION can GET /institution/dashboard/stats with filters', async () => {
       const inst = await createUserAndLogin(app, 'INSTITUTION', { email: 'inst-filter@t.demo' });
+      const userInst = await (
+        await import('../../../models')
+      ).User.findById(inst.userId)
+        .select('institution')
+        .lean();
+      const instId = String(userInst?.institution);
       const res = await request(app)
         .get(
-          `/api/v1/institution/dashboard/stats?institutionId=${institutionId}&department=Computer+Science&opportunityType=JOB&applicationStatus=APPLIED`,
+          `/api/v1/institution/dashboard/stats?institutionId=${instId}&department=Computer+Science&opportunityType=JOB&applicationStatus=APPLIED`,
         )
         .set('Cookie', inst.cookie);
       expect(res.status).toBe(200);

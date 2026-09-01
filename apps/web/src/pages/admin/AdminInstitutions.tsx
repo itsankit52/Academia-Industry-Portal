@@ -12,7 +12,7 @@ import { SkeletonTableRows } from '@/components/ui/Skeleton';
 import { useAdminInstitutions, useVerifyInstitution } from '@/hooks/queries/useAdminInstitutions';
 import type { Institution } from '@aip/types';
 
-const statusVariant: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = {
+const statusVariant: Record<string, 'success' | 'warning' | 'danger'> = {
   VERIFIED: 'success',
   PENDING: 'warning',
   REJECTED: 'danger',
@@ -137,13 +137,12 @@ function InstitutionRow({
         {institution.contactEmail}
       </Table.Td>
       <Table.Td>
-        <Badge
-          variant={statusVariant[institution.verificationStatus] ?? 'neutral'}
-          size="sm"
-          icon={statusIcon[institution.verificationStatus]}
-        >
-          {institution.verificationStatus}
-        </Badge>
+        <span className="inline-flex items-center gap-1">
+          {statusIcon[institution.verificationStatus]}
+          <Badge variant={statusVariant[institution.verificationStatus] ?? 'default'} size="sm">
+            {institution.verificationStatus}
+          </Badge>
+        </span>
       </Table.Td>
       <Table.Td className="text-sm text-slate-500 dark:text-slate-500">
         {institution.verifiedAt ? new Date(institution.verifiedAt).toLocaleDateString() : '—'}

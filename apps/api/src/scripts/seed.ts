@@ -5,11 +5,12 @@
  * function:
  *   - Skills (canonical technology and soft-skill catalogue)
  *   - Aptitude questions (technical aptitude test bank)
- *   - A verified demo institution (so students and faculty can register on first run)
  *
  * It does NOT create demo users, demo companies, demo students, demo faculty,
- * demo jobs, demo internships, demo applications, or any other demo/sample
- * business data.
+ * demo institutions, demo jobs, demo internships, demo applications, or any
+ * other demo/sample business data. The database is left usable from zero:
+ * institutions are created through the real registration flow, and students
+ * join those institutions with the code the admin sees in their dashboard.
  *
  * Production behaviour: NODE_ENV=production causes an immediate exit so this
  * script can never be run against live data by accident.
@@ -1445,31 +1446,6 @@ async function seedSkills(): Promise<number> {
 }
 
 /**
- * Seeds a verified demo institution so students and faculty can register on first run.
- * This breaks the chicken-and-egg problem where no verified institution exists,
- * blocking all STUDENT and FACULTY registrations.
- */
-async function seedDemoInstitution(): Promise<void> {
-  const existing = await Institution.findOne({ code: 'DEMOUNI' });
-  if (existing) {
-    logger.info('Demo institution already exists, skipping');
-    return;
-  }
-  await Institution.create({
-    name: 'Demo University of Technology',
-    code: 'DEMOUNI',
-    domain: 'demo.edu',
-    address: '123 Academic Lane, Knowledge City',
-    city: 'New Delhi',
-    state: 'Delhi',
-    contactEmail: 'admin@demo.edu',
-    verificationStatus: 'VERIFIED',
-    verifiedAt: new Date(),
-  });
-  logger.info('Demo institution seeded: DEMOUNI (VERIFIED)');
-}
-
-/**
  * Seeds the aptitude question bank so students can take aptitude tests on first run.
  */
 async function seedAptitudeQuestions(): Promise<number> {
@@ -1536,17 +1512,14 @@ async function run(): Promise<void> {
     logger.info('Seeding aptitude question bank');
     const aptitudeCount = await seedAptitudeQuestions();
 
-    logger.info('Seeding demo institution (for first-run student/faculty registration)');
-    await seedDemoInstitution();
-
     const counts = await summary();
     logger.info(
       { counts },
       'Seed complete — reference data only. ' +
-        'No demo users, companies, students, faculty, ' +
+        'No demo users, companies, students, faculty, institutions, ' +
         'jobs, internships, or applications were created. ' +
-        'A single demo institution is seeded to enable first-run registrations. ' +
-        'Users and additional institutions are created through the real registration flow.',
+        'Institutions are created through the real registration flow; ' +
+        'students and faculty join them using the institution code.',
     );
   } finally {
     await disconnectDB();

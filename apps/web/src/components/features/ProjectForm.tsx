@@ -10,14 +10,19 @@ import { useCreateStudentProject } from '@/hooks/queries/useCreateStudentProject
 import { useUpdateStudentProject } from '@/hooks/queries/useUpdateStudentProject';
 import type { StudentProject } from '@/hooks/queries/useStudentProjects';
 
-const schema = z.object({
+const rawSchema = z.object({
   title: z.string().min(3, 'At least 3 characters').max(200, 'Max 200 characters'),
   description: z.string().min(10, 'At least 10 characters').max(5000, 'Max 5000 characters'),
   role: z.string().max(200).optional(),
+  technologies: z.string().max(500, 'Technologies list too long').optional(),
+  completedAt: z.string().datetime().optional().nullable(),
+  isPublic: z.boolean().default(true),
+});
+
+const validatedSchema = rawSchema.extend({
   technologies: z
     .string()
     .max(500, 'Technologies list too long')
-    .optional()
     .transform((v) =>
       v
         ? v
@@ -27,11 +32,10 @@ const schema = z.object({
             .slice(0, 30)
         : [],
     ),
-  completedAt: z.string().datetime().optional().nullable(),
-  isPublic: z.boolean().default(true),
 });
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.input<typeof rawSchema>;
+type ValidatedValues = z.infer<typeof validatedSchema>;
 
 interface Props {
   project?: StudentProject | null;
@@ -50,7 +54,7 @@ export default function ProjectForm({ project, onClose }: Props) {
     watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(rawSchema),
     defaultValues: {
       title: '',
       description: '',
@@ -86,17 +90,20 @@ export default function ProjectForm({ project, onClose }: Props) {
   }, [project, reset]);
 
   function onSubmit(data: FormValues) {
+    // Re-parse with the schema that includes the technologies transform —
+    // the resolver above runs the field-level validation on the raw string.
+    const parsed: ValidatedValues = validatedSchema.parse(data);
     const payload = {
-      title: data.title,
-      description: data.description,
-      ...(data.role ? { role: data.role } : {}),
-      ...(data.technologies.length > 0 ? { technologies: data.technologies } : {}),
-      ...(data.completedAt ? { completedAt: data.completedAt } : {}),
+      title: parsed.title,
+      description: parsed.description,
+      ...(parsed.role ? { role: parsed.role } : {}),
+      ...(parsed.technologies.length > 0 ? { technologies: parsed.technologies } : {}),
+      ...(parsed.completedAt ? { completedAt: parsed.completedAt } : {}),
     };
 
     if (isEdit && project) {
       update.mutate(
-        { id: project._id, payload: { ...payload, isPublic: data.isPublic } },
+        { id: project._id, payload: { ...payload, isPublic: parsed.isPublic } },
         { onSuccess: onClose },
       );
     } else {
@@ -104,10 +111,10 @@ export default function ProjectForm({ project, onClose }: Props) {
     }
   }
 
-  const techTags = technologiesValue
+  const techTags: string[] = technologiesValue
     ? technologiesValue
         .split(',')
-        .map((t) => t.trim())
+        .map((t: string) => t.trim())
         .filter(Boolean)
         .slice(0, 30)
     : [];
@@ -146,7 +153,7 @@ export default function ProjectForm({ project, onClose }: Props) {
         />
         {techTags.length > 0 && (
           <div className="flex flex-wrap gap-1">
-            {techTags.map((t) => (
+            {techTags.map((t: string) => (
               <span
                 key={t}
                 className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300"

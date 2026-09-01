@@ -51,8 +51,9 @@ export default function Sidebar({ items, header, isOpen = false, onClose, drawer
           'fixed inset-y-0 left-0 z-40 flex flex-col bg-white border-r border-slate-200 transition-transform duration-200 dark:bg-slate-900 dark:border-slate-800',
           'lg:static lg:inset-auto lg:z-auto lg:transform-none',
           isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
-          // Desktop: always visible, collapsible
-          'hidden lg:flex',
+          // Always render as a flex container — on mobile it's translated off-screen
+          // and shown when the drawer is opened; on desktop (lg+) it stays in flow.
+          'flex',
           collapsed ? 'lg:w-16' : 'lg:w-64',
         )}
       >

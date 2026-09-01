@@ -26,7 +26,7 @@ vi.mock('../../../models', () => ({
   StudentProfile: { create: vi.fn(), findOne: vi.fn(), findOneAndUpdate: vi.fn() },
   CompanyProfile: { create: vi.fn(), findOne: vi.fn() },
   FacultyProfile: { create: vi.fn(), findOne: vi.fn() },
-  Institution: { findById: vi.fn(), create: vi.fn() },
+  Institution: { findById: vi.fn(), findOne: vi.fn(), create: vi.fn() },
   AuditLog: { create: vi.fn() },
 }));
 
@@ -38,6 +38,12 @@ vi.mock('../../../utils/jwt', () => ({
   signAccessToken: vi.fn(() => 'access.token'),
   signRefreshToken: vi.fn(() => 'refresh.token'),
   verifyRefreshToken: vi.fn(),
+}));
+vi.mock('../../institutions/institutions.service', () => ({
+  generateUniqueInstitutionCode: vi.fn(() => Promise.resolve('AB12345')),
+  verifyInstitutionCode: vi.fn(),
+  assertInstitutionAndCode: vi.fn(),
+  listVerifiedPublic: vi.fn(),
 }));
 
 import {
@@ -82,12 +88,12 @@ function userDoc(id: Types.ObjectId, role: string) {
 
 /**
  * Stub Institution.findById to simulate a VERIFIED institution.
- * The service calls `.select('_id verificationStatus').lean()` on the result.
+ * The service calls `.select('_id code verificationStatus').lean()` on the result.
  */
-function mockVerifiedInstitution(id: Types.ObjectId) {
+function mockVerifiedInstitution(id: Types.ObjectId, code = 'TESTCODE') {
   vi.mocked(Institution.findById).mockReturnValue({
     select: () => ({
-      lean: () => Promise.resolve({ _id: id, verificationStatus: 'VERIFIED' }),
+      lean: () => Promise.resolve({ _id: id, code, verificationStatus: 'VERIFIED' }),
     }),
   } as never);
 }
@@ -98,7 +104,7 @@ function mockVerifiedInstitution(id: Types.ObjectId) {
 function mockPendingInstitution(id: Types.ObjectId) {
   vi.mocked(Institution.findById).mockReturnValue({
     select: () => ({
-      lean: () => Promise.resolve({ _id: id, verificationStatus: 'PENDING' }),
+      lean: () => Promise.resolve({ _id: id, code: 'TESTCODE', verificationStatus: 'PENDING' }),
     }),
   } as never);
 }
@@ -189,6 +195,7 @@ describe('registerUser — STUDENT with nonexistent institutionId', () => {
           role: 'STUDENT',
           fullName: 'Jane Smith',
           institutionId: new Types.ObjectId().toHexString(),
+          institutionCode: 'TESTCODE',
         },
         res,
         ctx,
@@ -209,6 +216,7 @@ describe('registerUser — STUDENT with nonexistent institutionId', () => {
           role: 'STUDENT',
           fullName: 'Jane Smith',
           institutionId: new Types.ObjectId().toHexString(),
+          institutionCode: 'TESTCODE',
         },
         res,
         ctx,
@@ -234,6 +242,7 @@ describe('registerUser — STUDENT with PENDING (unverified) institution', () =>
           role: 'STUDENT',
           fullName: 'Jane Smith',
           institutionId: instId.toHexString(),
+          institutionCode: 'TESTCODE',
         },
         res,
         ctx,
@@ -257,6 +266,7 @@ describe('registerUser — STUDENT with PENDING (unverified) institution', () =>
           role: 'STUDENT',
           fullName: 'Jane Smith',
           institutionId: instId.toHexString(),
+          institutionCode: 'TESTCODE',
         },
         res,
         ctx,
@@ -272,7 +282,7 @@ describe('registerUser — STUDENT with PENDING (unverified) institution', () =>
 describe('registerUser — STUDENT with valid verified institution', () => {
   it('creates the User and StudentProfile, both linked to the institution', async () => {
     const instId = new Types.ObjectId();
-    mockVerifiedInstitution(instId);
+    mockVerifiedInstitution(instId, 'INSTCODE');
 
     await registerUser(
       {
@@ -281,6 +291,7 @@ describe('registerUser — STUDENT with valid verified institution', () => {
         role: 'STUDENT',
         fullName: 'Jane Smith',
         institutionId: instId.toHexString(),
+        institutionCode: 'INSTCODE',
       },
       res,
       ctx,
@@ -304,7 +315,7 @@ describe('registerUser — STUDENT with valid verified institution', () => {
 
   it('does not roll back on success', async () => {
     const instId = new Types.ObjectId();
-    mockVerifiedInstitution(instId);
+    mockVerifiedInstitution(instId, 'INSTCODE');
 
     await registerUser(
       {
@@ -313,6 +324,7 @@ describe('registerUser — STUDENT with valid verified institution', () => {
         role: 'STUDENT',
         fullName: 'Jane Smith',
         institutionId: instId.toHexString(),
+        institutionCode: 'INSTCODE',
       },
       res,
       ctx,
@@ -323,7 +335,7 @@ describe('registerUser — STUDENT with valid verified institution', () => {
 
   it('does not create a CompanyProfile or FacultyProfile', async () => {
     const instId = new Types.ObjectId();
-    mockVerifiedInstitution(instId);
+    mockVerifiedInstitution(instId, 'INSTCODE');
 
     await registerUser(
       {
@@ -332,6 +344,7 @@ describe('registerUser — STUDENT with valid verified institution', () => {
         role: 'STUDENT',
         fullName: 'Jane Smith',
         institutionId: instId.toHexString(),
+        institutionCode: 'INSTCODE',
       },
       res,
       ctx,
@@ -370,7 +383,7 @@ describe('registerUser — FACULTY without institutionId', () => {
 describe('registerUser — FACULTY with valid verified institution', () => {
   it('creates User and FacultyProfile both linked to the institution', async () => {
     const instId = new Types.ObjectId();
-    mockVerifiedInstitution(instId);
+    mockVerifiedInstitution(instId, 'INSTCODE');
 
     await registerUser(
       {
@@ -444,7 +457,7 @@ describe('registerUser — COMPANY does not require institutionId', () => {
 describe('registerUser — no default/demo institution', () => {
   it('uses exactly the institutionId the caller provided, nothing else', async () => {
     const realInstId = new Types.ObjectId();
-    mockVerifiedInstitution(realInstId);
+    mockVerifiedInstitution(realInstId, 'REALLCODE');
 
     await registerUser(
       {
@@ -453,6 +466,7 @@ describe('registerUser — no default/demo institution', () => {
         role: 'STUDENT',
         fullName: 'Real Student',
         institutionId: realInstId.toHexString(),
+        institutionCode: 'REALLCODE',
       },
       res,
       ctx,
@@ -466,7 +480,7 @@ describe('registerUser — no default/demo institution', () => {
   it('does NOT assign a hardcoded fallback when the caller provides a valid institution', async () => {
     const providedInstId = new Types.ObjectId();
     const differentInstId = new Types.ObjectId();
-    mockVerifiedInstitution(providedInstId);
+    mockVerifiedInstitution(providedInstId, 'PROVIDEDC');
 
     await registerUser(
       {
@@ -475,6 +489,7 @@ describe('registerUser — no default/demo institution', () => {
         role: 'STUDENT',
         fullName: 'Real Student',
         institutionId: providedInstId.toHexString(),
+        institutionCode: 'PROVIDEDC',
       },
       res,
       ctx,
@@ -547,7 +562,7 @@ describe('updateMyProfile — institution cannot be changed', () => {
 describe('assertInstitutionVerified called exactly once per STUDENT/FACULTY registration', () => {
   it('calls Institution.findById once for STUDENT', async () => {
     const instId = new Types.ObjectId();
-    mockVerifiedInstitution(instId);
+    mockVerifiedInstitution(instId, 'INSTCODE');
 
     await registerUser(
       {
@@ -556,6 +571,7 @@ describe('assertInstitutionVerified called exactly once per STUDENT/FACULTY regi
         role: 'STUDENT',
         fullName: 'Jane Smith',
         institutionId: instId.toHexString(),
+        institutionCode: 'INSTCODE',
       },
       res,
       ctx,
@@ -567,7 +583,7 @@ describe('assertInstitutionVerified called exactly once per STUDENT/FACULTY regi
 
   it('calls Institution.findById once for FACULTY', async () => {
     const instId = new Types.ObjectId();
-    mockVerifiedInstitution(instId);
+    mockVerifiedInstitution(instId, 'INSTCODE');
 
     await registerUser(
       {
@@ -599,5 +615,86 @@ describe('assertInstitutionVerified called exactly once per STUDENT/FACULTY regi
     );
 
     expect(Institution.findById).not.toHaveBeenCalled();
+  });
+});
+
+// ── 10. STUDENT institution code mismatch (Phase 20) ─────────────────────────
+
+describe('registerUser — STUDENT institution code mismatch', () => {
+  it('rejects when institution code does not match the selected institution', async () => {
+    const instId = new Types.ObjectId();
+    // Institution has code 'REALCODE' but caller submits 'WRONGCODE'
+    mockVerifiedInstitution(instId, 'REALCODE');
+
+    await expect(
+      registerUser(
+        {
+          email: 'student@example.com',
+          password: 'Password1!',
+          role: 'STUDENT',
+          fullName: 'Jane Smith',
+          institutionId: instId.toHexString(),
+          institutionCode: 'WRONGCODE',
+        },
+        res,
+        ctx,
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: expect.stringMatching(/institution code does not match/i),
+    });
+
+    expect(User.create).not.toHaveBeenCalled();
+    expect(StudentProfile.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects when STUDENT institutionCode is missing', async () => {
+    const instId = new Types.ObjectId();
+    mockVerifiedInstitution(instId, 'REALCODE');
+
+    await expect(
+      registerUser(
+        {
+          email: 'student@example.com',
+          password: 'Password1!',
+          role: 'STUDENT',
+          fullName: 'Jane Smith',
+          institutionId: instId.toHexString(),
+          // institutionCode intentionally omitted
+        },
+        res,
+        ctx,
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: expect.stringMatching(/institutionCode is required/i),
+    });
+
+    expect(User.create).not.toHaveBeenCalled();
+  });
+
+  it('accepts case-insensitive code match', async () => {
+    const instId = new Types.ObjectId();
+    // Stored as uppercase
+    mockVerifiedInstitution(instId, 'AB12345');
+
+    await registerUser(
+      {
+        email: 'student@example.com',
+        password: 'Password1!',
+        role: 'STUDENT',
+        fullName: 'Jane Smith',
+        institutionId: instId.toHexString(),
+        institutionCode: 'ab12345', // lowercase — should still match
+      },
+      res,
+      ctx,
+    );
+
+    expect(StudentProfile.create).toHaveBeenCalledTimes(1);
+    const studentCreateArg = vi.mocked(StudentProfile.create).mock.calls[0]![0] as {
+      institution: Types.ObjectId;
+    };
+    expect(String(studentCreateArg.institution)).toBe(instId.toHexString());
   });
 });

@@ -3,6 +3,7 @@ import { registerSchema } from '@aip/validation';
 import { buildRegisterPayload, type RegisterFormValues } from '../registerPayload';
 
 const OBJECT_ID = '507f1f77bcf86cd799439011';
+const INST_CODE = 'AB12345';
 
 const ROLES = ['STUDENT', 'COMPANY', 'FACULTY'] as const;
 type PublicRole = (typeof ROLES)[number];
@@ -12,7 +13,7 @@ type PublicRole = (typeof ROLES)[number];
  * be shown, which is the failure this module exists to prevent.
  */
 const VISIBLE_FIELDS: Record<PublicRole, string[]> = {
-  STUDENT: ['role', 'email', 'password', 'fullName', 'institutionId'],
+  STUDENT: ['role', 'email', 'password', 'fullName', 'institutionId', 'institutionCode'],
   COMPANY: ['role', 'email', 'password', 'companyName'],
   FACULTY: ['role', 'email', 'password', 'fullName', 'institutionId', 'designation', 'department'],
 };
@@ -30,6 +31,7 @@ function staleCompanyFormState(): RegisterFormValues {
     department: 'General',
     fullName: '',
     institutionId: '',
+    institutionCode: '',
     companyName: 'Acme Corp',
     email: 'company@example.com',
     password: 'Password1!',
@@ -40,13 +42,19 @@ describe('buildRegisterPayload', () => {
   it('lets a COMPANY signup through, where the raw form state could not', () => {
     const raw = staleCompanyFormState();
 
-    // The regression: the untouched form state is rejected on two fields the
+    // The regression: the untouched form state is rejected on the fields the
     // company form does not render.
     const before = registerSchema.safeParse(raw);
     expect(before.success).toBe(false);
     if (!before.success) {
+      // Every error has to land on a field the company form does not render —
+      // fullName, institutionId, and institutionCode. The buildRegisterPayload
+      // function below trims them away.
+      // Note: institutionCode produces TWO errors for '' (one from .min, one from .regex).
       expect(before.error.issues.map((i) => i.path.join('.')).sort()).toEqual([
         'fullName',
+        'institutionCode',
+        'institutionCode',
         'institutionId',
       ]);
     }
@@ -80,6 +88,7 @@ describe('buildRegisterPayload', () => {
       fullName: 'Jane Smith',
       companyName: 'Acme Corp',
       institutionId: OBJECT_ID,
+      institutionCode: INST_CODE,
       designation: 'Reader',
       department: 'Computer Science',
     };
@@ -108,7 +117,13 @@ describe('buildRegisterPayload', () => {
     // Nothing filled in but the role — the empty-form submit.
     for (const role of ROLES) {
       const result = registerSchema.safeParse(
-        buildRegisterPayload({ role, fullName: '', institutionId: '', companyName: '' }),
+        buildRegisterPayload({
+          role,
+          fullName: '',
+          institutionId: '',
+          institutionCode: '',
+          companyName: '',
+        }),
       );
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -156,6 +171,7 @@ describe('buildRegisterPayload', () => {
       role: 'STUDENT',
       fullName: 'Jane Smith',
       institutionId: OBJECT_ID,
+      institutionCode: INST_CODE,
       email: 'jane@example.com',
       password: 'Password1!',
       // Defaults that exist for the faculty branch only.
@@ -166,6 +182,7 @@ describe('buildRegisterPayload', () => {
       role: 'STUDENT',
       fullName: 'Jane Smith',
       institutionId: OBJECT_ID,
+      institutionCode: INST_CODE,
       email: 'jane@example.com',
       password: 'Password1!',
     });

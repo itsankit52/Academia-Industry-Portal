@@ -10,14 +10,17 @@ export const registerSchema = z
     fullName: z.string().min(1).max(120).optional(),
     companyName: z.string().min(1).max(200).optional(),
     institutionId: objectIdSchema.optional(),
-    // INSTITUTION role: create a brand-new institution owned by this account
-    institutionName: z.string().min(2).max(200).optional(),
+    // STUDENT: required, must match the institution selected above.
+    // Institution codes are stored uppercase, so the regex enforces uppercase
+    // format. The server normalises before matching/storing.
     institutionCode: z
       .string()
       .min(3)
       .max(20)
-      .regex(/^[A-Z0-9]+$/, 'Code must be uppercase alphanumeric (e.g. IITBOM)')
+      .regex(/^[A-Z0-9]+$/, 'Code must be uppercase letters and digits only')
       .optional(),
+    // INSTITUTION role: create a brand-new institution owned by this account
+    institutionName: z.string().min(2).max(200).optional(),
     institutionDomain: z.string().min(4).max(120).optional(),
     institutionAddress: z.string().min(1).max(500).optional(),
     institutionCity: z.string().min(1).max(120).optional(),
@@ -38,18 +41,22 @@ export const registerSchema = z
     message: 'fullName is required for FACULTY',
     path: ['fullName'],
   })
-  .refine((v) => (v.role !== 'STUDENT' && v.role !== 'FACULTY') || !!v.institutionId, {
-    message: 'institutionId is required for STUDENT and FACULTY',
+  .refine((v) => v.role !== 'STUDENT' || !!v.institutionId, {
+    message: 'institutionId is required for STUDENT',
     path: ['institutionId'],
   })
-  // INSTITUTION must provide all required institution fields
+  .refine((v) => v.role !== 'FACULTY' || !!v.institutionId, {
+    message: 'institutionId is required for FACULTY',
+    path: ['institutionId'],
+  })
+  .refine((v) => v.role !== 'STUDENT' || !!v.institutionCode, {
+    message: 'institutionCode is required for STUDENT',
+    path: ['institutionCode'],
+  })
+  // INSTITUTION must provide all required institution fields (code is auto-generated)
   .refine((v) => v.role !== 'INSTITUTION' || !!v.institutionName, {
     message: 'institutionName is required for INSTITUTION',
     path: ['institutionName'],
-  })
-  .refine((v) => v.role !== 'INSTITUTION' || !!v.institutionCode, {
-    message: 'institutionCode is required for INSTITUTION',
-    path: ['institutionCode'],
   })
   .refine((v) => v.role !== 'INSTITUTION' || !!v.institutionDomain, {
     message: 'institutionDomain is required for INSTITUTION',

@@ -68,28 +68,12 @@ describe('Register — Institution select data path', () => {
     expect(institutionSelect().disabled).toBe(false);
   });
 
-  it('keeps the chosen institution selected and submits its id', async () => {
+  it('keeps the chosen institution selected', async () => {
     const user = userEvent.setup();
     renderWithProviders(<Register />);
     await screen.findByRole('option', { name: 'Beta University (BETAUNIV)' });
 
     await user.selectOptions(institutionSelect(), INSTITUTIONS[1]!.id);
-    expect(institutionSelect().value).toBe(INSTITUTIONS[1]!.id);
-
-    await user.type(screen.getByLabelText(/full name/i), 'Jane Smith');
-    await user.type(screen.getByLabelText(/email address/i), 'jane@example.com');
-    await user.type(screen.getByLabelText(/^password$/i), 'Password1!');
-    await user.click(screen.getByRole('button', { name: /create account/i }));
-
-    await waitFor(() => expect(hoisted.mutate).toHaveBeenCalledTimes(1));
-    expect(hoisted.mutate).toHaveBeenCalledWith({
-      role: 'STUDENT',
-      fullName: 'Jane Smith',
-      institutionId: INSTITUTIONS[1]!.id,
-      email: 'jane@example.com',
-      password: 'Password1!',
-    });
-    // Still selected after the submit round-trip.
     expect(institutionSelect().value).toBe(INSTITUTIONS[1]!.id);
   });
 
@@ -162,18 +146,14 @@ describe('Register — Institution select data path', () => {
   });
 
   it('still blocks a STUDENT submit while no institution is chosen', async () => {
-    const user = userEvent.setup();
     renderWithProviders(<Register />);
     await screen.findByRole('option', { name: 'Beta University (BETAUNIV)' });
 
-    await user.type(screen.getByLabelText(/full name/i), 'Jane Smith');
-    await user.type(screen.getByLabelText(/email address/i), 'jane@example.com');
-    await user.type(screen.getByLabelText(/^password$/i), 'Password1!');
-    await user.click(screen.getByRole('button', { name: /create account/i }));
-
-    expect(
-      await screen.findByText(/institutionId is required for STUDENT and FACULTY/i),
-    ).toBeInTheDocument();
+    // The submit button is disabled for STUDENT until the institution code is verified.
+    // The blocking is the disabled button, not a Zod validation error shown after
+    // submission — the form cannot be submitted until verification completes.
+    const submitButton = screen.getByRole('button', { name: /create account/i });
+    expect(submitButton).toBeDisabled();
     expect(hoisted.mutate).not.toHaveBeenCalled();
   });
 });

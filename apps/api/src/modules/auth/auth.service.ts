@@ -6,6 +6,7 @@ import { hashPassword, comparePassword } from '../../utils/password';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../utils/jwt';
 import { setAuthCookies, clearAuthCookies } from '../../utils/cookies';
 import { logger } from '../../utils/logger';
+import { generateUniqueInstitutionCode } from '../institutions/institutions.service';
 import {
   User,
   StudentProfile,
@@ -43,13 +44,21 @@ function publicUser(user: { toJSON: () => unknown }) {
  * Validates that the institution exists and is VERIFIED before allowing a
  * student or faculty member to register against it.
  *
+ * For STUDENT registration, also validates that the supplied institutionCode
+ * matches the institution's code (case-insensitive).
+ *
  * Defence-in-depth: the Zod schema already enforces that institutionId is
  * present for STUDENT/FACULTY, so this function is always called with a value.
  * The explicit guard here means the service is safe even if called directly
  * (e.g. from tests or future service-to-service calls) without the middleware.
  */
-async function assertInstitutionVerified(institutionId: string): Promise<void> {
-  const inst = await Institution.findById(institutionId).select('_id verificationStatus').lean();
+async function assertInstitutionVerified(
+  institutionId: string,
+  institutionCode?: string,
+): Promise<void> {
+  const inst = await Institution.findById(institutionId)
+    .select('_id code verificationStatus')
+    .lean();
   if (!inst) {
     throw AppError.badRequest('Institution not found');
   }
@@ -58,6 +67,13 @@ async function assertInstitutionVerified(institutionId: string): Promise<void> {
       'The selected institution is pending verification and cannot accept registrations yet. ' +
         'Please contact your institution administrator.',
     );
+  }
+  // Code verification for STUDENT: must match exactly (case-insensitive).
+  if (institutionCode !== undefined) {
+    const expected = (inst as Record<string, unknown>).code as string;
+    if (expected !== institutionCode.trim().toUpperCase()) {
+      throw AppError.badRequest('The institution code does not match the selected institution');
+    }
   }
 }
 
@@ -70,9 +86,21 @@ export async function registerUser(input: RegisterInput, res: Response, ctx: Aut
   // enforces it is present, and this check confirms it resolves to a real,
   // verified institution. The guard is unconditional (no &&) so a missing
   // institutionId that slipped past schema validation is caught here too.
-  if (input.role === 'STUDENT' || input.role === 'FACULTY') {
+  if (input.role === 'STUDENT') {
     if (!input.institutionId) {
-      throw AppError.badRequest('institutionId is required for STUDENT and FACULTY registration');
+      throw AppError.badRequest('institutionId is required for STUDENT registration');
+    }
+    if (!input.institutionCode) {
+      throw AppError.badRequest('institutionCode is required for STUDENT registration');
+    }
+    // The server re-validates that the supplied institutionId and institutionCode
+    // belong to the same institution. Trusting the institutionId alone would let a
+    // client pick Institution A from the catalogue but submit Institution B's code
+    // and end up linked to A — defeating the whole point of the code gate.
+    await assertInstitutionVerified(input.institutionId, input.institutionCode);
+  } else if (input.role === 'FACULTY') {
+    if (!input.institutionId) {
+      throw AppError.badRequest('institutionId is required for FACULTY registration');
     }
     await assertInstitutionVerified(input.institutionId);
   }
@@ -122,9 +150,22 @@ export async function registerUser(input: RegisterInput, res: Response, ctx: Aut
     } else if (input.role === 'INSTITUTION') {
       // The institution account IS the institution — create the institution document
       // first, link it to the user, then update the user record with the ID.
+      // The institution code is auto-generated server-side to guarantee uniqueness.
+      // If the user supplied a custom code, honour it (after uniqueness check).
+      let code: string;
+      if (input.institutionCode) {
+        const normalized = input.institutionCode.toUpperCase();
+        const exists = await Institution.findOne({ code: normalized }).select('_id').lean();
+        if (exists) {
+          throw AppError.conflict('This institution code is already in use');
+        }
+        code = normalized;
+      } else {
+        code = await generateUniqueInstitutionCode();
+      }
       const institution = await Institution.create({
         name: input.institutionName,
-        code: input.institutionCode!.toUpperCase(),
+        code,
         domain: input.institutionDomain!.toLowerCase(),
         address: input.institutionAddress,
         city: input.institutionCity,

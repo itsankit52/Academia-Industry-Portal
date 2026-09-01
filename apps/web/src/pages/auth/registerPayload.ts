@@ -12,7 +12,7 @@ export type RegisterFormValues = Partial<Record<keyof RegisterInput, unknown>>;
  * renders them.
  */
 const FIELDS_BY_ROLE: Record<PublicRole, ReadonlyArray<keyof RegisterInput>> = {
-  STUDENT: ['role', 'email', 'password', 'fullName', 'institutionId'],
+  STUDENT: ['role', 'email', 'password', 'fullName', 'institutionId', 'institutionCode'],
   COMPANY: ['role', 'email', 'password', 'companyName'],
   FACULTY: ['role', 'email', 'password', 'fullName', 'institutionId', 'designation', 'department'],
   INSTITUTION: [

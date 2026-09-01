@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { FiCode, FiPlus, FiExternalLink, FiTrash2, FiEdit2 } from 'react-icons/fi';
 import PageHeader from '@/components/ui/PageHeader';
 import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import EmptyState from '@/components/ui/EmptyState';
 import ErrorState from '@/components/ui/ErrorState';
@@ -110,14 +111,17 @@ export default function StudentProjects() {
       <PageHeader
         title="Projects"
         subtitle="Showcase your portfolio projects to companies and institutions."
-        action={{
-          label: 'Add Project',
-          icon: <FiPlus className="w-4 h-4" />,
-          onClick: () => {
-            setEditProject(null);
-            setShowForm(true);
-          },
-        }}
+        actions={
+          <Button
+            onClick={() => {
+              setEditProject(null);
+              setShowForm(true);
+            }}
+          >
+            <FiPlus className="w-4 h-4 mr-1" />
+            Add Project
+          </Button>
+        }
       />
 
       {isError && <ErrorState onRetry={() => void refetch()} />}
@@ -130,7 +134,6 @@ export default function StudentProjects() {
           description="Add your first portfolio project to showcase your work."
           action={{
             label: 'Add Project',
-            icon: <FiPlus className="w-4 h-4" />,
             onClick: () => {
               setEditProject(null);
               setShowForm(true);
