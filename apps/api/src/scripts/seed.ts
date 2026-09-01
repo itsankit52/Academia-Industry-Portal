@@ -24,6 +24,8 @@ import {
   MentorshipMessage,
   MentorshipRequest,
   Notification,
+  PlacementDrive,
+  PlacementParticipant,
   Resume,
   SavedOpportunity,
   Skill,
@@ -120,6 +122,8 @@ async function clearAll(): Promise<void> {
     InterimReport.deleteMany({}),
     CollaborationEvent.deleteMany({}),
     EventRegistration.deleteMany({}),
+    PlacementDrive.deleteMany({}),
+    PlacementParticipant.deleteMany({}),
     AptitudeQuestion.deleteMany({}),
     AptitudeTest.deleteMany({}),
   ]);
@@ -2171,6 +2175,241 @@ async function seedAptitude(
   return { questions: inserted.length, tests: 1 };
 }
 
+interface CreatedDrive {
+  driveId: Types.ObjectId;
+  title: string;
+  status: string;
+  participantsCreated: number;
+}
+
+/**
+ * Seed placement drives so the institution dashboard has a real drive to
+ * show on the demo day (otherwise the analytics pipeline short-circuits to
+ * "insufficient data" and the judge sees an empty page).
+ */
+async function seedPlacementDrives(
+  primaryInstitutionId: Types.ObjectId,
+  primaryInstitutionUser: CreatedUser,
+  companies: CreatedCompany[],
+  students: CreatedStudent[],
+  jobs: CreatedJob[],
+): Promise<CreatedDrive[]> {
+  const [demoTech, demoCloud, demoFintech] = companies;
+  if (!demoTech || !demoCloud || !demoFintech) return [];
+
+  const frontendJob = jobs.find((j) => j.seed.title === 'Demo Frontend Engineer');
+  const backendJob = jobs.find((j) => j.seed.title === 'Demo Backend Engineer');
+  const dataJob = jobs.find((j) => j.seed.title === 'Demo Data Scientist');
+  if (!frontendJob || !backendJob || !dataJob) return [];
+
+  const now = Date.now();
+
+  // Three drives at varying lifecycle stages so every dashboard tab has data:
+  //  1. Drive in REGISTRATION_OPEN — students can still register
+  //  2. Drive in IN_PROGRESS — selection & offer phases underway
+  //  3. Drive COMPLETED — closed out, drives the analytics report
+  const drives = await PlacementDrive.insertMany([
+    {
+      institution: primaryInstitutionId,
+      title: 'Demo Tech Campus Placement Drive 2026',
+      description:
+        'Annual on-campus placement drive for graduating students of Demo Institute of Technology. Participating companies: Demo Technologies, Demo Cloud Systems, and Demo Fintech. Open to all branches with CGPA ≥ 6.5.',
+      mode: 'ONSITE',
+      location: 'Demo Institute of Technology, Bengaluru',
+      participatingCompanies: [demoTech.companyId, demoCloud.companyId, demoFintech.companyId],
+      opportunities: [
+        { opportunityType: 'JOB', opportunityId: frontendJob.jobId, openings: 6 },
+        { opportunityType: 'JOB', opportunityId: backendJob.jobId, openings: 4 },
+      ],
+      eligibilityRules: {
+        minCgpa: 6.5,
+        allowedBranches: ['Computer Science', 'Information Technology', 'Data Science'],
+        allowedGraduationYears: [2026],
+        maxActiveBacklogs: 0,
+        resumeRequired: true,
+      },
+      registrationOpensAt: new Date(now - 10 * 24 * 60 * 60 * 1000),
+      registrationClosesAt: new Date(now + 5 * 24 * 60 * 60 * 1000),
+      driveStartsAt: new Date(now + 14 * 24 * 60 * 60 * 1000),
+      driveEndsAt: new Date(now + 30 * 24 * 60 * 60 * 1000),
+      status: 'REGISTRATION_OPEN',
+      totalSlots: 10,
+      filledSlots: 0,
+      coordinators: [primaryInstitutionUser.userId],
+      createdBy: primaryInstitutionUser.userId,
+    },
+    {
+      institution: primaryInstitutionId,
+      title: 'Demo Cloud & FinTech Hiring Drive',
+      description:
+        'Specialised placement drive focused on Demo Cloud Systems and Demo FinTech Labs. Hiring for data science and full-stack roles across cohorts graduating in 2025 and 2026.',
+      mode: 'HYBRID',
+      location: 'Demo Institute of Technology + remote',
+      participatingCompanies: [demoCloud.companyId, demoFintech.companyId],
+      opportunities: [
+        { opportunityType: 'JOB', opportunityId: dataJob.jobId, openings: 3 },
+        { opportunityType: 'JOB', opportunityId: frontendJob.jobId, openings: 2 },
+      ],
+      eligibilityRules: {
+        minCgpa: 7.0,
+        allowedBranches: ['Computer Science', 'Data Science', 'Information Technology'],
+        allowedGraduationYears: [2025, 2026],
+        maxActiveBacklogs: 0,
+        minReadinessScore: 50,
+      },
+      registrationOpensAt: new Date(now - 25 * 24 * 60 * 60 * 1000),
+      registrationClosesAt: new Date(now - 5 * 24 * 60 * 60 * 1000),
+      driveStartsAt: new Date(now - 2 * 24 * 60 * 60 * 1000),
+      driveEndsAt: new Date(now + 12 * 24 * 60 * 60 * 1000),
+      status: 'IN_PROGRESS',
+      totalSlots: 5,
+      filledSlots: 2,
+      coordinators: [primaryInstitutionUser.userId],
+      createdBy: primaryInstitutionUser.userId,
+    },
+    {
+      institution: primaryInstitutionId,
+      title: 'Demo Fintech Winter Placement Drive 2025',
+      description:
+        'Closed placement drive for the 2025 graduating cohort held in winter. All offers have been released and accepted; useful for placement analytics and outcome reporting.',
+      mode: 'ONSITE',
+      location: 'Demo Institute of Technology, Bengaluru',
+      participatingCompanies: [demoFintech.companyId, demoTech.companyId],
+      opportunities: [
+        { opportunityType: 'JOB', opportunityId: backendJob.jobId, openings: 5 },
+        { opportunityType: 'JOB', opportunityId: frontendJob.jobId, openings: 3 },
+      ],
+      eligibilityRules: {
+        minCgpa: 6.0,
+        allowedBranches: ['Computer Science', 'Information Technology'],
+        allowedGraduationYears: [2025],
+        maxActiveBacklogs: 0,
+      },
+      registrationOpensAt: new Date(now - 120 * 24 * 60 * 60 * 1000),
+      registrationClosesAt: new Date(now - 90 * 24 * 60 * 60 * 1000),
+      driveStartsAt: new Date(now - 80 * 24 * 60 * 60 * 1000),
+      driveEndsAt: new Date(now - 60 * 24 * 60 * 60 * 1000),
+      status: 'COMPLETED',
+      totalSlots: 8,
+      filledSlots: 6,
+      coordinators: [primaryInstitutionUser.userId],
+      createdBy: primaryInstitutionUser.userId,
+    },
+  ]);
+
+  const created: CreatedDrive[] = drives.map((d) => ({
+    driveId: d._id as Types.ObjectId,
+    title: d.title,
+    status: d.status,
+    participantsCreated: 0,
+  }));
+
+  // Seed participants for the in-progress and completed drives so the
+  // institution analytics view has rows to summarise. The REGISTRATION_OPEN
+  // drive gets a few registered (but not yet selected) students.
+  const arya = students.find((s) => s.email === 'arya@demo.edu');
+  const rohan = students.find((s) => s.email === 'rohan@demo.edu');
+  const priya = students.find((s) => s.email === 'priya@demo.edu');
+  const kavya = students.find((s) => s.email === 'kavya@demo.edu');
+
+  const participantRows: Array<Record<string, unknown>> = [];
+
+  if (arya) {
+    // Arya is selected in the completed drive — drives positive analytics.
+    const completed = created[2]!;
+    participantRows.push({
+      drive: completed.driveId,
+      student: arya.userId,
+      studentProfile: arya.studentId,
+      company: demoFintech.companyId,
+      opportunity: { opportunityType: 'JOB', opportunityId: backendJob.jobId },
+      status: 'ACCEPTED',
+      registeredAt: new Date(now - 100 * 24 * 60 * 60 * 1000),
+      currentRound: 'Final',
+      lastActivityAt: new Date(now - 65 * 24 * 60 * 60 * 1000),
+      timeline: [
+        { status: 'REGISTERED', at: new Date(now - 100 * 24 * 60 * 60 * 1000) },
+        { status: 'SHORTLISTED', at: new Date(now - 95 * 24 * 60 * 60 * 1000) },
+        { status: 'INTERVIEWED', at: new Date(now - 80 * 24 * 60 * 60 * 1000) },
+        { status: 'OFFER_RECEIVED', at: new Date(now - 70 * 24 * 60 * 60 * 1000) },
+        { status: 'ACCEPTED', at: new Date(now - 65 * 24 * 60 * 60 * 1000) },
+      ],
+    });
+  }
+
+  if (rohan) {
+    const completed = created[2]!;
+    participantRows.push({
+      drive: completed.driveId,
+      student: rohan.userId,
+      studentProfile: rohan.studentId,
+      company: demoTech.companyId,
+      opportunity: { opportunityType: 'JOB', opportunityId: frontendJob.jobId },
+      status: 'ACCEPTED',
+      registeredAt: new Date(now - 100 * 24 * 60 * 60 * 1000),
+      currentRound: 'Final',
+      lastActivityAt: new Date(now - 64 * 24 * 60 * 60 * 1000),
+      timeline: [
+        { status: 'REGISTERED', at: new Date(now - 100 * 24 * 60 * 60 * 1000) },
+        { status: 'SHORTLISTED', at: new Date(now - 94 * 24 * 60 * 60 * 1000) },
+        { status: 'INTERVIEWED', at: new Date(now - 80 * 24 * 60 * 60 * 1000) },
+        { status: 'OFFER_RECEIVED', at: new Date(now - 70 * 24 * 60 * 60 * 1000) },
+        { status: 'ACCEPTED', at: new Date(now - 64 * 24 * 60 * 60 * 1000) },
+      ],
+    });
+  }
+
+  if (priya) {
+    // In the in-progress drive, currently in interview round.
+    const inProgress = created[1]!;
+    participantRows.push({
+      drive: inProgress.driveId,
+      student: priya.userId,
+      studentProfile: priya.studentId,
+      company: demoCloud.companyId,
+      opportunity: { opportunityType: 'JOB', opportunityId: dataJob.jobId },
+      status: 'INTERVIEWED',
+      registeredAt: new Date(now - 20 * 24 * 60 * 60 * 1000),
+      currentRound: 'Technical Round 1',
+      lastActivityAt: new Date(now - 1 * 24 * 60 * 60 * 1000),
+      timeline: [
+        { status: 'REGISTERED', at: new Date(now - 20 * 24 * 60 * 60 * 1000) },
+        { status: 'SHORTLISTED', at: new Date(now - 6 * 24 * 60 * 60 * 1000) },
+        { status: 'INTERVIEWED', at: new Date(now - 1 * 24 * 60 * 60 * 1000) },
+      ],
+    });
+  }
+
+  if (kavya) {
+    const open = created[0]!;
+    participantRows.push({
+      drive: open.driveId,
+      student: kavya.userId,
+      studentProfile: kavya.studentId,
+      company: demoTech.companyId,
+      opportunity: { opportunityType: 'JOB', opportunityId: frontendJob.jobId },
+      status: 'REGISTERED',
+      registeredAt: new Date(now - 3 * 24 * 60 * 60 * 1000),
+      currentRound: 'Application',
+      lastActivityAt: new Date(now - 3 * 24 * 60 * 60 * 1000),
+      timeline: [{ status: 'REGISTERED', at: new Date(now - 3 * 24 * 60 * 60 * 1000) }],
+    });
+  }
+
+  if (participantRows.length > 0) {
+    await PlacementParticipant.insertMany(participantRows);
+  }
+
+  // Tally participants per drive so the caller can log it
+  for (const row of participantRows) {
+    const driveId = String(row['drive']);
+    const drive = created.find((c) => String(c.driveId) === driveId);
+    if (drive) drive.participantsCreated += 1;
+  }
+
+  return created;
+}
+
 async function summary(): Promise<Record<string, number>> {
   const [
     users,
@@ -2195,6 +2434,8 @@ async function summary(): Promise<Record<string, number>> {
     interimReports,
     events,
     eventRegistrations,
+    placementDrives,
+    placementParticipants,
     aptitudeQuestions,
     aptitudeTests,
     facultyOpportunities,
@@ -2221,6 +2462,8 @@ async function summary(): Promise<Record<string, number>> {
     InterimReport.countDocuments(),
     CollaborationEvent.countDocuments(),
     EventRegistration.countDocuments(),
+    PlacementDrive.countDocuments(),
+    PlacementParticipant.countDocuments(),
     AptitudeQuestion.countDocuments(),
     AptitudeTest.countDocuments(),
     FacultyOpportunity.countDocuments(),
@@ -2248,6 +2491,8 @@ async function summary(): Promise<Record<string, number>> {
     interimReports,
     events,
     eventRegistrations,
+    placementDrives,
+    placementParticipants,
     aptitudeQuestions,
     aptitudeTests,
     facultyOpportunities,
@@ -2521,6 +2766,16 @@ async function run(): Promise<void> {
 
     logger.info('Seeding aptitude questions and demo test');
     await seedAptitude(students);
+
+    logger.info('Seeding placement drives');
+    const placementDrives = await seedPlacementDrives(
+      primaryInstitutionId,
+      primaryInstitutionUser,
+      companies,
+      students,
+      jobs,
+    );
+    logger.info({ drivesCreated: placementDrives.length }, 'Placement drives seeded');
 
     const counts = await summary();
     logger.info({ counts }, 'Seed complete');

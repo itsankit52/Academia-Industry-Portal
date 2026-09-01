@@ -175,10 +175,15 @@ describe('RequireAuth guard', () => {
 
   it('shows PageSkeleton while booting', () => {
     useAuthStore.setState({ user: null, isBooting: true });
+    // RequireAuth uses <Outlet /> (no children prop), so wrap in Routes
+    // like the other RequireAuth tests.
     renderWithProviders(
-      <RequireAuth>
-        <FakeDashboard />
-      </RequireAuth>,
+      <Routes>
+        <Route element={<RequireAuth />}>
+          <Route path="*" element={<FakeDashboard />} />
+        </Route>
+      </Routes>,
+      { route: '/student/dashboard' },
     );
     // While booting, neither dashboard nor redirect should be shown
     expect(screen.queryByTestId('dashboard')).not.toBeInTheDocument();

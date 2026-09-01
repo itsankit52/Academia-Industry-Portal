@@ -34,25 +34,101 @@ const fullReadiness: PlacementReadiness = {
   readinessLabel: 'Nearly Ready',
   readinessDescription: 'A few improvements will lock in placement readiness.',
   componentScores: [
-    { key: 'SKILLS', label: 'Skills', score: 80, weight: 0.3, contribution: 24, evidence: ['Strong proficiency in React, TypeScript.'] },
-    { key: 'ASSESSMENTS', label: 'Assessments', score: 65, weight: 0.2, contribution: 13, evidence: ['Average assessment score: 65% across 2 assessments.'] },
-    { key: 'INDUSTRY_ALIGNMENT', label: 'Industry Alignment', score: 70, weight: 0.15, contribution: 10.5, evidence: ['Aligns with 3 of 10 industry-required skills.'] },
-    { key: 'TRAINING', label: 'Training', score: 40, weight: 0.1, contribution: 4, evidence: ['No completed trainings yet.'] },
-    { key: 'INTERNSHIP_EXPERIENCE', label: 'Internship Experience', score: 60, weight: 0.1, contribution: 6, evidence: ['Completed 1 internship.'] },
-    { key: 'CAREER_TARGET', label: 'Career Target', score: 50, weight: 0.1, contribution: 5, evidence: ['Target role readiness: 50%.'] },
-    { key: 'APPLICATION_HISTORY', label: 'Application History', score: 20, weight: 0.05, contribution: 1, evidence: ['Only 1 application on file.'] },
+    {
+      key: 'SKILLS',
+      label: 'Skills',
+      score: 80,
+      weight: 0.3,
+      contribution: 24,
+      evidence: ['Strong proficiency in React, TypeScript.'],
+    },
+    {
+      key: 'ASSESSMENTS',
+      label: 'Assessments',
+      score: 65,
+      weight: 0.2,
+      contribution: 13,
+      evidence: ['Average assessment score: 65% across 2 assessments.'],
+    },
+    {
+      key: 'INDUSTRY_ALIGNMENT',
+      label: 'Industry Alignment',
+      score: 70,
+      weight: 0.15,
+      contribution: 10.5,
+      evidence: ['Aligns with 3 of 10 industry-required skills.'],
+    },
+    {
+      key: 'TRAINING',
+      label: 'Training',
+      score: 40,
+      weight: 0.1,
+      contribution: 4,
+      evidence: ['No completed trainings yet.'],
+    },
+    {
+      key: 'INTERNSHIP_EXPERIENCE',
+      label: 'Internship Experience',
+      score: 60,
+      weight: 0.1,
+      contribution: 6,
+      evidence: ['Completed 1 internship.'],
+    },
+    {
+      key: 'CAREER_TARGET',
+      label: 'Career Target',
+      score: 50,
+      weight: 0.1,
+      contribution: 5,
+      evidence: ['Target role readiness: 50%.'],
+    },
+    {
+      key: 'APPLICATION_HISTORY',
+      label: 'Application History',
+      score: 20,
+      weight: 0.05,
+      contribution: 1,
+      evidence: ['Only 1 application on file.'],
+    },
   ],
   strengths: [
-    { key: 'skill:react', label: 'Strong in React', value: '80/100', detail: 'Recorded at ADVANCED proficiency.' },
+    {
+      key: 'skill:react',
+      label: 'Strong in React',
+      value: '80/100',
+      detail: 'Recorded at ADVANCED proficiency.',
+    },
     { key: 'component:SKILLS', label: 'Skills is strong', value: '80/100' },
   ],
   blockers: [
-    { key: 'component:APPLICATION_HISTORY', label: 'Application History is below the floor', severity: 'HIGH', reason: 'Only 1 application on file.' },
-    { key: 'experience:low', label: 'Limited industry exposure', severity: 'MEDIUM', reason: 'No completed trainings and no internship experience on file.' },
+    {
+      key: 'component:APPLICATION_HISTORY',
+      label: 'Application History is below the floor',
+      severity: 'HIGH',
+      reason: 'Only 1 application on file.',
+    },
+    {
+      key: 'experience:low',
+      label: 'Limited industry exposure',
+      severity: 'MEDIUM',
+      reason: 'No completed trainings and no internship experience on file.',
+    },
   ],
   recommendedNextActions: [
-    { type: 'OPPORTUNITY', title: 'Apply to an internship', reason: 'Internship experience is one of the strongest placement-readiness signals.', ctaPath: '/student/internships', ctaLabel: 'Browse internships' },
-    { type: 'TRAINING', title: 'Enroll in an industry training program', reason: 'Completed trainings add an industry-aligned signal.', ctaPath: '/student/training', ctaLabel: 'Browse trainings' },
+    {
+      type: 'OPPORTUNITY',
+      title: 'Apply to an internship',
+      reason: 'Internship experience is one of the strongest placement-readiness signals.',
+      ctaPath: '/student/internships',
+      ctaLabel: 'Browse internships',
+    },
+    {
+      type: 'TRAINING',
+      title: 'Enroll in an industry training program',
+      reason: 'Completed trainings add an industry-aligned signal.',
+      ctaPath: '/student/training',
+      ctaLabel: 'Browse trainings',
+    },
   ],
   generatedAt: new Date().toISOString(),
   insufficientData: false,
@@ -116,7 +192,8 @@ const fullInterventions: InstitutionInterventions = {
       interventionType: 'LOW_READINESS',
       severity: 'CRITICAL',
       reason: 'Overall placement readiness score is 28 (NOT_READY).',
-      recommendedAction: 'Review the readiness breakdown. Focus on closing the highest-weight gaps first.',
+      recommendedAction:
+        'Review the readiness breakdown. Focus on closing the highest-weight gaps first.',
     },
     {
       studentUserId: 'st-2',
@@ -155,11 +232,39 @@ const noStudentsInterventions: InstitutionInterventions = {
 const fullSkillAnalytics: SkillOutcomeAnalytics = {
   institutionId: 'inst-1',
   metrics: [
-    { skillId: 'skill-1', name: 'React', skillDemandCount: 10, applicantsWithSkill: 8, selectedWithSkill: 5, selectionRate: 62.5, skillOutcomeStrength: 85 },
-    { skillId: 'skill-2', name: 'TypeScript', skillDemandCount: 8, applicantsWithSkill: 6, selectedWithSkill: 3, selectionRate: 50, skillOutcomeStrength: 70 },
-    { skillId: 'skill-3', name: 'Python', skillDemandCount: 5, applicantsWithSkill: 10, selectedWithSkill: 2, selectionRate: 20, skillOutcomeStrength: 30 },
+    {
+      skillId: 'skill-1',
+      name: 'React',
+      skillDemandCount: 10,
+      opportunityCount: 10,
+      applicantsWithSkill: 8,
+      selectedWithSkill: 5,
+      selectionRate: 62.5,
+      skillOutcomeStrength: 85,
+    },
+    {
+      skillId: 'skill-2',
+      name: 'TypeScript',
+      skillDemandCount: 8,
+      opportunityCount: 8,
+      applicantsWithSkill: 6,
+      selectedWithSkill: 3,
+      selectionRate: 50,
+      skillOutcomeStrength: 70,
+    },
+    {
+      skillId: 'skill-3',
+      name: 'Python',
+      skillDemandCount: 5,
+      opportunityCount: 5,
+      applicantsWithSkill: 10,
+      selectedWithSkill: 2,
+      selectionRate: 20,
+      skillOutcomeStrength: 30,
+    },
   ],
   insufficientData: false,
+  insufficientReasons: [],
   minimumSampleSize: 5,
   generatedAt: new Date().toISOString(),
 };
@@ -168,13 +273,16 @@ const insufficientSkillAnalytics: SkillOutcomeAnalytics = {
   institutionId: 'inst-1',
   metrics: [],
   insufficientData: true,
+  insufficientReasons: ['No application data for any skills.'],
   minimumSampleSize: 5,
   generatedAt: new Date().toISOString(),
 };
 
 /* ─── PlacementReadinessCard ─────────────────────────────────────── */
 
-function renderReadinessCard(props: Partial<React.ComponentProps<typeof PlacementReadinessCard>> = {}) {
+function renderReadinessCard(
+  props: Partial<React.ComponentProps<typeof PlacementReadinessCard>> = {},
+) {
   return render(
     <MemoryRouter>
       <PlacementReadinessCard
@@ -189,7 +297,9 @@ function renderReadinessCard(props: Partial<React.ComponentProps<typeof Placemen
 }
 
 describe('PlacementReadinessCard', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('shows loading skeleton when isLoading', () => {
     renderReadinessCard({ isLoading: true });
@@ -227,18 +337,26 @@ describe('PlacementReadinessCard', () => {
 
   it('renders blockers with severity', () => {
     renderReadinessCard({ data: fullReadiness });
-    expect(screen.getByText((content) => String(content).includes('Application History is below the floor'))).toBeTruthy();
+    expect(
+      screen.getByText((content) =>
+        String(content).includes('Application History is below the floor'),
+      ),
+    ).toBeTruthy();
     expect(screen.getByText('HIGH')).toBeTruthy();
   });
 
   it('renders next actions with CTA paths', () => {
     renderReadinessCard({ data: fullReadiness });
-    expect(screen.getByText((content) => String(content).includes('Apply to an internship'))).toBeTruthy();
+    expect(
+      screen.getByText((content) => String(content).includes('Apply to an internship')),
+    ).toBeTruthy();
   });
 
   it('renders insufficient-data badge when flagged', () => {
     renderReadinessCard({ data: insufficientReadiness });
-    expect(screen.getByText((content) => String(content).includes('Insufficient data'))).toBeTruthy();
+    expect(
+      screen.getByText((content) => String(content).includes('Insufficient data')),
+    ).toBeTruthy();
   });
 
   it('compact mode hides breakdown', () => {
@@ -266,7 +384,9 @@ function renderFunnel(props: Partial<React.ComponentProps<typeof OutcomeFunnel>>
 }
 
 describe('OutcomeFunnel', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('shows loading skeleton when isLoading', () => {
     renderFunnel({ isLoading: true });
@@ -297,7 +417,7 @@ describe('OutcomeFunnel', () => {
   it('renders funnel counts', () => {
     renderFunnel({ data: fullOutcomes });
     expect(screen.getByText('10')).toBeTruthy(); // Applied
-    expect(screen.getByText('3')).toBeTruthy();  // Shortlisted
+    expect(screen.getByText('3')).toBeTruthy(); // Shortlisted
   });
 
   it('renders rate tiles', () => {
@@ -320,7 +440,9 @@ describe('OutcomeFunnel', () => {
 
 /* ─── InstitutionInterventionsPanel ────────────────────────────── */
 
-function renderInterventions(props: Partial<React.ComponentProps<typeof InstitutionInterventionsPanel>> = {}) {
+function renderInterventions(
+  props: Partial<React.ComponentProps<typeof InstitutionInterventionsPanel>> = {},
+) {
   return render(
     <MemoryRouter>
       <InstitutionInterventionsPanel
@@ -334,7 +456,9 @@ function renderInterventions(props: Partial<React.ComponentProps<typeof Institut
 }
 
 describe('InstitutionInterventionsPanel', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('shows loading skeleton when isLoading', () => {
     renderInterventions({ isLoading: true });
@@ -406,7 +530,9 @@ function renderSkillChart(props: Partial<React.ComponentProps<typeof SkillOutcom
 }
 
 describe('SkillOutcomeChart', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('shows loading skeleton when isLoading', () => {
     renderSkillChart({ isLoading: true });
@@ -440,7 +566,9 @@ describe('SkillOutcomeChart', () => {
   it('renders association disclaimer', () => {
     renderSkillChart({ data: fullSkillAnalytics });
     // The disclaimer text contains "association" in the text and in the explanation
-    expect(screen.getAllByText((content) => String(content).toLowerCase().includes('association'))).toHaveLength(2);
+    expect(
+      screen.getAllByText((content) => String(content).toLowerCase().includes('association')),
+    ).toHaveLength(2);
   });
 
   it('renders strength badges for top skills', () => {
