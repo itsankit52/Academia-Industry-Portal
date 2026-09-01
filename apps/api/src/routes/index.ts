@@ -31,6 +31,7 @@ import interimReportsRouter from '../modules/interim-reports/interim-reports.rou
 import institutionAnalyticsRouter from '../modules/institution-analytics/institution-analytics.routes';
 import facultyApplicationsRouter from '../modules/faculty-applications/faculty-applications.routes';
 import studentOpportunitiesRouter from '../modules/student-opportunities/student-opportunities.routes';
+import studentProjectsRouter from '../modules/student-projects/student-projects.routes';
 import {
   studentRouter as placementReadinessRouter,
   studentOutcomesRouter as placementOutcomesRouter,
@@ -91,6 +92,8 @@ const mounts: Array<[string, ExpressRouter]> = [
   ['/faculty-opportunities', facultyApplicationsRouter],
   // Phase 15B — Student opportunity discovery
   ['/student-faculty-opportunities', studentOpportunitiesRouter],
+  // Student-editable portfolio projects
+  ['/student-projects', studentProjectsRouter],
 ];
 
 for (const [path, subRouter] of mounts) {

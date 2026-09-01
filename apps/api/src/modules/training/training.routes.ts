@@ -29,7 +29,7 @@ router.get('/:id', validate(idParamSchema, 'params'), controller.getById);
 router.post(
   '/',
   requireAuth,
-  requireRole('ADMIN'),
+  requireRole('ADMIN', 'COMPANY', 'INSTITUTION'),
   validate(createTrainingSchema),
   auditLog({ action: 'TRAINING_CREATED', entity: 'TrainingProgram' }),
   controller.create,
@@ -38,7 +38,7 @@ router.post(
 router.patch(
   '/:id',
   requireAuth,
-  requireRole('ADMIN'),
+  requireRole('ADMIN', 'COMPANY', 'INSTITUTION'),
   validate(idParamSchema, 'params'),
   validate(updateTrainingSchema),
   auditLog({
@@ -52,7 +52,7 @@ router.patch(
 router.delete(
   '/:id',
   requireAuth,
-  requireRole('ADMIN'),
+  requireRole('ADMIN', 'COMPANY', 'INSTITUTION'),
   validate(idParamSchema, 'params'),
   auditLog({
     action: 'TRAINING_DELETED',
@@ -68,7 +68,7 @@ router.get('/:id/content', validate(idParamSchema, 'params'), contentController.
 router.post(
   '/:id/modules',
   requireAuth,
-  requireRole('ADMIN'),
+  requireRole('ADMIN', 'COMPANY', 'INSTITUTION'),
   validate(idParamSchema, 'params'),
   validate(createTrainingModuleSchema),
   contentController.createModuleHandler,
@@ -77,7 +77,7 @@ router.post(
 router.patch(
   '/:id/modules/:moduleId',
   requireAuth,
-  requireRole('ADMIN'),
+  requireRole('ADMIN', 'COMPANY', 'INSTITUTION'),
   validate(idParamSchema, 'params'),
   validate(updateTrainingModuleSchema),
   contentController.updateModuleHandler,
@@ -86,7 +86,7 @@ router.patch(
 router.delete(
   '/:id/modules/:moduleId',
   requireAuth,
-  requireRole('ADMIN'),
+  requireRole('ADMIN', 'COMPANY', 'INSTITUTION'),
   validate(idParamSchema, 'params'),
   contentController.deleteModuleHandler,
 );
@@ -94,7 +94,7 @@ router.delete(
 router.post(
   '/:id/lessons',
   requireAuth,
-  requireRole('ADMIN'),
+  requireRole('ADMIN', 'COMPANY', 'INSTITUTION'),
   validate(idParamSchema, 'params'),
   validate(createTrainingLessonSchema),
   contentController.createLessonHandler,
@@ -103,7 +103,7 @@ router.post(
 router.patch(
   '/lessons/:lessonId',
   requireAuth,
-  requireRole('ADMIN'),
+  requireRole('ADMIN', 'COMPANY', 'INSTITUTION'),
   validate(idParamSchema, 'params'),
   validate(updateTrainingLessonSchema),
   contentController.updateLessonHandler,
@@ -112,7 +112,7 @@ router.patch(
 router.delete(
   '/lessons/:lessonId',
   requireAuth,
-  requireRole('ADMIN'),
+  requireRole('ADMIN', 'COMPANY', 'INSTITUTION'),
   validate(idParamSchema, 'params'),
   contentController.deleteLessonHandler,
 );
@@ -170,7 +170,7 @@ router.post(
 router.get(
   '/:id/enrollments',
   requireAuth,
-  requireRole('ADMIN'),
+  requireRole('ADMIN', 'COMPANY', 'INSTITUTION'),
   validate(idParamSchema, 'params'),
   validate(enrollmentQuerySchema, 'query'),
   enrollmentController.listTrainingEnrollments,

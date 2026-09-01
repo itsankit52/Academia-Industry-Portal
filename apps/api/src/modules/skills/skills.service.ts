@@ -29,7 +29,7 @@ export async function listSkills(pag: PaginationInput, filters: SkillListFilters
 }
 
 export async function createSkill(input: CreateSkillInput) {
-  const name = input.name.toLowerCase();
+  const name = input.name.trim().toLowerCase();
   const exists = await Skill.findOne({ name });
   if (exists) throw AppError.conflict('Skill already exists');
   const skill = await Skill.create({ ...input, name });

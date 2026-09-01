@@ -102,6 +102,7 @@ const AdminAuditLogs = lazy(() => import('@/pages/admin/AdminAuditLogs'));
 const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'));
 const AdminVerificationQueue = lazy(() => import('@/pages/admin/AdminVerificationQueue'));
 const AdminCollaborationHub = lazy(() => import('@/pages/admin/AdminCollaborationHub'));
+const AdminInstitutions = lazy(() => import('@/pages/admin/AdminInstitutions'));
 
 const CompanyVerifications = lazy(() => import('@/pages/company/CompanyVerifications'));
 const CompanyActiveInterns = lazy(() => import('@/pages/company/CompanyActiveInterns'));
@@ -167,6 +168,7 @@ const StudentFacultyOpportunityDetails = lazy(
   () => import('@/pages/student/StudentFacultyOpportunityDetails'),
 );
 const StudentInterimReports = lazy(() => import('@/pages/student/StudentInterimReports'));
+const StudentProjects = lazy(() => import('@/pages/student/StudentProjects'));
 const StudentEvents = lazy(() => import('@/pages/student/StudentEvents'));
 const StudentMyRegistrations = lazy(() => import('@/pages/student/StudentMyRegistrations'));
 const StudentCollaborationHub = lazy(() => import('@/pages/student/StudentCollaborationHub'));
@@ -284,6 +286,7 @@ export const router = createBrowserRouter([
           { path: 'mentorship', element: s(StudentMentorship) },
           { path: 'mentorship/:requestId', element: s(StudentMentorshipDetails) },
           { path: 'applications/:appId/reports', element: s(StudentInterimReports) },
+          { path: 'projects', element: s(StudentProjects) },
           { path: 'events', element: s(StudentEvents) },
           { path: 'events/registrations', element: s(StudentMyRegistrations) },
           { path: 'collaboration', element: s(StudentCollaborationHub) },
@@ -359,6 +362,7 @@ export const router = createBrowserRouter([
           { path: 'dashboard', element: s(AdminDashboard) },
           { path: 'students', element: s(AdminStudents) },
           { path: 'companies', element: s(AdminCompanies) },
+          { path: 'institutions', element: s(AdminInstitutions) },
           { path: 'jobs', element: s(AdminJobs) },
           { path: 'internships', element: s(AdminInternships) },
           { path: 'applications', element: s(AdminApplications) },

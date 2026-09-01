@@ -15,6 +15,7 @@ import {
   FiCalendar,
   FiUserCheck,
   FiZap,
+  FiHome,
 } from 'react-icons/fi';
 import type { NavItem } from './StudentNavItems';
 
@@ -22,6 +23,7 @@ export const adminNavItems: NavItem[] = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: FiGrid },
   { to: '/admin/students', label: 'Students', icon: FiUsers },
   { to: '/admin/companies', label: 'Companies', icon: FiBriefcase },
+  { to: '/admin/institutions', label: 'Institutions', icon: FiHome },
   { to: '/admin/jobs', label: 'Jobs', icon: FiBriefcase },
   { to: '/admin/internships', label: 'Internships', icon: FiBookOpen },
   { to: '/admin/applications', label: 'Applications', icon: FiClipboard },

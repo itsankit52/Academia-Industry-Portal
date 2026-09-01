@@ -81,6 +81,7 @@ export const queryKeys = {
     applications: (filters?: object) => ['admin', 'applications', filters] as const,
     auditLogs: (filters?: object) => ['admin', 'audit-logs', filters] as const,
     trainings: (filters?: object) => ['admin', 'trainings', filters] as const,
+    institutions: (filters?: object) => ['admin', 'institutions', filters] as const,
   },
 
   institution: {
@@ -107,6 +108,9 @@ export const queryKeys = {
   },
 
   portfolio: (studentId: string) => ['portfolio', studentId] as const,
+
+  studentProjects: () => ['student', 'projects'] as const,
+  studentProject: (id: string) => ['student', 'projects', id] as const,
 
   verifications: {
     queue: (scope: string, filters?: object) => ['verifications', 'queue', scope, filters] as const,

@@ -26,6 +26,7 @@ export { InterimReport, type InterimReportDoc } from './InterimReport';
 export { CollaborationEvent, type CollaborationEventDoc } from './CollaborationEvent';
 export { EventRegistration, type EventRegistrationDoc } from './EventRegistration';
 export { TrainingEnrollment, type TrainingEnrollmentDoc } from './TrainingEnrollment';
+export { StudentProject, type StudentProjectDoc } from './StudentProject';
 export { TrainingModule, type TrainingModuleDoc } from './TrainingModule';
 export {
   TrainingLesson,

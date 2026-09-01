@@ -42,8 +42,7 @@ export function useSkillsCatalog() {
   return useQuery({
     queryKey: queryKeys.skillsCatalog(),
     queryFn: async () => {
-      const path = (page: number) =>
-        `/skills?status=ACTIVE&pageSize=${MAX_PAGE_SIZE}&page=${page}`;
+      const path = (page: number) => `/skills?status=ACTIVE&pageSize=${MAX_PAGE_SIZE}&page=${page}`;
       const first = await apiGet<Paginated<Skill>>(path(1));
       if (first.totalPages <= 1) return first;
       const rest = await Promise.all(
@@ -65,7 +64,10 @@ export function useCreateSkill() {
     mutationFn: (data: CreateSkillInput) => apiPost<Skill>('/skills', data),
     onSuccess: () => {
       toast.success('Skill created.');
+      // Invalidate both the list and the full catalog so the SkillPicker
+      // immediately sees the newly created skill after a "Create" action.
       qc.invalidateQueries({ queryKey: ['skills'] });
+      qc.invalidateQueries({ queryKey: queryKeys.skillsCatalog() });
     },
     onError: (err: Error) => toast.error(err.message),
   });

@@ -31,7 +31,11 @@ const studentIdParamSchema = z
   .strict();
 
 router.get('/', ctrl.list);
-router.post('/', requireAuth, requireRole('ADMIN'), validate(createSkillSchema), ctrl.create);
+// Any authenticated user may suggest a new skill — useful when building a job
+// posting, a training programme, or a student profile and the catalogue is
+// missing something the user actually needs. ADMIN keeps exclusive control of
+// update and archive so the catalogue doesn't drift without oversight.
+router.post('/', requireAuth, validate(createSkillSchema), ctrl.create);
 router.patch(
   '/:id',
   requireAuth,

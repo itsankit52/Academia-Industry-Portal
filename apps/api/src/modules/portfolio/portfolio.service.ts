@@ -7,6 +7,7 @@ import {
   Internship,
   Skill,
   StudentProfile,
+  StudentProject,
   StudentSkill,
   User,
 } from '../../models';
@@ -16,24 +17,27 @@ export async function getPublicPortfolio(studentId: string): Promise<PublicPortf
   const profile = await StudentProfile.findById(studentId).lean();
   if (!profile) throw AppError.notFound('Student not found');
 
-  const [institution, studentSkillsRaw, verifiedDocsRaw, completedInternships] = await Promise.all([
-    profile.institution
-      ? Institution.findById(profile.institution).select('name code').lean()
-      : Promise.resolve(null),
-    StudentSkill.find({ student: profile._id }).lean(),
-    DocumentModel.find({ user: profile.user, verificationStatus: 'VERIFIED' })
-      .sort({ verifiedAt: -1 })
-      .lean(),
-    // Phase 5B: Pull completed internships for the portfolio
-    Application.find({
-      student: profile._id,
-      opportunityType: 'INTERNSHIP',
-      status: { $in: ['ONGOING', 'COMPLETED'] },
-    })
-      .populate({ path: 'opportunity', populate: { path: 'company', select: 'companyName' } })
-      .sort({ completedAt: -1, startedAt: -1 })
-      .lean(),
-  ]);
+  const [institution, studentSkillsRaw, verifiedDocsRaw, completedInternships, customProjects] =
+    await Promise.all([
+      profile.institution
+        ? Institution.findById(profile.institution).select('name code').lean()
+        : Promise.resolve(null),
+      StudentSkill.find({ student: profile._id }).lean(),
+      DocumentModel.find({ user: profile.user, verificationStatus: 'VERIFIED' })
+        .sort({ verifiedAt: -1 })
+        .lean(),
+      // Phase 5B: Pull completed internships for the portfolio
+      Application.find({
+        student: profile._id,
+        opportunityType: 'INTERNSHIP',
+        status: { $in: ['ONGOING', 'COMPLETED'] },
+      })
+        .populate({ path: 'opportunity', populate: { path: 'company', select: 'companyName' } })
+        .sort({ completedAt: -1, startedAt: -1 })
+        .lean(),
+      // Student-managed dedicated projects (separate collection, portfolio-editable)
+      StudentProject.find({ student: profile._id, isPublic: true }).sort({ createdAt: -1 }).lean(),
+    ]);
 
   const skillIds = studentSkillsRaw.map((s) => s.skill);
   const skillDocs = skillIds.length
@@ -148,11 +152,34 @@ export async function getPublicPortfolio(studentId: string): Promise<PublicPortf
         };
       })
       .filter((s) => s.name),
-    projects: (profile.projects ?? []).map((p) => ({
-      title: p.title as string,
-      description: (p.description as string) ?? '',
-      ...(p.link ? { link: p.link as string } : {}),
-    })),
+    projects: [
+      // Student-managed dedicated projects first (most recent)
+      ...customProjects.map((p) => ({
+        title: p.title as string,
+        description: p.description as string,
+        ...(p.role ? { role: p.role as string } : {}),
+        ...(p.technologies && (p.technologies as string[]).length > 0
+          ? { technologies: p.technologies as string[] }
+          : {}),
+        ...(p.links && (p.links as Array<{ label?: string; url?: string }>).length > 0
+          ? {
+              links: (p.links as Array<{ label?: string; url?: string }>).map((l) => ({
+                label: l.label ?? '',
+                url: l.url ?? '',
+              })),
+            }
+          : {}),
+        ...(p.completedAt ? { completedAt: String(p.completedAt) } : {}),
+        source: 'student-managed',
+      })),
+      // Then profile-embedded projects
+      ...(profile.projects ?? []).map((p) => ({
+        title: p.title as string,
+        description: (p.description as string) ?? '',
+        ...(p.link ? { link: p.link as string } : {}),
+        source: 'profile',
+      })),
+    ],
     certifications: (profile.certifications ?? []).map((c) => ({
       title: c.title as string,
       issuer: c.issuer as string,

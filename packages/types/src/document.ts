@@ -68,6 +68,10 @@ export interface PortfolioProject {
   title: string;
   description: string;
   link?: string;
+  role?: string;
+  technologies?: string[];
+  links?: Array<{ label: string; url: string }>;
+  completedAt?: string;
 }
 
 export interface PortfolioCertification {

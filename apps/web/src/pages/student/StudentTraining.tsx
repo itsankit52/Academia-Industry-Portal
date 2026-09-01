@@ -9,7 +9,7 @@ import Pagination from '@/components/ui/Pagination';
 import { SkeletonCard } from '@/components/ui/Skeleton';
 import { useTrainings } from '@/hooks/queries/useTrainings';
 import { useRecommendedTrainings } from '@/hooks/queries/useRecommendedTrainings';
-import { useSkillsCatalog } from '@/hooks/queries/useSkillsCatalog';
+import { useSkillsCatalog } from '@/hooks/queries/useSkills';
 import { useEnrollInTraining } from '@/hooks/queries/useTrainingEnrollment';
 import { useMyEnrollments } from '@/hooks/queries/useTrainingEnrollment';
 
@@ -29,9 +29,7 @@ export default function StudentTraining() {
   const enrollmentsQ = useMyEnrollments({ pageSize: 100 });
   const enrollMut = useEnrollInTraining();
 
-  const enrolledTrainingIds = new Set(
-    (enrollmentsQ.data?.items ?? []).map((e) => e.training),
-  );
+  const enrolledTrainingIds = new Set((enrollmentsQ.data?.items ?? []).map((e) => e.training));
 
   function toggleSkill(skillId: string) {
     setSelectedSkills((prev) =>
@@ -46,13 +44,18 @@ export default function StudentTraining() {
 
   return (
     <div className="container-page py-8 space-y-8">
-      <PageHeader title="Training Programmes" subtitle="Enrol in programmes to upskill and close your gaps." />
+      <PageHeader
+        title="Training Programmes"
+        subtitle="Enrol in programmes to upskill and close your gaps."
+      />
 
       {recommendedItems.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-4">
             <FiStar className="w-4 h-4 text-amber-500" />
-            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Recommended for You</h2>
+            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+              Recommended for You
+            </h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {recommendedItems.map((item) => (
@@ -71,7 +74,9 @@ export default function StudentTraining() {
       <div>
         <div className="flex items-center gap-2 mb-4">
           <FiBookOpen className="w-4 h-4 text-indigo-600" />
-          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">All Programmes</h2>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            All Programmes
+          </h2>
         </div>
 
         {catalog.length > 0 && (
@@ -104,7 +109,9 @@ export default function StudentTraining() {
 
         {isLoading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
           </div>
         )}
 

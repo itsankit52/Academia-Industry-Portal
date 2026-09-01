@@ -19,6 +19,7 @@ import {
   FiUsers,
   FiActivity,
   FiTarget as FiDrive,
+  FiCode,
 } from 'react-icons/fi';
 
 export interface NavItem {
@@ -55,5 +56,6 @@ export const studentNavItems: NavItem[] = [
   { to: '/student/placements/participations', label: 'My Participations', icon: FiAward },
   { to: '/student/events', label: 'Events', icon: FiCalendar },
   { to: '/student/collaboration', label: 'Collab Hub', icon: FiUsers },
+  { to: '/student/projects', label: 'Portfolio Projects', icon: FiCode },
   { to: '/student/settings', label: 'Settings', icon: FiSettings },
 ];
