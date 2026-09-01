@@ -273,7 +273,7 @@ export default function UserGuide() {
           User Guide
         </div>
         <h1 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4 leading-tight dark:text-slate-100">
-          How the Academia–Industry Portal works
+          How the AcadIn works
         </h1>
         <p className="text-lg text-slate-600 leading-relaxed dark:text-slate-400">
           A step-by-step walkthrough for every role. New here? Start with
@@ -328,7 +328,7 @@ export default function UserGuide() {
             onToggle={() => toggle('welcome')}
           >
             <P>
-              The Academia–Industry Portal is a single place where{' '}
+              The AcadIn is a single place where{' '}
               <span className="font-medium text-slate-900 dark:text-slate-100">students</span>,{' '}
               <span className="font-medium text-slate-900 dark:text-slate-100">companies</span>,{' '}
               <span className="font-medium text-slate-900 dark:text-slate-100">
@@ -421,11 +421,15 @@ export default function UserGuide() {
               sign out manually. Your session uses secure HTTP-only cookies, so you don&apos;t need
               to manage tokens yourself.
             </P>
-            <H3>Forgot your password?</H3>
+            <H3>Lost access to your account?</H3>
             <P>
-              On the sign-in page, click <span className="font-medium">Forgot password</span> and
-              enter your registered email. You will receive a one-time reset link valid for 30
-              minutes. After resetting, sign in with the new password.
+              There is no self-service password reset on the platform yet. If you have lost access
+              to your account, reach out through the{' '}
+              <Link to="/contact" className="font-medium text-indigo-700 dark:text-indigo-300">
+                Contact
+              </Link>{' '}
+              page or ask your placement admin to re-issue your credentials. To prevent lockouts,
+              use an email you check often and keep your password in a password manager.
             </P>
             <H3>Signing out</H3>
             <P>
@@ -552,7 +556,7 @@ export default function UserGuide() {
               weekly progress reports. Companies read and rate your reports. When the internship
               ends, you can download a signed PDF completion certificate from the application page.
             </P>
-            <H3>9. Mentorship, aptitude tests, training</H3>
+            <H3>9. Mentorship, aptitude tests, training, and more</H3>
             <Ul
               items={[
                 <>
@@ -564,8 +568,42 @@ export default function UserGuide() {
                   / ENGLISH tests. Passing auto-upgrades a related skill.
                 </>,
                 <>
-                  <span className="font-medium">Training</span> — recommended training programs
-                  based on your skill gaps.
+                  <span className="font-medium">Training</span> — browse the catalog of available
+                  training programs.
+                </>,
+                <>
+                  <span className="font-medium">My Trainings</span> — track training programs you
+                  have enrolled in and your progress.
+                </>,
+                <>
+                  <span className="font-medium">Career Plan</span> — see AI-suggested next steps
+                  based on your skills, assessments, and applications.
+                </>,
+                <>
+                  <span className="font-medium">Learning</span> — curated resources and learning
+                  paths matched to your skill gaps.
+                </>,
+                <>
+                  <span className="font-medium">Projects</span> — showcase personal or academic
+                  projects on your profile and portfolio.
+                </>,
+                <>
+                  <span className="font-medium">Placements</span> — view and register for upcoming
+                  placement drives, and track your participation.
+                </>,
+                <>
+                  <span className="font-medium">Faculty opportunities</span> — some companies and
+                  institutions post faculty opportunities that are also open to students. Browse and
+                  apply where eligible.
+                </>,
+                <>
+                  <span className="font-medium">Events</span> — discover and register for
+                  collaboration events (workshops, guest lectures, innovation challenges, live
+                  projects).
+                </>,
+                <>
+                  <span className="font-medium">Collaboration Hub</span> — your consolidated view of
+                  events, mentorship, and projects in one place.
                 </>,
                 <>
                   <span className="font-medium">Documents</span> — upload certificates and
@@ -805,15 +843,22 @@ export default function UserGuide() {
             <P>
               Open <span className="font-medium">Opportunities</span> from the sidebar. You will see
               FDPs, consultancy engagements, collaborative research, and faculty internships posted
-              by companies. Apply with a short statement of interest. Track your applications in the{' '}
-              <span className="font-medium">Applications</span> tab.
+              by companies and institutions. Apply with a short statement of interest. Track your
+              applications in the <span className="font-medium">Applications</span> tab. Track
+              selected or completed engagements under{' '}
+              <span className="font-medium">Engagements</span>.
             </P>
-            <H3>Mentor students</H3>
+            <H3>Mentor students and track interns</H3>
             <P>
               Students and other faculty can request mentorship from you. Open{' '}
               <span className="font-medium">Mentorship</span> to accept or decline pending requests.
               Once accepted, communicate via a threaded inbox. You can give feedback and ratings on
               interim reports from students you mentor.
+            </P>
+            <P>
+              If you are a company&apos;s nominated faculty coordinator, use{' '}
+              <span className="font-medium">Assigned Interns</span> to review the students the
+              company has assigned to you for mentorship.
             </P>
             <H3>Events and documents</H3>
             <Ul
@@ -856,6 +901,18 @@ export default function UserGuide() {
                   institution only.
                 </>,
                 <>
+                  <span className="font-medium">Placement Intelligence</span> — predictive insights
+                  on placement outcomes for your students.
+                </>,
+                <>
+                  <span className="font-medium">Drive Management</span> — organise and track campus
+                  placement drives end-to-end.
+                </>,
+                <>
+                  <span className="font-medium">Action Items</span> — a focused to-do list of
+                  pending verifications, approvals, and follow-ups.
+                </>,
+                <>
                   Drill into individual students or faculty to see their profiles, applications, and
                   skill profiles.
                 </>,
@@ -888,12 +945,21 @@ export default function UserGuide() {
                 </>,
               ]}
             />
-            <H3>FDPs and verifications</H3>
+            <H3>FDPs, faculty opportunities, and verifications</H3>
             <Ul
               items={[
                 <>
-                  <span className="font-medium">FDPs</span> — post faculty development programs and
-                  track registrations.
+                  <span className="font-medium">FDPs</span> — view a summary of faculty development
+                  program participation submitted by your faculty.
+                </>,
+                <>
+                  <span className="font-medium">Faculty Opportunities</span> — post faculty
+                  internships, collaborative research, and similar opportunities for your own
+                  faculty.
+                </>,
+                <>
+                  <span className="font-medium">Faculty Engagements</span> — track which faculty are
+                  actively engaged on each opportunity you posted.
                 </>,
                 <>
                   <span className="font-medium">Verifications</span> — verify documents submitted by
@@ -902,6 +968,10 @@ export default function UserGuide() {
                 <>
                   <span className="font-medium">Events</span> — host guest lectures, workshops, and
                   other collaboration events.
+                </>,
+                <>
+                  <span className="font-medium">Collaboration Hub</span> — a consolidated view of
+                  events, mentorship, and faculty opportunities in one place.
                 </>,
               ]}
             />
@@ -924,11 +994,14 @@ export default function UserGuide() {
           >
             <P>
               Every application moves through a defined status flow. Both you and the company see
-              the same status; updates are real-time.
+              the same status; updates are reflected in real time.
             </P>
             <ol className="space-y-3 mt-2">
               {[
-                { status: 'APPLIED', who: 'You submitted your application and cover letter.' },
+                {
+                  status: 'APPLIED',
+                  who: 'You submitted your application and cover letter.',
+                },
                 {
                   status: 'SHORTLISTED',
                   who: 'The company reviewed your profile and moved you forward.',
@@ -938,12 +1011,24 @@ export default function UserGuide() {
                   who: 'The company scheduled an interview. Check the Interviews tab.',
                 },
                 {
-                  status: 'OFFERED',
-                  who: 'You received an offer. Accept or decline from the application page.',
+                  status: 'SELECTED',
+                  who: 'The company has made you an offer. You can now accept or decline from the application page.',
                 },
                 {
-                  status: 'SELECTED',
-                  who: 'You accepted. Submit interim reports during the engagement.',
+                  status: 'OFFER_ACCEPTED / OFFER_REJECTED',
+                  who: 'You accepted or turned down the offer. If you accepted, the internship begins.',
+                },
+                {
+                  status: 'INTERNSHIP_STARTED',
+                  who: 'You have started the internship. Submit weekly interim reports.',
+                },
+                {
+                  status: 'ONGOING',
+                  who: 'The internship is in progress. Your company mentor reviews your reports.',
+                },
+                {
+                  status: 'COMPLETED',
+                  who: 'The internship is done. You can download your completion certificate.',
                 },
                 {
                   status: 'REJECTED',
@@ -965,7 +1050,9 @@ export default function UserGuide() {
             </ol>
             <Tip>
               You can withdraw an application any time before it reaches{' '}
-              <span className="font-mono text-xs">SELECTED</span> from the application detail page.
+              <span className="font-mono text-xs">SELECTED</span> — use the Withdraw option on the
+              application detail page. Once an offer has been accepted, withdrawal requires the
+              company&apos;s approval.
             </Tip>
           </SectionCard>
 
@@ -1057,12 +1144,22 @@ export default function UserGuide() {
                 ['Jobs / Internships', 'Browse all open roles with filters.'],
                 ['Saved', 'Opportunities you bookmarked for later.'],
                 ['Applications', 'Track every application and its current status.'],
+                ['My Internships', 'Internships you have been selected for, with reports.'],
                 ['Interviews', 'Scheduled interviews with date, time, and mode.'],
                 ['Skill Gap', 'Aggregate view of where you fall short of demand.'],
+                ['Skill Profile', 'A complete view of all your skills and proficiency.'],
+                ['Career Plan', 'AI-suggested next steps based on your skills and goals.'],
+                ['Assessments', 'Take an AI-generated skill assessment.'],
                 ['Aptitude', 'Timed QUANT / LOGIC / VERBAL / ENGLISH tests.'],
-                ['Training', 'Recommended training to close skill gaps.'],
+                ['Training', 'Browse the training program catalog.'],
+                ['My Trainings', 'Track training programs you are enrolled in.'],
+                ['Learning', 'Curated learning paths matched to your skill gaps.'],
                 ['Mentorship', 'Request and message a mentor.'],
+                ['Projects', 'Showcase personal or academic projects.'],
+                ['Placements', 'Discover and register for placement drives.'],
+                ['Faculty Opportunities', 'Faculty opportunities also open to students.'],
                 ['Events', 'Discover and register for collaboration events.'],
+                ['Collaboration Hub', 'A consolidated view of events, mentorship, and projects.'],
                 ['Notifications', 'In-app alerts and status updates.'],
                 ['Settings', 'Account, password, theme, and privacy.'],
               ].map(([label, desc]) => (
@@ -1085,13 +1182,86 @@ export default function UserGuide() {
                 ['Jobs / Internships', 'List of your postings, with publish / close controls.'],
                 ['Applicants', 'Candidates ranked by match score.'],
                 ['Shortlisted', 'Candidates you have shortlisted.'],
+                ['Active Interns', 'Students currently interning at your company.'],
                 ['Interviews', 'Schedule, reschedule, and complete interviews.'],
-                ['Faculty opportunities', 'FDPs, consultancies, and research postings.'],
-                ['Events', 'Host workshops, lectures, and challenges.'],
+                [
+                  'Faculty opportunities',
+                  'FDPs, consultancies, research, and faculty internships.',
+                ],
+                ['Events', 'Host workshops, lectures, challenges, and live projects.'],
                 ['Mentorship', 'Publish a mentor profile and accept requests.'],
                 ['Verifications', 'Verify student-submitted documents.'],
+                ['Interim Reports', 'Review student weekly reports and give feedback.'],
+                ['Collaboration Hub', 'Events, mentorship, and interim reports in one place.'],
                 ['Notifications', 'Application and interview alerts.'],
                 ['Settings', 'Account, password, and notification preferences.'],
+              ].map(([label, desc]) => (
+                <div
+                  key={label}
+                  className="rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+                >
+                  <div className="font-medium text-slate-900 dark:text-slate-100">{label}</div>
+                  <div className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mt-1">
+                    {desc}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <H3>Faculty</H3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+              {[
+                [
+                  'Dashboard',
+                  'Overview of your applications, upcoming events, and mentorship requests.',
+                ],
+                ['Opportunities', 'Browse FDPs, consultancies, research, and faculty internships.'],
+                ['My Applications', 'Track applications you have submitted.'],
+                ['Engagements', 'Track your selected or completed faculty opportunities.'],
+                ['Assigned Interns', 'Students assigned to you for mentorship by a company.'],
+                ['Events', 'Browse and register for workshops, lectures, and challenges.'],
+                ['Mentorship', 'Accept or decline mentorship requests from students.'],
+                ['Documents', 'Upload certificates and transcripts for verification.'],
+                ['Collaboration Hub', 'Events, mentorship, and your engagements in one place.'],
+                [
+                  'Profile',
+                  'Department, designation, qualifications, research interests, and bio.',
+                ],
+                ['Settings', 'Account and notification preferences.'],
+              ].map(([label, desc]) => (
+                <div
+                  key={label}
+                  className="rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+                >
+                  <div className="font-medium text-slate-900 dark:text-slate-100">{label}</div>
+                  <div className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mt-1">
+                    {desc}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <H3>Institution</H3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+              {[
+                ['Dashboard', 'Placement metrics, skill gaps, FDPs, scoped to your institution.'],
+                [
+                  'Students / Faculty',
+                  'Browse and drill into profiles of your students and faculty.',
+                ],
+                ['Skill Gaps', 'Where your students fall short of industry demand.'],
+                ['Placements', 'Placement outcomes, branch-wise and year-wise.'],
+                ['Placement Intelligence', 'Predictive insights on placement outcomes.'],
+                ['Drive Management', 'Organise and track campus placement drives.'],
+                ['Action Items', 'Pending verifications, approvals, and follow-ups.'],
+                ['FDPs', 'FDP participation submitted by your faculty.'],
+                [
+                  'Faculty Opportunities',
+                  'Post faculty internships and research for your faculty.',
+                ],
+                ['Faculty Engagements', 'Track active faculty engagements.'],
+                ['Verifications', 'Verify documents submitted by your own students and faculty.'],
+                ['Events', 'Host guest lectures, workshops, and other events.'],
+                ['Collaboration Hub', 'Events and faculty opportunities in one place.'],
+                ['Settings', 'Account and notification preferences.'],
               ].map(([label, desc]) => (
                 <div
                   key={label}
@@ -1109,6 +1279,10 @@ export default function UserGuide() {
               {[
                 ['Dashboard', '6 stat cards + analytics charts.'],
                 ['Students / Companies', 'View, filter, and activate / deactivate.'],
+                [
+                  'Institutions',
+                  'Create, edit, verify institutions, and invite institution users.',
+                ],
                 ['Jobs / Internships', 'All postings; force-close or delete.'],
                 ['Applications', 'Every application across the platform.'],
                 ['Skills', 'Skill catalog management.'],
@@ -1117,8 +1291,9 @@ export default function UserGuide() {
                 ['Analytics', 'Applications over time, top skills, placement rate.'],
                 ['Industry skill demand', 'What skills are most requested.'],
                 ['Verification queue', 'Approve or reject uploaded documents.'],
-                ['Institutions', 'Create, edit, and verify institutions.'],
-                ['Events / Mentorship', 'Platform-wide oversight.'],
+                ['Events', 'Force-close or oversee any collaboration event.'],
+                ['Mentorship', 'Oversight of all mentorship pairings and requests.'],
+                ['Collaboration', 'A consolidated platform-wide collaboration view.'],
                 ['Audit logs', 'Every action with before / after diff.'],
                 ['Settings', 'Platform configuration.'],
               ].map(([label, desc]) => (
@@ -1145,7 +1320,11 @@ export default function UserGuide() {
               {[
                 {
                   q: 'I cannot sign in. The page says "Invalid credentials".',
-                  a: 'Double-check the email — including the domain — and try resetting your password. If the issue persists, your account may be inactive; contact your placement admin.',
+                  a: 'Double-check the email — including the domain — and make sure Caps Lock is off. If the issue persists, your account may be inactive; contact your placement admin.',
+                },
+                {
+                  q: 'I forgot my password. How do I reset it?',
+                  a: 'There is no self-service password reset on the platform yet. Use the Contact page from the top nav, or ask your placement admin to help you reset your credentials.',
                 },
                 {
                   q: 'My session keeps signing me out.',
@@ -1153,11 +1332,19 @@ export default function UserGuide() {
                 },
                 {
                   q: 'My resume upload is failing.',
-                  a: 'The maximum size is 5 MB and the format must be PDF. If the file is valid and still fails, try a different browser or check your network connection.',
+                  a: 'The maximum size is 5 MB and the format must be PDF. If the file is valid and still fails, try a different browser, or check your network connection. If the failure mentions Cloudinary permissions, your backend may need a full-access API key — see the developer docs.',
                 },
                 {
                   q: 'I do not see a job that was posted earlier.',
                   a: 'Only PUBLISHED jobs are visible to students. Drafts, closed, and deleted jobs are hidden. If you saved a job and the company later unpublished it, the bookmark will also disappear.',
+                },
+                {
+                  q: 'Why is my application stuck on a particular status?',
+                  a: 'Each company manages its own hiring funnel. Shortlisting, interview scheduling, and offer decisions are all on the company side. You will be notified in-app the moment your status changes.',
+                },
+                {
+                  q: 'How do I withdraw an application or accept an offer?',
+                  a: 'Open the application from your Applications page. Before SELECTED you can withdraw directly. After SELECTED, use Accept / Decline. Once you have accepted, withdrawal requests must be approved by the company.',
                 },
                 {
                   q: 'How do I contact support?',
@@ -1207,8 +1394,9 @@ export default function UserGuide() {
               <div>
                 <h2 className="text-2xl font-bold mb-2">Ready to get started?</h2>
                 <p className="text-indigo-100 mb-6 max-w-2xl leading-relaxed">
-                  Your account works across roles. Create one account, and your placement admin can
-                  grant you additional access as needed.
+                  Create the account that matches your role. Students, faculty, and companies can
+                  self-register; institution and admin accounts are provisioned by the platform
+                  team.
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <Link
