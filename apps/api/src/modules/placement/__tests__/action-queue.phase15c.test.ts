@@ -143,7 +143,9 @@ describe.skipIf(!hasTestDb)('action-queue.service (Phase 15C)', () => {
       const result = await ActionQueueService.list({ institutionId: String(institutionId) });
       expect(result.items.length).toBeGreaterThan(0);
       expect(result.total).toBeGreaterThan(0);
-      expect(result.items[0].institution!.toString()).toBe(institutionId.toString());
+      const firstItem = result.items[0];
+      expect(firstItem).toBeDefined();
+      expect(firstItem!.institution!.toString()).toBe(institutionId.toString());
     });
   });
 

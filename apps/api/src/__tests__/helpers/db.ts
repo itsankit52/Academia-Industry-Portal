@@ -2,6 +2,10 @@ import mongoose from 'mongoose';
 
 const TEST_MONGO_URI = process.env.TEST_MONGO_URI;
 
+export function hasTestDb(): boolean {
+  return typeof TEST_MONGO_URI === 'string' && TEST_MONGO_URI.length > 0;
+}
+
 export async function connectTestDb(): Promise<void> {
   if (!TEST_MONGO_URI) throw new Error('TEST_MONGO_URI is not set');
   if (mongoose.connection.readyState === 1) return;

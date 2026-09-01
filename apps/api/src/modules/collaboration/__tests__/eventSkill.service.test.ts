@@ -31,7 +31,7 @@ import {
 } from '../../../__tests__/helpers/db';
 import { processEventSkillsForRegistration } from '../eventSkill.service';
 
-describe.skipIf(!hasTestDb)('eventSkill.service (Phase 15C)', () => {
+describe.skipIf(!hasTestDb())('eventSkill.service (Phase 15C)', () => {
   let studentUser: UserDoc;
   let studentProfile: { _id: Types.ObjectId };
   let facultyUser: UserDoc;

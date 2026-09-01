@@ -6,6 +6,7 @@
  *
  *   PATCH /applications/:id/withdraw
  *   GET   /applications/engagements
+ *   PATCH /applications/:id/engagement/complete
  *   GET   /faculty-opportunities/:id/match-score
  *   GET   /faculty-opportunities/:id/applicants
  *
@@ -16,7 +17,13 @@
  */
 
 import { Router } from 'express';
-import { idParamSchema, withdrawFacultyApplicationSchema } from '@aip/validation';
+import {
+  idParamSchema,
+  objectIdSchema,
+  withdrawFacultyApplicationSchema,
+  createEngagementSchema,
+  updateEngagementStatusSchema,
+} from '@aip/validation';
 import { requireAuth } from '../../middleware/requireAuth';
 import { requireRole } from '../../middleware/requireRole';
 import { validate } from '../../middleware/validate';
@@ -24,6 +31,8 @@ import { auditLog } from '../../middleware/audit';
 import * as ctrl from './faculty-applications.controller';
 
 const router = Router();
+
+// --- /applications/* (Application model — shared between student and faculty)
 
 router.patch(
   '/:id/withdraw',
@@ -53,5 +62,61 @@ router.patch(
 );
 
 router.get('/engagements', requireAuth, requireRole('FACULTY'), ctrl.listEngagements);
+
+// --- /faculty-opportunities/* — opportunity-scoped endpoints
+
+const oppRouter = Router({ mergeParams: true });
+
+// GET /faculty-opportunities/:opportunityId/match-score  — FACULTY pre-apply score
+oppRouter.get(
+  '/:opportunityId/match-score',
+  requireAuth,
+  requireRole('FACULTY'),
+  validate(objectIdSchema, 'params'),
+  ctrl.getMatchScore,
+);
+
+// GET /faculty-opportunities/:opportunityId/applicants — COMPANY/INSTITUTION/ADMIN
+oppRouter.get(
+  '/:opportunityId/applicants',
+  requireAuth,
+  requireRole('COMPANY', 'INSTITUTION', 'ADMIN'),
+  validate(objectIdSchema, 'params'),
+  ctrl.listOpportunityApplicants,
+);
+
+// Phase 17 — Faculty engagement workflow under /faculty-opportunities/:id/engage/*
+
+// POST /faculty-opportunities/:opportunityId/engage — FACULTY applies
+oppRouter.post(
+  '/:opportunityId/engage',
+  requireAuth,
+  requireRole('FACULTY'),
+  validate(objectIdSchema, 'params'),
+  validate(createEngagementSchema),
+  ctrl.createEngagement,
+);
+
+// GET /faculty-opportunities/:opportunityId/engagements — host lists all engagements
+oppRouter.get(
+  '/:opportunityId/engagements',
+  requireAuth,
+  requireRole('COMPANY', 'INSTITUTION', 'ADMIN'),
+  validate(objectIdSchema, 'params'),
+  ctrl.listEngagementsForOpportunity,
+);
+
+// PATCH /faculty-opportunities/:opportunityId/engage/:engagementId — host updates status
+oppRouter.patch(
+  '/:opportunityId/engage/:engagementId',
+  requireAuth,
+  requireRole('COMPANY', 'INSTITUTION', 'ADMIN'),
+  validate(objectIdSchema, 'params'),
+  validate(updateEngagementStatusSchema),
+  ctrl.updateEngagementStatus,
+);
+
+// Merge the opportunity-scoped router into the main router under /faculty-opportunities
+router.use('/faculty-opportunities', oppRouter);
 
 export default router;

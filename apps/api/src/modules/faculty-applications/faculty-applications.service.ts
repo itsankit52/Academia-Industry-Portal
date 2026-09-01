@@ -471,3 +471,261 @@ export async function completeFacultyEngagement(
 
   return app.toJSON();
 }
+
+/**
+ * Phase 17 — Faculty engagement endpoints exposed under
+ *   POST   /faculty-opportunities/:id/engage
+ *   GET    /faculty-opportunities/:id/engagements
+ *   PATCH  /faculty-opportunities/:id/engage/:engagementId
+ *
+ * The "engagement" is the faculty's application to a faculty opportunity
+ * (FDP, consultancy, project, collaborative research, etc.). The endpoints
+ * are thin wrappers over the existing application model so the data model
+ * stays the one source of truth — every read or write goes through the
+ * same access checks as `listApplicantsForOpportunity` and
+ * `completeFacultyEngagement`.
+ *
+ * Authorization is identical to the rest of the module:
+ *   - Only FACULTY can create/update their own engagement.
+ *   - Only the host (COMPANY/INSTITUTION that owns the opportunity) or ADMIN
+ *     can list engagements or progress them through status transitions.
+ *   - Faculty are scoped to their own engagement by faculty profile id.
+ */
+
+export interface CreateEngagementInput {
+  coverLetter?: string;
+}
+
+export async function createEngagement(
+  userId: string,
+  role: Role,
+  opportunityId: string,
+  input: CreateEngagementInput = {},
+) {
+  if (role !== 'FACULTY') {
+    throw AppError.forbidden('Only faculty members can engage with faculty opportunities');
+  }
+  const profile = await getMyFacultyProfile(userId);
+  const opp = await FacultyOpportunity.findById(opportunityId);
+  if (!opp) throw AppError.notFound('Faculty opportunity not found');
+  if (opp.status !== 'PUBLISHED') {
+    throw AppError.badRequest('Opportunity is not open for engagement');
+  }
+  if (!(opp.targetRoles ?? []).includes('FACULTY')) {
+    throw AppError.forbidden('This opportunity is not open to faculty');
+  }
+  if (!usesFacultyModel(opp.opportunityType)) {
+    throw AppError.badRequest('Not a faculty opportunity');
+  }
+
+  // Duplicate guard. The Application model does not enforce a unique index on
+  // (faculty, opportunity) across all opportunity types, so we do it
+  // explicitly to give a clean 409 instead of relying on the Mongoose
+  // E11000 path the student flow uses.
+  const existing = await Application.findOne({ faculty: profile._id, opportunity: opp._id });
+  if (existing) throw AppError.conflict('You have already engaged with this opportunity');
+
+  const tags = [...(profile.researchInterests ?? []), ...(profile.qualifications ?? [])];
+  const matchScore = (() => {
+    const req = new Set(
+      (opp.requiredExpertise ?? []).map((s) => s.toString().trim().toLowerCase()).filter(Boolean),
+    );
+    if (req.size === 0) return 0;
+    const own = new Set(tags.map((s) => s.toString().trim().toLowerCase()).filter(Boolean));
+    let hits = 0;
+    for (const r of req) if (own.has(r)) hits += 1;
+    return Math.round((hits / req.size) * 100);
+  })();
+
+  const created = await Application.create({
+    faculty: profile._id,
+    opportunityType: opp.opportunityType,
+    opportunity: opp._id,
+    coverLetter: input.coverLetter,
+    matchScore,
+    timeline: [{ status: 'APPLIED', at: new Date() }],
+  });
+
+  if (opp.postedBy) {
+    await createNotification(
+      String(opp.postedBy),
+      'FACULTY_APPLICATION_SUBMITTED',
+      'New faculty engagement',
+      `${profile.fullName} has engaged with ${opp.title}.`,
+      `/${opp.hostType === 'INSTITUTION' ? 'institution' : 'company'}/faculty-opportunities/${String(opp._id)}`,
+    );
+  }
+
+  return created.toJSON();
+}
+
+export interface ListEngagementsForOpportunityRow {
+  id: string;
+  applicationId: string;
+  facultyProfileId: string;
+  facultyName: string;
+  facultyEmail: string;
+  status: string;
+  coverLetter?: string;
+  matchScore?: number;
+  appliedAt: string;
+}
+
+export async function listEngagementsForOpportunity(
+  userId: string,
+  role: Role,
+  opportunityId: string,
+  pag: PaginationInput,
+): Promise<Paginated<ListEngagementsForOpportunityRow>> {
+  const opp = await FacultyOpportunity.findById(opportunityId);
+  if (!opp) throw AppError.notFound('Faculty opportunity not found');
+
+  // Host-only access (mirrors listApplicantsForOpportunity).
+  if (role === 'COMPANY') {
+    const company = await CompanyProfile.findOne({ user: userId }).select('_id');
+    if (!company) throw AppError.forbidden('Company profile not found');
+    if (opp.hostType !== 'COMPANY' || String(opp.host) !== String(company._id)) {
+      throw AppError.forbidden('Not your opportunity');
+    }
+  } else if (role === 'INSTITUTION') {
+    const user = await User.findById(userId).select('institution');
+    if (!user?.institution) throw AppError.forbidden('No institution linked to your account');
+    if (opp.hostType !== 'INSTITUTION' || String(opp.host) !== String(user.institution)) {
+      throw AppError.forbidden('Not your opportunity');
+    }
+  } else if (role !== 'ADMIN') {
+    throw AppError.forbidden('Insufficient role');
+  }
+
+  if (!usesFacultyModel(opp.opportunityType)) {
+    throw AppError.badRequest('Not a faculty opportunity');
+  }
+
+  const { page, pageSize, skip, limit, sort } = applyPagination(pag);
+  const where: Record<string, unknown> = {
+    opportunityType: opp.opportunityType,
+    opportunity: opp._id,
+    faculty: { $exists: true, $ne: null },
+  };
+  const [rows, total] = await Promise.all([
+    Application.find(where).sort(sort).skip(skip).limit(limit),
+    Application.countDocuments(where),
+  ]);
+
+  const facultyIds = rows.map((r) => r.faculty).filter(Boolean);
+  const profiles = await FacultyProfile.find({ _id: { $in: facultyIds } })
+    .populate('user', 'email')
+    .select('fullName user')
+    .lean();
+  const profileMap = new Map(profiles.map((p) => [String(p._id), p]));
+
+  const items: ListEngagementsForOpportunityRow[] = rows.map((r) => {
+    const profile = profileMap.get(String(r.faculty));
+    const userRow = profile?.user as unknown as { email?: string } | undefined;
+    const json = r.toJSON() as Record<string, unknown>;
+    return {
+      id: String(r._id),
+      applicationId: String(r._id),
+      facultyProfileId: profile ? String(profile._id) : String(r.faculty),
+      facultyName: profile?.fullName ?? '—',
+      facultyEmail: userRow?.email ?? '',
+      status: String(r.status),
+      ...(typeof json.coverLetter === 'string' ? { coverLetter: json.coverLetter } : {}),
+      ...(typeof json.matchScore === 'number' ? { matchScore: json.matchScore } : {}),
+      appliedAt: String(json.createdAt ?? new Date()),
+    };
+  });
+
+  return buildPaginated(items, total, page, pageSize);
+}
+
+export interface UpdateEngagementStatusInput {
+  status: 'APPLIED' | 'SHORTLISTED' | 'SELECTED' | 'REJECTED' | 'WITHDRAWN';
+  note?: string;
+}
+
+// The valid pre-engagement transitions a host can make on a faculty
+// application. Engagement-state transitions (ONGOING/COMPLETED) go through
+// the dedicated engagement/complete endpoint so the host's workflow stays
+// distinct from the faculty's withdraw path.
+const PRE_ENGAGEMENT_STATUSES = ['APPLIED', 'SHORTLISTED', 'SELECTED', 'REJECTED'] as const;
+type PreEngagementStatus = (typeof PRE_ENGAGEMENT_STATUSES)[number];
+
+/**
+ * Update a single engagement's status. Only the host (COMPANY/INSTITUTION
+ * that owns the opportunity) or ADMIN can change the status. Faculty
+ * members use the dedicated withdraw endpoint — this endpoint does not
+ * accept a faculty caller at all, so a faculty user cannot accidentally
+ * promote themselves.
+ */
+export async function updateEngagementStatus(
+  userId: string,
+  role: Role,
+  opportunityId: string,
+  applicationId: string,
+  input: UpdateEngagementStatusInput,
+) {
+  const opp = await FacultyOpportunity.findById(opportunityId);
+  if (!opp) throw AppError.notFound('Faculty opportunity not found');
+  if (!usesFacultyModel(opp.opportunityType)) {
+    throw AppError.badRequest('Not a faculty opportunity');
+  }
+
+  if (role === 'COMPANY') {
+    const company = await CompanyProfile.findOne({ user: userId }).select('_id');
+    if (!company) throw AppError.forbidden('Company profile not found');
+    if (opp.hostType !== 'COMPANY' || String(opp.host) !== String(company._id)) {
+      throw AppError.forbidden('Not your opportunity');
+    }
+  } else if (role === 'INSTITUTION') {
+    const user = await User.findById(userId).select('institution');
+    if (!user?.institution) throw AppError.forbidden('No institution linked to your account');
+    if (opp.hostType !== 'INSTITUTION' || String(opp.host) !== String(user.institution)) {
+      throw AppError.forbidden('Not your opportunity');
+    }
+  } else if (role !== 'ADMIN') {
+    throw AppError.forbidden('Insufficient role');
+  }
+
+  if (!(PRE_ENGAGEMENT_STATUSES as readonly string[]).includes(input.status)) {
+    throw AppError.badRequest(
+      `Engagement status can only be set to one of ${PRE_ENGAGEMENT_STATUSES.join(', ')}; use /engagement/complete for ONGOING/COMPLETED transitions`,
+    );
+  }
+
+  const app = await Application.findById(applicationId);
+  if (!app) throw AppError.notFound('Engagement not found');
+  if (String(app.opportunity) !== String(opp._id)) {
+    throw AppError.notFound('Engagement does not belong to this opportunity');
+  }
+  if (!app.faculty) {
+    throw AppError.forbidden('Engagement is not a faculty application');
+  }
+
+  const target = input.status as PreEngagementStatus;
+  if (app.status === target) {
+    return app.toJSON();
+  }
+
+  app.status = target;
+  app.timeline.push({
+    status: target,
+    at: new Date(),
+    ...(input.note ? { note: input.note } : { note: `Status set to ${target} by host` }),
+  });
+  await app.save();
+
+  // Notify the faculty member.
+  const faculty = await FacultyProfile.findById(app.faculty).select('user fullName').lean();
+  if (faculty?.user) {
+    await createNotification(
+      String(faculty.user),
+      'FACULTY_APPLICATION_STATUS_UPDATED',
+      'Engagement updated',
+      `Your engagement for ${opp.title} is now ${target}.`,
+      `/faculty/applications/${String(app._id)}`,
+    );
+  }
+
+  return app.toJSON();
+}

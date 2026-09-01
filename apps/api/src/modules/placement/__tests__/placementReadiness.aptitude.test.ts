@@ -11,7 +11,11 @@ import { PLACEMENT_READINESS_BANDS, PLACEMENT_READINESS_WEIGHTS } from '@aip/typ
 import { __test as readinessTest } from '../placement-readiness.service';
 
 describe('Phase 15C — Placement Readiness APTITUDE component', () => {
-  const { computeOverall, levelFor } = readinessTest;
+  // Cast to accept simple {score, weight} objects for testing the weighted-sum logic.
+  const { computeOverall, levelFor } = readinessTest as unknown as {
+    computeOverall: (components: Array<{ score: number; weight: number }>) => number;
+    levelFor: (score: number) => string;
+  };
 
   describe('weight system', () => {
     it('weights still sum to 1.0 after adding APTITUDE', () => {

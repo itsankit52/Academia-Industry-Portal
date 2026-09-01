@@ -24,7 +24,7 @@ import { createNotification } from '../notifications/notifications.service';
 import { processEventSkillsForRegistration } from './eventSkill.service';
 
 interface HostRef {
-  hostType: 'COMPANY' | 'INSTITUTION';
+  hostType: 'COMPANY' | 'INSTITUTION' | 'FACULTY';
   hostId: Types.ObjectId;
   hostName: string;
 }
@@ -39,7 +39,20 @@ async function resolveActorHost(userId: string, role: Role): Promise<HostRef> {
       hostName: String(c.companyName),
     };
   }
-  if (role === 'INSTITUTION' || role === 'FACULTY' || role === 'ADMIN') {
+  if (role === 'FACULTY') {
+    // Faculty host events under their own faculty profile so the host name in
+    // event listings reflects the actual faculty member (e.g. "Prof. S. Sharma")
+    // rather than the parent institution. Ownership checks in
+    // `assertHostOrAdmin` use the same faculty-profile id.
+    const f = await FacultyProfile.findOne({ user: userId }).select('_id fullName');
+    if (!f) throw AppError.notFound('Faculty profile not found');
+    return {
+      hostType: 'FACULTY',
+      hostId: f._id as Types.ObjectId,
+      hostName: String(f.fullName),
+    };
+  }
+  if (role === 'INSTITUTION' || role === 'ADMIN') {
     const user = await User.findById(userId).select('institution').lean();
     if (!user?.institution) throw AppError.badRequest('User has no institution to host under');
     const inst = await Institution.findById(user.institution).select('name');
@@ -54,12 +67,16 @@ async function resolveActorHost(userId: string, role: Role): Promise<HostRef> {
 }
 
 async function resolveHostName(
-  hostType: 'COMPANY' | 'INSTITUTION',
+  hostType: 'COMPANY' | 'INSTITUTION' | 'FACULTY',
   hostId: unknown,
 ): Promise<string> {
   if (hostType === 'COMPANY') {
     const c = await CompanyProfile.findById(hostId).select('companyName').lean();
     return c ? String(c.companyName) : '—';
+  }
+  if (hostType === 'FACULTY') {
+    const f = await FacultyProfile.findById(hostId).select('fullName').lean();
+    return f ? String(f.fullName) : '—';
   }
   const inst = await Institution.findById(hostId).select('name').lean();
   return inst ? String(inst.name) : '—';
@@ -74,7 +91,11 @@ async function assertHostOrAdmin(eventId: string, userId: string, role: Role) {
     const c = await CompanyProfile.findOne({ user: userId }).select('_id');
     if (c && String(event.host) === String(c._id)) return event;
   }
-  if ((role === 'INSTITUTION' || role === 'FACULTY') && event.hostType === 'INSTITUTION') {
+  if (role === 'FACULTY' && event.hostType === 'FACULTY') {
+    const f = await FacultyProfile.findOne({ user: userId }).select('_id');
+    if (f && String(event.host) === String(f._id)) return event;
+  }
+  if (role === 'INSTITUTION' && event.hostType === 'INSTITUTION') {
     const user = await User.findById(userId).select('institution').lean();
     if (user?.institution && String(event.host) === String(user.institution)) return event;
   }
@@ -155,7 +176,7 @@ export async function listEvents(filters: ListEventsQuery, viewerUserId?: string
       id: String(r._id),
       host: {
         id: String(r.host),
-        name: await resolveHostName(r.hostType as 'COMPANY' | 'INSTITUTION', r.host),
+        name: await resolveHostName(r.hostType as 'COMPANY' | 'INSTITUTION' | 'FACULTY', r.host),
       },
     })),
   );
@@ -165,7 +186,10 @@ export async function listEvents(filters: ListEventsQuery, viewerUserId?: string
 export async function getEventById(id: string) {
   const doc = await CollaborationEvent.findById(id).lean();
   if (!doc) throw AppError.notFound('Event not found');
-  const hostName = await resolveHostName(doc.hostType as 'COMPANY' | 'INSTITUTION', doc.host);
+  const hostName = await resolveHostName(
+    doc.hostType as 'COMPANY' | 'INSTITUTION' | 'FACULTY',
+    doc.host,
+  );
   return {
     ...doc,
     id: String(doc._id),
@@ -284,7 +308,10 @@ export async function listMyRegistrations(userId: string, filters: ListMyRegistr
               status: e.status,
               host: {
                 id: String(e.host),
-                name: await resolveHostName(e.hostType as 'COMPANY' | 'INSTITUTION', e.host),
+                name: await resolveHostName(
+                  e.hostType as 'COMPANY' | 'INSTITUTION' | 'FACULTY',
+                  e.host,
+                ),
               },
             }
           : null,

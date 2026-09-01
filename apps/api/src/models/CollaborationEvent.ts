@@ -1,7 +1,7 @@
 import { Schema, model, type HydratedDocument, type InferSchemaType } from 'mongoose';
 import { COLLAB_EVENT_TYPES, ROLES } from '@aip/config';
 
-export const COLLAB_EVENT_HOST_TYPES = ['COMPANY', 'INSTITUTION'] as const;
+export const COLLAB_EVENT_HOST_TYPES = ['COMPANY', 'INSTITUTION', 'FACULTY'] as const;
 export type CollabEventHostType = (typeof COLLAB_EVENT_HOST_TYPES)[number];
 
 export const COLLAB_EVENT_MODES = ['ONLINE', 'ONSITE', 'HYBRID'] as const;

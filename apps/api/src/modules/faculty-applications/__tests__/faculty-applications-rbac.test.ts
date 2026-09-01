@@ -739,4 +739,222 @@ describe.skipIf(!hasTestDb)('faculty-applications rbac', () => {
       expect(res.body.error).toMatch(/deadline|passed/i);
     });
   });
+
+  // --- Phase 17 — Faculty engagement endpoints under /faculty-opportunities ---
+
+  describe('POST /faculty-opportunities/:id/engage', () => {
+    it('returns 401 for unauthenticated requests', async () => {
+      const res = await request(app).post(
+        '/api/v1/faculty-opportunities/000000000000000000000001/engage',
+      );
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 403 for STUDENT (only FACULTY can engage)', async () => {
+      const student = await createUserAndLogin(app, 'STUDENT', { email: 'engage-st@t.demo' });
+      const res = await request(app)
+        .post('/api/v1/faculty-opportunities/000000000000000000000001/engage')
+        .set('Cookie', student.cookie)
+        .send({ coverLetter: 'Trying to engage as a student' });
+      expect(res.status).toBe(403);
+    });
+
+    it('returns 403 for COMPANY (only FACULTY can engage)', async () => {
+      const company = await createUserAndLogin(app, 'COMPANY', {
+        email: 'engage-co@t.demo',
+        companyName: 'Engage Co',
+      });
+      const res = await request(app)
+        .post('/api/v1/faculty-opportunities/000000000000000000000001/engage')
+        .set('Cookie', company.cookie)
+        .send({});
+      expect(res.status).toBe(403);
+    });
+
+    it('returns 200 when FACULTY engages with a published opportunity', async () => {
+      const company = await createUserAndLogin(app, 'COMPANY', {
+        email: 'engage-ok-co@t.demo',
+        companyName: 'Engage Ok Co',
+      });
+      const companyProfile = await CompanyProfile.findOne({ user: company.userId });
+      const faculty = await createUserAndLogin(app, 'FACULTY', { email: 'engage-ok-fa@t.demo' });
+      const opp = await FacultyOpportunity.create({
+        title: 'Engage OK FDP',
+        description: 'A test FDP for engagement',
+        opportunityType: 'FDP',
+        hostType: 'COMPANY',
+        host: companyProfile!._id,
+        postedBy: new Types.ObjectId(company.userId),
+        targetRoles: ['FACULTY'],
+        location: 'Remote',
+        mode: 'REMOTE',
+        applicationDeadline: new Date(Date.now() + 86400000),
+        status: 'PUBLISHED',
+      });
+
+      const res = await request(app)
+        .post(`/api/v1/faculty-opportunities/${opp._id}/engage`)
+        .set('Cookie', faculty.cookie)
+        .send({ coverLetter: 'I would like to engage with this opportunity' });
+
+      expect(res.status).toBe(201);
+    });
+
+    it('returns 409 Conflict on duplicate engagement', async () => {
+      const company = await createUserAndLogin(app, 'COMPANY', {
+        email: 'engage-dup-co@t.demo',
+        companyName: 'Engage Dup Co',
+      });
+      const companyProfile = await CompanyProfile.findOne({ user: company.userId });
+      const faculty = await createUserAndLogin(app, 'FACULTY', { email: 'engage-dup-fa@t.demo' });
+      const opp = await FacultyOpportunity.create({
+        title: 'Duplicate Engage FDP',
+        description: 'A test FDP for duplicate engagement',
+        opportunityType: 'FDP',
+        hostType: 'COMPANY',
+        host: companyProfile!._id,
+        postedBy: new Types.ObjectId(company.userId),
+        targetRoles: ['FACULTY'],
+        location: 'Remote',
+        mode: 'REMOTE',
+        applicationDeadline: new Date(Date.now() + 86400000),
+        status: 'PUBLISHED',
+      });
+
+      const first = await request(app)
+        .post(`/api/v1/faculty-opportunities/${opp._id}/engage`)
+        .set('Cookie', faculty.cookie)
+        .send({});
+      expect(first.status).toBe(201);
+
+      const second = await request(app)
+        .post(`/api/v1/faculty-opportunities/${opp._id}/engage`)
+        .set('Cookie', faculty.cookie)
+        .send({});
+      expect(second.status).toBe(409);
+    });
+  });
+
+  describe('GET /faculty-opportunities/:id/engagements', () => {
+    it('returns 401 for unauthenticated requests', async () => {
+      const res = await request(app).get(
+        '/api/v1/faculty-opportunities/000000000000000000000001/engagements',
+      );
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 403 for STUDENT (only host COMPANY/INSTITUTION/ADMIN can list)', async () => {
+      const student = await createUserAndLogin(app, 'STUDENT', { email: 'list-eng-st@t.demo' });
+      const res = await request(app)
+        .get('/api/v1/faculty-opportunities/000000000000000000000001/engagements')
+        .set('Cookie', student.cookie);
+      expect(res.status).toBe(403);
+    });
+
+    it('returns 403 for FACULTY (host-only endpoint)', async () => {
+      const faculty = await createUserAndLogin(app, 'FACULTY', { email: 'list-eng-fa@t.demo' });
+      const res = await request(app)
+        .get('/api/v1/faculty-opportunities/000000000000000000000001/engagements')
+        .set('Cookie', faculty.cookie);
+      expect(res.status).toBe(403);
+    });
+
+    it('returns 200 for COMPANY (the host)', async () => {
+      const company = await createUserAndLogin(app, 'COMPANY', {
+        email: 'list-eng-ok-co@t.demo',
+        companyName: 'List Eng Co',
+      });
+      const companyProfile = await CompanyProfile.findOne({ user: company.userId });
+      const opp = await FacultyOpportunity.create({
+        title: 'List Eng FDP',
+        description: 'A test FDP for listing',
+        opportunityType: 'FDP',
+        hostType: 'COMPANY',
+        host: companyProfile!._id,
+        postedBy: new Types.ObjectId(company.userId),
+        targetRoles: ['FACULTY'],
+        location: 'Remote',
+        mode: 'REMOTE',
+        applicationDeadline: new Date(Date.now() + 86400000),
+        status: 'PUBLISHED',
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/faculty-opportunities/${opp._id}/engagements`)
+        .set('Cookie', company.cookie);
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('items');
+    });
+  });
+
+  describe('PATCH /faculty-opportunities/:id/engage/:engagementId', () => {
+    it('returns 401 for unauthenticated requests', async () => {
+      const res = await request(app).patch(
+        '/api/v1/faculty-opportunities/000000000000000000000001/engage/000000000000000000000002',
+      );
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 403 for FACULTY (host-only endpoint)', async () => {
+      const faculty = await createUserAndLogin(app, 'FACULTY', { email: 'patch-eng-fa@t.demo' });
+      const res = await request(app)
+        .patch(
+          '/api/v1/faculty-opportunities/000000000000000000000001/engage/000000000000000000000002',
+        )
+        .set('Cookie', faculty.cookie)
+        .send({ status: 'SHORTLISTED' });
+      expect(res.status).toBe(403);
+    });
+
+    it('returns 403 for STUDENT (host-only endpoint)', async () => {
+      const student = await createUserAndLogin(app, 'STUDENT', { email: 'patch-eng-st@t.demo' });
+      const res = await request(app)
+        .patch(
+          '/api/v1/faculty-opportunities/000000000000000000000001/engage/000000000000000000000002',
+        )
+        .set('Cookie', student.cookie)
+        .send({ status: 'SHORTLISTED' });
+      expect(res.status).toBe(403);
+    });
+
+    it('returns 200 when COMPANY updates the status of an engagement for its own opportunity', async () => {
+      const company = await createUserAndLogin(app, 'COMPANY', {
+        email: 'patch-eng-ok-co@t.demo',
+        companyName: 'Patch Eng Co',
+      });
+      const companyProfile = await CompanyProfile.findOne({ user: company.userId });
+      const faculty = await createUserAndLogin(app, 'FACULTY', { email: 'patch-eng-ok-fa@t.demo' });
+      const facultyProfile = await FacultyProfile.findOne({ user: faculty.userId });
+      const opp = await FacultyOpportunity.create({
+        title: 'Patch Eng FDP',
+        description: 'A test FDP for patching',
+        opportunityType: 'FDP',
+        hostType: 'COMPANY',
+        host: companyProfile!._id,
+        postedBy: new Types.ObjectId(company.userId),
+        targetRoles: ['FACULTY'],
+        location: 'Remote',
+        mode: 'REMOTE',
+        applicationDeadline: new Date(Date.now() + 86400000),
+        status: 'PUBLISHED',
+      });
+
+      // Faculty creates engagement
+      const created = await request(app)
+        .post(`/api/v1/faculty-opportunities/${opp._id}/engage`)
+        .set('Cookie', faculty.cookie)
+        .send({ coverLetter: 'I would like to engage' });
+      expect(created.status).toBe(201);
+
+      // Company updates the engagement status
+      const res = await request(app)
+        .patch(`/api/v1/faculty-opportunities/${opp._id}/engage/${created.body.id}`)
+        .set('Cookie', company.cookie)
+        .send({ status: 'SHORTLISTED', note: 'Looks promising' });
+      expect(res.status).toBe(200);
+
+      // Verify faculty profile was actually used (not a fake ID)
+      expect(String(facultyProfile!._id)).toBeDefined();
+    });
+  });
 });

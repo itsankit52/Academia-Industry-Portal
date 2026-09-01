@@ -20,6 +20,23 @@ export async function getMyProfile(userId: string) {
 }
 
 export async function updateMyProfile(userId: string, patch: UpdateStudentProfileInput) {
+  // Fetch existing profile to establish ownership and guard against institutionId tampering.
+  // The route-level requireRole('STUDENT') + validate() already strips institutionId from
+  // the body (it's not in updateStudentProfileSchema), but we add this as defense-in-depth:
+  // 1. Verify the profile belongs to the authenticated user (ownership check).
+  // 2. Reject any attempt to change institutionId — students cannot transfer institutions.
+  const existing = await StudentProfile.findOne({ user: userId });
+  if (!existing) throw AppError.notFound('Student profile not found');
+
+  // Block institutionId mutation — institution assignment is set at registration and
+  // is managed by institution admins. A student must not be able to transfer or remove
+  // their institution by sending it in the payload. The type cast is safe because
+  // the Zod strict schema strips unknown keys before this runs.
+  const patchObj = patch as Record<string, unknown>;
+  if (Object.prototype.hasOwnProperty.call(patchObj, 'institutionId')) {
+    throw AppError.forbidden('Institution cannot be changed via this endpoint');
+  }
+
   const profile = await StudentProfile.findOneAndUpdate(
     { user: userId },
     { $set: patch },
