@@ -5,7 +5,13 @@
  * NEVER trusts client-provided results — always recalculates server-side.
  */
 import { Types } from 'mongoose';
-import { PlacementDrive, PlacementParticipant, StudentProfile, Application, Resume } from '../../models';
+import {
+  PlacementDrive,
+  PlacementParticipant,
+  StudentProfile,
+  Application,
+  Resume,
+} from '../../models';
 import type { PlacementDriveDoc } from '../../models/placement/PlacementDrive';
 import type {
   EligibilityResult,
@@ -56,9 +62,9 @@ export async function evaluateEligibility(
 
   // Cast Mongoose subdocument to the shared rules shape; both share the same
   // field names so this is safe at runtime.
-  const rules = (drive.eligibilityRules
-    ? JSON.parse(JSON.stringify(drive.eligibilityRules))
-    : {}) as EligibilityRules;
+  const rules = (
+    drive.eligibilityRules ? JSON.parse(JSON.stringify(drive.eligibilityRules)) : {}
+  ) as EligibilityRules;
   const failures: EligibilityFailure[] = [];
   const warnings: EligibilityWarning[] = [];
 
@@ -73,7 +79,11 @@ export async function evaluateEligibility(
   }
 
   // MIN_CGPA
-  if (rules.minCgpa !== undefined && studentProfile.cgpa != null) {
+  if (
+    rules.minCgpa !== undefined &&
+    studentProfile.cgpa !== null &&
+    studentProfile.cgpa !== undefined
+  ) {
     const cgpa = studentProfile.cgpa as number;
     if (cgpa < rules.minCgpa) {
       failures.push({
