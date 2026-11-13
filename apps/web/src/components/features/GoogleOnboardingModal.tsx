@@ -12,7 +12,7 @@
  * is sent directly to the backend for server-side verification on each attempt.
  */
 
-import { useEffect, type Dispatch, type SetStateAction } from 'react';
+import { useEffect } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -29,7 +29,7 @@ import RadioGroup from '@/components/ui/RadioGroup';
 import Select from '@/components/ui/Select';
 import { FiCheck, FiX } from 'react-icons/fi';
 
-// ── Form schema (role-specific sub-fields are optional — validated in service) ──
+// ── Form schema ───────────────────────────────────────────────────────────────
 
 const onboardingSchema = z.object({
   role: z.enum(['STUDENT', 'COMPANY', 'FACULTY', 'INSTITUTION']),
@@ -61,7 +61,7 @@ const roleOptions: Array<{ value: PublicRole; label: string }> = [
   { value: 'INSTITUTION', label: 'Institution Admin — manage students & industry' },
 ];
 
-// ── Props ────────────────────────────────────────────────────────────────────
+// ── Props ─────────────────────────────────────────────────────────────────────
 
 interface GoogleOnboardingModalProps {
   isOpen: boolean;
@@ -72,7 +72,7 @@ interface GoogleOnboardingModalProps {
   idToken: string;
 }
 
-// ── Component ────────────────────────────────────────────────────────────────
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function GoogleOnboardingModal({
   isOpen,
@@ -80,7 +80,11 @@ export default function GoogleOnboardingModal({
   pendingData,
   idToken,
 }: GoogleOnboardingModalProps) {
+  // This internal mutation handles the SECOND call (with role + profile data).
+  // onNeedsOnboarding is intentionally not wired — if the backend somehow
+  // returns needs_role again the error path below catches it.
   const googleAuth = useGoogleAuth();
+
   const institutions = useInstitutionsCatalog();
   const {
     verificationState,
@@ -95,11 +99,20 @@ export default function GoogleOnboardingModal({
     handleSubmit,
     watch,
     setValue,
+    reset: resetForm,
     formState: { errors },
   } = useForm<OnboardingFormValues>({
     resolver: zodResolver(onboardingSchema) as Resolver<OnboardingFormValues>,
     defaultValues: { role: 'STUDENT', designation: 'Assistant Professor', department: 'General' },
   });
+
+  // Reset everything when the modal is closed or reopened with new data.
+  useEffect(() => {
+    if (!isOpen) {
+      resetForm({ role: 'STUDENT', designation: 'Assistant Professor', department: 'General' });
+      resetVerification();
+    }
+  }, [isOpen, resetForm, resetVerification]);
 
   const role = watch('role') as PublicRole;
   const institutionId = watch('institutionId');
@@ -148,9 +161,25 @@ export default function GoogleOnboardingModal({
   };
 
   return (
-    <Modal open={isOpen} onClose={onClose} title="Complete your profile" size="md">
-      <div className="p-6 overflow-y-auto max-h-[80vh] space-y-1">
-        <div className="space-y-1 mb-5">
+    // Use the 'lg' size so the form has room to breathe and doesn't overflow on
+    // mobile. The Modal panel itself is scrollable via the className override.
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      title="Complete your profile"
+      size="md"
+      // Allow the panel to scroll when content is taller than the viewport.
+      // This keeps all inputs inside the scrollable panel (not a nested div)
+      // so there is no inner stacking context that could block pointer events.
+      className="overflow-y-auto max-h-[90vh]"
+    >
+      {/* Inner padding wrapper — no overflow or max-height here so there is
+          only ONE scroll container: the Modal panel itself. Having two nested
+          overflow-y-auto containers was creating a sub-stacking context that
+          swallowed pointer events on form controls rendered below the fold. */}
+      <div className="p-6">
+        {/* Welcome header */}
+        <div className="mb-5 text-center">
           {pendingData?.picture && (
             <img
               src={pendingData.picture}
@@ -158,15 +187,16 @@ export default function GoogleOnboardingModal({
               className="w-14 h-14 rounded-full mx-auto mb-3 border border-slate-200 dark:border-slate-700"
             />
           )}
-          <p className="text-sm text-slate-600 dark:text-slate-400 text-center">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             Welcome, <span className="font-medium">{pendingData?.name ?? pendingData?.email}</span>!
           </p>
-          <p className="text-sm text-slate-500 dark:text-slate-500 text-center">
+          <p className="text-sm text-slate-500 dark:text-slate-500 mt-0.5">
             Choose how you&apos;d like to use AcadIn.
           </p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+          {/* Role selection */}
           <RadioGroup
             label="I am a…"
             name="role"
@@ -179,15 +209,18 @@ export default function GoogleOnboardingModal({
             error={errors.role?.message}
           />
 
+          {/* Full name — STUDENT / FACULTY */}
           {(role === 'STUDENT' || role === 'FACULTY') && (
             <Input
               label="Full name"
               placeholder={pendingData?.name ?? 'Jane Smith'}
+              autoComplete="name"
               error={errors.fullName?.message}
               {...register('fullName')}
             />
           )}
 
+          {/* Company name — COMPANY */}
           {role === 'COMPANY' && (
             <Input
               label="Company name"
@@ -197,6 +230,7 @@ export default function GoogleOnboardingModal({
             />
           )}
 
+          {/* Institution select — STUDENT / FACULTY */}
           {needsInstitution && (
             <Select
               label="University / Institution"
@@ -211,6 +245,7 @@ export default function GoogleOnboardingModal({
             />
           )}
 
+          {/* Institution code + verify — STUDENT only */}
           {isStudent && (
             <>
               <Input
@@ -221,6 +256,7 @@ export default function GoogleOnboardingModal({
                 error={errors.institutionCode?.message ?? verifyError ?? undefined}
                 {...register('institutionCode')}
               />
+
               <Button
                 type="button"
                 variant="outline"
@@ -232,6 +268,7 @@ export default function GoogleOnboardingModal({
               >
                 {isVerifying ? 'Verifying…' : 'Verify institution code'}
               </Button>
+
               {isVerified && verificationState?.institution && (
                 <div className="flex items-start gap-2 text-sm text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg px-3 py-2">
                   <FiCheck className="mt-0.5 shrink-0" />
@@ -241,6 +278,7 @@ export default function GoogleOnboardingModal({
                   </span>
                 </div>
               )}
+
               {verificationState?.valid === false && (
                 <div className="flex items-start gap-2 text-sm text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded-lg px-3 py-2">
                   <FiX className="mt-0.5 shrink-0" />
@@ -250,6 +288,7 @@ export default function GoogleOnboardingModal({
             </>
           )}
 
+          {/* Designation / Department — FACULTY */}
           {role === 'FACULTY' && (
             <>
               <Input
@@ -267,6 +306,7 @@ export default function GoogleOnboardingModal({
             </>
           )}
 
+          {/* Institution details — INSTITUTION role */}
           {role === 'INSTITUTION' && (
             <>
               <p
@@ -285,6 +325,7 @@ export default function GoogleOnboardingModal({
               <Input
                 label="Primary email domain"
                 placeholder="acme.edu"
+                helperText="e.g. the domain used by your students' email addresses."
                 error={errors.institutionDomain?.message}
                 {...register('institutionDomain')}
               />
@@ -311,6 +352,7 @@ export default function GoogleOnboardingModal({
             </>
           )}
 
+          {/* Submission error */}
           {googleAuth.error && (
             <p
               className="text-sm text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-lg px-3 py-2"

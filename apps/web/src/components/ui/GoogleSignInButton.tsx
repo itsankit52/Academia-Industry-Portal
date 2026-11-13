@@ -168,12 +168,25 @@ export default function GoogleSignInButton({
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full overflow-hidden"
-      style={{ minHeight: '40px' }}
-      aria-label={text === 'signup_with' ? 'Sign up with Google' : 'Sign in with Google'}
-    />
+    // Wrapper is `relative` so the disabled overlay can be positioned over the
+    // GIS iframe. The GIS button is an <iframe> injected by Google's script and
+    // does not respect HTML `disabled` or React props — an overlay is the only
+    // reliable way to block interaction while a request is in flight.
+    <div className="relative w-full">
+      <div
+        ref={containerRef}
+        className="w-full overflow-hidden"
+        style={{ minHeight: '40px' }}
+        aria-label={text === 'signup_with' ? 'Sign up with Google' : 'Sign in with Google'}
+      />
+      {disabled && (
+        <div
+          className="absolute inset-0 cursor-not-allowed"
+          aria-hidden="true"
+          style={{ background: 'transparent' }}
+        />
+      )}
+    </div>
   );
 }
 
