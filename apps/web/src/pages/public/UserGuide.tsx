@@ -273,7 +273,7 @@ export default function UserGuide() {
           User Guide
         </div>
         <h1 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4 leading-tight dark:text-slate-100">
-          How the AcadIn works
+          How the AcadIn works || Full User Guide
         </h1>
         <p className="text-lg text-slate-600 leading-relaxed dark:text-slate-400">
           A step-by-step walkthrough for every role. New here? Start with

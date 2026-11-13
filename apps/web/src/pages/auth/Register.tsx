@@ -1,9 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { registerSchema, type RegisterInput } from '@aip/validation';
 import { useRegister } from '@/hooks/mutations/useRegister';
+import {
+  useGoogleAuth,
+  type OnboardingResponse,
+  type EmailConflictResponse,
+} from '@/hooks/mutations/useGoogleAuth';
 import { useInstitutionsCatalog } from '@/hooks/queries/useInstitutionsCatalog';
 import { useVerifyInstitutionCode } from '@/hooks/queries/useVerifyInstitutionCode';
 import { buildRegisterPayload } from './registerPayload';
@@ -12,6 +17,8 @@ import Button from '@/components/ui/Button';
 import RadioGroup from '@/components/ui/RadioGroup';
 import Select from '@/components/ui/Select';
 import Logo from '@/components/ui/Logo';
+import GoogleSignInButton from '@/components/ui/GoogleSignInButton';
+import GoogleOnboardingModal from '@/components/features/GoogleOnboardingModal';
 import { FiCheck, FiX } from 'react-icons/fi';
 
 type PublicRole = 'STUDENT' | 'COMPANY' | 'FACULTY' | 'INSTITUTION';
@@ -47,6 +54,26 @@ export default function Register() {
     verifyCode,
     reset: resetVerification,
   } = useVerifyInstitutionCode();
+
+  // Google auth state
+  const [pendingOnboarding, setPendingOnboarding] = useState<OnboardingResponse | null>(null);
+  const [pendingIdToken, setPendingIdToken] = useState('');
+  const [emailConflict, setEmailConflict] = useState<EmailConflictResponse | null>(null);
+
+  const googleAuth = useGoogleAuth({
+    onNeedsOnboarding: (data) => {
+      setPendingOnboarding(data);
+    },
+    onEmailConflict: (data) => {
+      setEmailConflict(data);
+    },
+  });
+
+  const handleGoogleToken = (idToken: string) => {
+    setPendingIdToken(idToken);
+    setEmailConflict(null);
+    googleAuth.mutate({ idToken });
+  };
 
   const {
     register,
@@ -114,12 +141,51 @@ export default function Register() {
         </div>
 
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-8">
+          {/* Quick Google sign-up */}
+          <div className="mb-5">
+            <GoogleSignInButton
+              onToken={handleGoogleToken}
+              disabled={googleAuth.isPending || register_.isPending}
+              text="signup_with"
+            />
+            {googleAuth.error && (
+              <p
+                className="mt-2 text-sm text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-lg px-3 py-2"
+                role="alert"
+              >
+                {googleAuth.error.message}
+              </p>
+            )}
+            {emailConflict && (
+              <div
+                className="mt-2 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2"
+                role="alert"
+              >
+                <p className="font-medium">Account already exists</p>
+                <p className="mt-0.5 text-xs">
+                  {emailConflict.message}{' '}
+                  <Link to="/login" className="font-medium underline">
+                    Sign in instead
+                  </Link>
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Divider */}
+          <div className="relative my-5">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-200 dark:border-slate-700" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase tracking-wide">
+              <span className="bg-white dark:bg-slate-900 px-2 text-slate-400 dark:text-slate-500">
+                or sign up with email
+              </span>
+            </div>
+          </div>
+
           <form
             onSubmit={handleSubmit((data) =>
-              // Built again rather than trusting the resolver's return value, so
-              // the request body is the role's payload regardless of which object
-              // react-hook-form hands back. `buildRegisterPayload` is pure and
-              // idempotent, so running it twice costs nothing.
               register_.mutate(buildRegisterPayload(data) as RegisterInput),
             )}
             noValidate
@@ -341,6 +407,17 @@ export default function Register() {
           </Link>
         </p>
       </div>
+
+      {/* Google onboarding modal — shown for new Google users who need a role */}
+      <GoogleOnboardingModal
+        isOpen={!!pendingOnboarding}
+        onClose={() => {
+          setPendingOnboarding(null);
+          setPendingIdToken('');
+        }}
+        pendingData={pendingOnboarding}
+        idToken={pendingIdToken}
+      />
     </div>
   );
 }

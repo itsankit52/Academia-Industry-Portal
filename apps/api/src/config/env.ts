@@ -46,6 +46,8 @@ const envSchema = z.object({
   CLOUDINARY_API_KEY: z.string().optional().default(''),
   CLOUDINARY_API_SECRET: z.string().optional().default(''),
 
+  GOOGLE_CLIENT_ID: z.string().optional().default(''),
+
   GEMINI_API_KEY: z.string().optional().default(''),
   // Not a plain `.default()`: an empty `GEMINI_MODEL=` line parses as '' and
   // would be passed through verbatim. See `resolveGeminiModel`.
