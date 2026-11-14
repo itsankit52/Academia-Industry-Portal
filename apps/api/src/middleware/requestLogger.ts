@@ -14,6 +14,7 @@ export function serializeRequest(req: {
   query?: unknown;
   headers?: unknown;
   remoteAddress?: unknown;
+  raw?: { ip?: unknown };
 }) {
   return {
     id: req.id,
@@ -21,6 +22,9 @@ export function serializeRequest(req: {
     url: String(req.url ?? '').split('?')[0],
     queryKeys: req.query && typeof req.query === 'object' ? Object.keys(req.query) : [],
     headers: req.headers,
+    // `ip` is Express's proxy-aware client address (the rate-limit key for
+    // anonymous traffic); `remoteAddress` is the socket peer, i.e. the proxy.
+    ip: req.raw?.ip,
     remoteAddress: req.remoteAddress,
   };
 }

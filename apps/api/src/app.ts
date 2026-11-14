@@ -14,6 +14,11 @@ import { csrfOriginGuard } from './middleware/csrf';
 export function createApp(): Express {
   const app = express();
 
+  // Exactly one trusted hop: Render's edge proxy, which appends the real client
+  // address as the last X-Forwarded-For entry. `req.ip` is therefore the client
+  // and a client-supplied X-Forwarded-For prefix is ignored. Never use `true`
+  // here — that trusts the left-most (client-controlled) entry and would let
+  // anyone pick their own rate-limit bucket.
   app.set('trust proxy', 1);
   app.use(helmet());
   app.use(

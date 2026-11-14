@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
 import {
   generateAssessmentSchema,
   idParamSchema,
@@ -9,20 +8,15 @@ import {
 import { requireAuth } from '../../middleware/requireAuth';
 import { requireRole } from '../../middleware/requireRole';
 import { validate } from '../../middleware/validate';
+import { createUserLimiter } from '../../middleware/rateLimit';
 import * as ctrl from './assessments.controller';
 
-const generateLimiter = rateLimit({
+// Per student (it runs after requireAuth), not per IP: keyed by IP, a whole
+// campus behind one NAT address shared five generations an hour.
+const generateLimiter = createUserLimiter({
   windowMs: 60 * 60 * 1000,
   max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    error: {
-      code: 'RATE_LIMITED',
-      message: 'Too many assessment generations, try again in an hour',
-    },
-  },
+  message: 'Too many assessment generations, try again in an hour',
 });
 
 const router = Router();

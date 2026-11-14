@@ -61,8 +61,14 @@ const envSchema = z.object({
 
   MAX_FILE_SIZE_MB: z.coerce.number().int().positive().default(5),
 
-  RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900_000),
-  RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(100),
+  // Global /api/v1 budget per window. Anonymous callers are counted per client
+  // IP; signed-in callers per user id (so users behind one campus NAT address
+  // do not share a budget). /health is exempt. See middleware/rateLimit.ts.
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().int().min(1_000).max(86_400_000).default(900_000),
+  RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().min(1).max(100_000).default(300),
+  RATE_LIMIT_USER_MAX_REQUESTS: z.coerce.number().int().min(1).max(100_000).default(600),
+  // Per-user budget for the Gemini-backed /ai routes, same window.
+  RATE_LIMIT_AI_MAX_REQUESTS: z.coerce.number().int().min(1).max(10_000).default(20),
 
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
