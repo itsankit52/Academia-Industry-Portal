@@ -64,6 +64,9 @@ vi.mock('../../../config/env', () => ({
     COOKIE_SECURE: false,
     COOKIE_SAMESITE: 'lax',
     NODE_ENV: 'test',
+    // utils/logger builds a pino instance from env.LOG_LEVEL at import time;
+    // without it the whole file failed to load and none of these tests ran.
+    LOG_LEVEL: 'silent',
   },
 }));
 
@@ -140,10 +143,14 @@ describe('verifyGoogleIdToken', () => {
     expect(claims.email_verified).toBe(true);
   });
 
-  it('throws 401 for an expired token', async () => {
-    mockVerifyIdToken.mockRejectedValue(new Error('Token used too late, 1234 > 1234: expired'));
+  it('throws 401 with the session-expired message for an expired token', async () => {
+    // Literal google-auth-library wording: it never contains the word "expired".
+    mockVerifyIdToken.mockRejectedValue(
+      new Error('Token used too late, 1700000400 > 1700000000: {"sub":"x"}'),
+    );
     await expect(verifyGoogleIdToken('expired-token')).rejects.toMatchObject({
       statusCode: 401,
+      message: 'Google sign-in session has expired. Please sign in again.',
     });
   });
 
@@ -216,8 +223,9 @@ describe('handleGoogleAuth — new user, needs role', () => {
 
     const result = await handleGoogleAuth({ idToken: 'valid-token' }, res, ctx);
     expect(result.status).toBe('needs_role');
-    const r = result as { googleId: string; email: string };
-    expect(r.googleId).toBe('google-sub-123');
+    const r = result as { googleId?: string; email: string };
+    // ISS-10: the Google subject is not handed back to the client.
+    expect(r).not.toHaveProperty('googleId');
     expect(r.email).toBe('user@example.com');
   });
 });
@@ -260,7 +268,7 @@ describe('handleGoogleAuth — new COMPANY user with role', () => {
     vi.mocked(User.deleteOne).mockResolvedValue({ deletedCount: 1 } as never);
 
     await expect(
-      handleGoogleAuth({ idToken: 'valid-token', role: 'COMPANY' }, res, ctx),
+      handleGoogleAuth({ idToken: 'valid-token', role: 'COMPANY', companyName: 'Acme' }, res, ctx),
     ).rejects.toThrow('DB error');
 
     expect(User.deleteOne).toHaveBeenCalledWith({ _id: newId });
@@ -294,7 +302,7 @@ describe('handleGoogleAuth — new STUDENT user with role', () => {
     expect(StudentProfile.create).toHaveBeenCalledTimes(1);
   });
 
-  it('throws 400 when institutionId is missing for STUDENT', async () => {
+  it('throws 422 and writes nothing when institutionId is missing for STUDENT', async () => {
     mockVerifySuccess();
     vi.mocked(User.findOne)
       .mockReturnValueOnce({ select: () => Promise.resolve(null) } as never)
@@ -302,6 +310,7 @@ describe('handleGoogleAuth — new STUDENT user with role', () => {
 
     await expect(
       handleGoogleAuth({ idToken: 'valid-token', role: 'STUDENT', fullName: 'Jane' }, res, ctx),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    ).rejects.toMatchObject({ statusCode: 422 });
+    expect(User.create).not.toHaveBeenCalled();
   });
 });

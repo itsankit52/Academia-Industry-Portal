@@ -72,15 +72,21 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     if (err.field) details = [{ path: err.field, message: err.code }];
   }
 
+  // `err` goes through the logger's serializer, which keeps only codes and field
+  // names for database/validation errors. The path drops the query string and
+  // the log message is the error code, not the client-facing message (which
+  // can quote input, e.g. validation details). `requestId` matches pino-http's
+  // request line for correlation.
   const logPayload = {
     err,
+    requestId: (req as { id?: unknown }).id,
     method: req.method,
-    url: req.originalUrl,
+    path: req.originalUrl.split('?')[0],
     status,
     code,
   };
-  if (status >= 500) logger.error(logPayload, message);
-  else logger.warn(logPayload, message);
+  if (status >= 500) logger.error(logPayload, `Request failed: ${code}`);
+  else logger.warn(logPayload, `Request rejected: ${code}`);
 
   const body: ApiError = {
     success: false,

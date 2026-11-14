@@ -5,6 +5,27 @@ import { toast } from 'sonner';
 import { apiPost } from '@/lib/api';
 import FormField from '@/components/ui/FormField';
 import Button from '@/components/ui/Button';
+import { useAuthStore } from '@/store/auth';
+
+/**
+ * Whether the signed-in account has a password, from the session user's
+ * `authProvider` ('local' | 'both' have one; 'google' does not). Unknown is
+ * treated as "has a password": the API still refuses a password change for a
+ * Google-only account with a clear 400, so the form can never do harm.
+ */
+export function useAccountHasPassword(): boolean {
+  return useAuthStore((s) => s.user?.authProvider !== 'google');
+}
+
+/** Shown instead of a Change Password form on Google-only accounts. */
+export function GoogleOnlyPasswordNotice() {
+  return (
+    <p className="text-sm text-slate-600 dark:text-slate-300" role="note">
+      Your account signs in with Google, so it has no AcadIn password to change. To change how you
+      sign in, manage your password in your Google account.
+    </p>
+  );
+}
 
 const schema = z
   .object({
@@ -20,6 +41,12 @@ const schema = z
 type FormValues = z.infer<typeof schema>;
 
 export default function ChangePasswordForm() {
+  const hasPassword = useAccountHasPassword();
+  if (!hasPassword) return <GoogleOnlyPasswordNotice />;
+  return <PasswordForm />;
+}
+
+function PasswordForm() {
   const {
     control,
     handleSubmit,

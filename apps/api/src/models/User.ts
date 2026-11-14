@@ -39,6 +39,9 @@ const userSchema = new Schema(
         delete ret.__v;
         delete ret.passwordHash;
         delete ret.refreshTokenVersion;
+        // The Google subject is a stable account identifier; clients only need
+        // authProvider/googleAvatar.
+        delete ret.googleId;
         return ret;
       },
     },

@@ -29,7 +29,9 @@ services:
       - key: PORT
         value: 10000
       - key: FRONTEND_URL
-        # Production frontend on Render (same domain as API → cookies can be lax)
+        # Production frontend (static site). Also the only Origin the CORS policy
+        # and the CSRF Origin guard accept — it must match the site exactly.
+        # The live API for this frontend is https://academia7.onrender.com.
         value: https://aip-qq08.onrender.com
       - key: MONGODB_URI
         sync: false # prompted on first deploy; stored encrypted
@@ -43,16 +45,24 @@ services:
         value: 15m
       - key: JWT_REFRESH_EXPIRES_IN
         value: 7d
-      # Both apps are *.onrender.com — same registrable domain, so cross-site
-      # cookies are NOT required. Leave COOKIE_DOMAIN blank (host-only) and use
-      # `lax` (the default). The `none` + Secure pattern only applies when the
-      # frontend and backend are on completely different registrable domains.
+      # Cookies are CROSS-SITE here. onrender.com is on the Public Suffix List,
+      # so aip-qq08.onrender.com and academia7.onrender.com are different sites
+      # and a Lax/Strict cookie is never sent on the SPA's API requests.
+      # `none` + Secure is required (and is what production serves today).
+      # SameSite=None gives no CSRF protection: that is provided by the Origin
+      # checks (csrfOriginGuard / requireTrustedOrigin) against FRONTEND_URL.
+      # COOKIE_DOMAIN stays blank → host-only cookies on the API host.
       - key: COOKIE_DOMAIN
         value: ''
       - key: COOKIE_SECURE
         value: 'true'
       - key: COOKIE_SAMESITE
-        value: lax
+        value: none
+      # Google OAuth Web Client ID (the ID only — no client secret is used).
+      # Must be the same ID the static site is built with as VITE_GOOGLE_CLIENT_ID;
+      # ID tokens are verified against it as their audience.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY

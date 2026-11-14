@@ -36,6 +36,10 @@ export class AppError extends Error {
     return new AppError(HTTP_STATUS.CONFLICT, 'CONFLICT', message);
   }
 
+  static unsupportedMediaType(message: string): AppError {
+    return new AppError(HTTP_STATUS.UNSUPPORTED_MEDIA_TYPE, 'UNSUPPORTED_MEDIA_TYPE', message);
+  }
+
   static unprocessable(message: string, details?: ApiErrorDetail[]): AppError {
     return new AppError(HTTP_STATUS.UNPROCESSABLE, 'VALIDATION_ERROR', message, details);
   }

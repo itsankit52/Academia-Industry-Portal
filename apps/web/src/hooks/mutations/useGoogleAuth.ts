@@ -27,7 +27,6 @@ interface AuthenticatedResponse {
 
 export interface OnboardingResponse {
   requiresOnboarding: true;
-  googleId: string;
   email: string;
   name?: string;
   picture?: string;

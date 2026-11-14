@@ -33,8 +33,12 @@ const formSchema = z
     title: z.string().min(3).max(200),
     description: z.string().min(20).max(5000),
     location: z.string().min(1).max(200),
-    workMode: z.enum(WORK_MODES as unknown as [WorkMode, ...WorkMode[]]),
-    employmentType: z.enum(EMPLOYMENT_TYPES as unknown as [EmploymentType, ...EmploymentType[]]),
+    workMode: z.enum(WORK_MODES as unknown as [WorkMode, ...WorkMode[]], {
+      errorMap: () => ({ message: 'Select a work mode.' }),
+    }),
+    employmentType: z.enum(EMPLOYMENT_TYPES as unknown as [EmploymentType, ...EmploymentType[]], {
+      errorMap: () => ({ message: 'Select an employment type.' }),
+    }),
     salaryMin: z.number().min(0).optional(),
     salaryMax: z.number().min(0).optional(),
     salaryCurrency: z.string().length(3, 'Use a 3-letter code, e.g. INR').optional(),

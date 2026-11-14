@@ -40,6 +40,23 @@ function publicUser(user: { toJSON: () => unknown }) {
   return user.toJSON();
 }
 
+/** A stored bcrypt hash, or undefined for accounts without a password (Google-only). */
+function usablePasswordHash(hash: unknown): string | undefined {
+  return typeof hash === 'string' && hash.startsWith('$2') ? hash : undefined;
+}
+
+/**
+ * Login failures that never reach a real bcrypt comparison (no such account,
+ * no password set) would otherwise answer measurably faster than a wrong
+ * password, which tells a caller the account exists. Comparing against a
+ * throwaway hash of the same cost keeps the three paths alike.
+ */
+let dummyHash: Promise<string> | undefined;
+async function burnPasswordCheck(plain: string): Promise<void> {
+  dummyHash ??= hashPassword('acadin-timing-equaliser-not-a-real-password');
+  await comparePassword(plain, await dummyHash);
+}
+
 /**
  * Validates that the institution exists and is VERIFIED before allowing a
  * student or faculty member to register against it.
@@ -87,6 +104,9 @@ export async function registerUser(input: RegisterInput, res: Response, ctx: Aut
   // verified institution. The guard is unconditional (no &&) so a missing
   // institutionId that slipped past schema validation is caught here too.
   if (input.role === 'STUDENT') {
+    // Defensive only: registerSchema rejects these first with friendly
+    // messages at the field path. These carry no `details`, so the message is
+    // the only field identifier API consumers get and stays as it was.
     if (!input.institutionId) {
       throw AppError.badRequest('institutionId is required for STUDENT registration');
     }
@@ -183,12 +203,12 @@ export async function registerUser(input: RegisterInput, res: Response, ctx: Aut
       // Now we really do have an orphan, and it needs a human. Log loudly with
       // the id so it can be found, but still surface the original failure.
       logger.error(
-        { err: cleanupErr, userId: String(user._id), email, role: input.role },
+        { err: cleanupErr, userId: String(user._id), role: input.role },
         'Profile creation failed AND rollback of the user failed — orphaned account left behind',
       );
     }
     logger.warn(
-      { err, email, role: input.role },
+      { err, userId: String(user._id), role: input.role },
       'Profile creation failed during registration; rolled back the user',
     );
     throw err;
@@ -223,7 +243,8 @@ export async function loginUser(input: LoginInput, res: Response, ctx: AuthConte
   // recorded server-side only, because without it a support request like
   // "signup worked but login says invalid credentials" is undiagnosable.
   if (!user) {
-    logger.warn({ email, ip: ctx.ip }, 'Login rejected: no account with that email');
+    await burnPasswordCheck(input.password);
+    logger.warn({ ip: ctx.ip }, 'Login rejected: no account with that email');
     throw AppError.unauthorized('Invalid credentials');
   }
   if (!user.isActive) {
@@ -231,7 +252,21 @@ export async function loginUser(input: LoginInput, res: Response, ctx: AuthConte
     throw AppError.unauthorized('Invalid credentials');
   }
 
-  const match = await comparePassword(input.password, user.passwordHash as string);
+  // A Google-only account has no password. bcrypt.compare(plain, undefined)
+  // throws, which surfaced as a 500 that also told the caller "this email is a
+  // Google account". It is now the same "Invalid credentials" as every other
+  // failure, after the same amount of bcrypt work.
+  const passwordHash = usablePasswordHash(user.passwordHash);
+  if (!passwordHash) {
+    await burnPasswordCheck(input.password);
+    logger.warn(
+      { userId: String(user._id), ip: ctx.ip },
+      'Login rejected: account has no password',
+    );
+    throw AppError.unauthorized('Invalid credentials');
+  }
+
+  const match = await comparePassword(input.password, passwordHash);
   if (!match) {
     logger.warn({ userId: String(user._id), ip: ctx.ip }, 'Login rejected: password mismatch');
     throw AppError.unauthorized('Invalid credentials');
@@ -333,7 +368,7 @@ export async function getCurrentUser(userId: string) {
       // the user can sign in, but every company route resolves its company
       // through this document and will 404 until someone repairs the account.
       logger.error(
-        { userId: String(user._id), email: user.email },
+        { userId: String(user._id) },
         'COMPANY user has no CompanyProfile — all company routes will fail for this account',
       );
     }
@@ -383,7 +418,14 @@ export async function changePassword(
   const user = await User.findById(userId).select('+passwordHash +refreshTokenVersion');
   if (!user) throw AppError.notFound('User not found');
 
-  const match = await comparePassword(input.currentPassword, user.passwordHash as string);
+  // The caller is authenticated, so saying why is not an enumeration risk.
+  // No password is created implicitly for a Google-only account.
+  const passwordHash = usablePasswordHash(user.passwordHash);
+  if (!passwordHash) {
+    throw AppError.badRequest('This account signs in with Google and has no password to change.');
+  }
+
+  const match = await comparePassword(input.currentPassword, passwordHash);
   if (!match) throw AppError.unauthorized('Current password is incorrect');
 
   user.passwordHash = await hashPassword(input.newPassword);

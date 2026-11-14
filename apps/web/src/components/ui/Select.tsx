@@ -50,8 +50,15 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
           aria-describedby={error ? `${inputId}-error` : undefined}
           {...props}
         >
+          {/* The placeholder must NOT be `disabled`. When nothing is selected,
+              browsers select the first *enabled* option — so a disabled
+              placeholder made the first real option (e.g. the first
+              institution) the silent default, including when options arrive
+              after mount. An enabled, `hidden` placeholder with value "" stays
+              selected until the user picks something, and the form's
+              validation then reports the field as missing. */}
           {placeholder && (
-            <option value="" disabled>
+            <option value="" hidden>
               {placeholder}
             </option>
           )}

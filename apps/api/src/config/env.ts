@@ -80,6 +80,41 @@ if (!parsed.success) {
 export const env = parsed.data;
 export type Env = typeof env;
 
+const PUBLIC_SUFFIX_HOSTS = /\.onrender\.com$/i;
+
+/**
+ * Deployment mistakes that do not stop the server but break sign-in. Warnings,
+ * not failures: refusing to boot over them would turn a degraded feature into
+ * an outage.
+ */
+export function productionConfigWarnings(
+  e: Pick<Env, 'NODE_ENV' | 'API_URL' | 'FRONTEND_URL' | 'COOKIE_SAMESITE' | 'GOOGLE_CLIENT_ID'>,
+): string[] {
+  if (e.NODE_ENV !== 'production') return [];
+  const warnings: string[] = [];
+  const api = new URL(e.API_URL).hostname;
+  const web = new URL(e.FRONTEND_URL).hostname;
+  // onrender.com is on the Public Suffix List, so two different *.onrender.com
+  // hosts are different sites; Lax/Strict cookies never reach the API's XHRs.
+  if (
+    api !== web &&
+    PUBLIC_SUFFIX_HOSTS.test(api) &&
+    PUBLIC_SUFFIX_HOSTS.test(web) &&
+    e.COOKIE_SAMESITE !== 'none'
+  ) {
+    warnings.push(
+      `COOKIE_SAMESITE=${e.COOKIE_SAMESITE}, but the frontend (${web}) and API (${api}) are different sites ` +
+        `(onrender.com is a public suffix). Auth cookies will not be sent; set COOKIE_SAMESITE=none.`,
+    );
+  }
+  if (!e.GOOGLE_CLIENT_ID) {
+    warnings.push('GOOGLE_CLIENT_ID is not set: Google sign-in, signup and linking are disabled.');
+  }
+  return warnings;
+}
+
+for (const warning of productionConfigWarnings(env)) console.warn(`[env] ${warning}`);
+
 // Only worth saying when a key is actually present — with no key the AI paths are
 // skipped deliberately and the model id is irrelevant.
 if (env.GEMINI_API_KEY && isRetiredGeminiModel(env.GEMINI_MODEL)) {

@@ -8,15 +8,22 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { apiPost } from '@/lib/api';
+import LinkGoogleAccount from '@/components/features/LinkGoogleAccount';
+import {
+  GoogleOnlyPasswordNotice,
+  useAccountHasPassword,
+} from '@/components/features/ChangePasswordForm';
 
-const passwordSchema = z.object({
-  currentPassword: z.string().min(1, 'Required'),
-  newPassword: z.string().min(8, 'Minimum 8 characters'),
-  confirmPassword: z.string().min(1, 'Required'),
-}).refine((d) => d.newPassword === d.confirmPassword, {
-  message: 'Passwords do not match',
-  path: ['confirmPassword'],
-});
+const passwordSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Required'),
+    newPassword: z.string().min(8, 'Minimum 8 characters'),
+    confirmPassword: z.string().min(1, 'Required'),
+  })
+  .refine((d) => d.newPassword === d.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
 
 type PasswordInput = z.infer<typeof passwordSchema>;
 
@@ -38,8 +45,14 @@ export default function CompanySettings() {
     ...loadPrefs(),
   }));
   const [saving, setSaving] = useState(false);
+  const hasPassword = useAccountHasPassword();
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<PasswordInput>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<PasswordInput>({
     resolver: zodResolver(passwordSchema),
   });
 
@@ -78,19 +91,55 @@ export default function CompanySettings() {
 
       <div className="max-w-xl space-y-6">
         <Card>
-          <Card.Header><h3 className="font-semibold text-slate-900 dark:text-slate-100">Change Password</h3></Card.Header>
+          <Card.Header>
+            <h3 className="font-semibold text-slate-900 dark:text-slate-100">Change Password</h3>
+          </Card.Header>
           <Card.Body>
-            <form onSubmit={handleSubmit(changePassword)} className="space-y-4">
-              <Input label="Current Password" type="password" error={errors.currentPassword?.message} {...register('currentPassword')} />
-              <Input label="New Password" type="password" error={errors.newPassword?.message} {...register('newPassword')} />
-              <Input label="Confirm New Password" type="password" error={errors.confirmPassword?.message} {...register('confirmPassword')} />
-              <Button type="submit" size="sm" loading={saving}>Update Password</Button>
-            </form>
+            {hasPassword ? (
+              <form onSubmit={handleSubmit(changePassword)} className="space-y-4">
+                <Input
+                  label="Current Password"
+                  type="password"
+                  error={errors.currentPassword?.message}
+                  {...register('currentPassword')}
+                />
+                <Input
+                  label="New Password"
+                  type="password"
+                  error={errors.newPassword?.message}
+                  {...register('newPassword')}
+                />
+                <Input
+                  label="Confirm New Password"
+                  type="password"
+                  error={errors.confirmPassword?.message}
+                  {...register('confirmPassword')}
+                />
+                <Button type="submit" size="sm" loading={saving}>
+                  Update Password
+                </Button>
+              </form>
+            ) : (
+              <GoogleOnlyPasswordNotice />
+            )}
           </Card.Body>
         </Card>
 
         <Card>
-          <Card.Header><h3 className="font-semibold text-slate-900 dark:text-slate-100">Notification Preferences</h3></Card.Header>
+          <Card.Header>
+            <h3 className="font-semibold text-slate-900 dark:text-slate-100">Google Sign-In</h3>
+          </Card.Header>
+          <Card.Body>
+            <LinkGoogleAccount />
+          </Card.Body>
+        </Card>
+
+        <Card>
+          <Card.Header>
+            <h3 className="font-semibold text-slate-900 dark:text-slate-100">
+              Notification Preferences
+            </h3>
+          </Card.Header>
           <Card.Body>
             <div className="space-y-3">
               {notifOptions.map(({ key, label }) => (
@@ -103,7 +152,9 @@ export default function CompanySettings() {
                     onClick={() => togglePref(key)}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${prefs[key] ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700'}`}
                   >
-                    <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${prefs[key] ? 'translate-x-6' : 'translate-x-1'}`} />
+                    <span
+                      className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${prefs[key] ? 'translate-x-6' : 'translate-x-1'}`}
+                    />
                   </button>
                 </label>
               ))}

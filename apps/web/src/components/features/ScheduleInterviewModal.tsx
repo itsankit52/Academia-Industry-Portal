@@ -57,7 +57,8 @@ export default function ScheduleInterviewModal({ open, onClose, applicationId }:
           label="Mode"
           options={modeOptions}
           placeholder="Select mode"
-          error={errors.mode?.message}
+          // Nothing chosen yet → the placeholder's "" fails the shared enum schema.
+          error={errors.mode && !mode ? 'Select an interview mode.' : errors.mode?.message}
           {...register('mode')}
         />
 

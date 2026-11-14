@@ -27,7 +27,12 @@ export default function SkillFormModal({ open, onClose, skill }: Props) {
   const updateSkill = useUpdateSkill();
   const isEdit = !!skill;
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateSkillInput>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<CreateSkillInput>({
     resolver: zodResolver(createSkillSchema),
     defaultValues: skill
       ? { name: skill.name, category: skill.category, description: skill.description }
@@ -68,7 +73,9 @@ export default function SkillFormModal({ open, onClose, skill }: Props) {
           label="Category"
           options={categoryOptions}
           placeholder="Select category"
-          error={errors.category?.message}
+          // Every listed option is valid, so an error here means none was chosen
+          // (the placeholder's "" fails the shared enum schema).
+          error={errors.category ? 'Select a category.' : undefined}
           {...register('category')}
         />
 

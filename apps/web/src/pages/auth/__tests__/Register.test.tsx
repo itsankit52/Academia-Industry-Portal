@@ -124,7 +124,7 @@ describe('Register page', () => {
 
     // The point is that the error is attached to a field that is on screen,
     // rather than to the unmounted fullName/institutionId.
-    expect(await screen.findByText(/companyName is required for COMPANY/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Please enter your company name\./)).toBeInTheDocument();
     expect(hoisted.mutate).not.toHaveBeenCalled();
   });
 

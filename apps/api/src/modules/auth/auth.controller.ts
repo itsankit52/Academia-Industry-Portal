@@ -5,11 +5,25 @@ import type {
   LoginInput,
   ChangePasswordInput,
   GoogleAuthInput,
+  GoogleLinkInput,
 } from '@aip/validation';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { ok, created, noContent } from '../../utils/apiResponse';
 import * as service from './auth.service';
 import * as googleService from './auth.google.service';
+
+/**
+ * Request facts handed to services. `requestId` is pino-http's per-request id,
+ * so service log lines can be correlated with the request log line.
+ */
+function authContext(req: Request) {
+  const id = (req as unknown as { id?: unknown }).id;
+  return {
+    ip: req.ip,
+    userAgent: req.get('user-agent') ?? undefined,
+    requestId: id === undefined || id === null ? undefined : String(id),
+  };
+}
 
 function readCookie(req: Request, name: string): string | undefined {
   const cookies = (req as unknown as { cookies?: Record<string, string> }).cookies;
@@ -17,18 +31,12 @@ function readCookie(req: Request, name: string): string | undefined {
 }
 
 export const register = asyncHandler(async (req: Request, res: Response) => {
-  const user = await service.registerUser(req.body as RegisterInput, res, {
-    ip: req.ip,
-    userAgent: req.get('user-agent') ?? undefined,
-  });
+  const user = await service.registerUser(req.body as RegisterInput, res, authContext(req));
   return created(res, { user });
 });
 
 export const login = asyncHandler(async (req: Request, res: Response) => {
-  const user = await service.loginUser(req.body as LoginInput, res, {
-    ip: req.ip,
-    userAgent: req.get('user-agent') ?? undefined,
-  });
+  const user = await service.loginUser(req.body as LoginInput, res, authContext(req));
   return ok(res, { user });
 });
 
@@ -49,18 +57,21 @@ export const me = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const changePassword = asyncHandler(async (req: Request, res: Response) => {
-  await service.changePassword(req.user!.id, req.body as ChangePasswordInput, res, {
-    ip: req.ip,
-    userAgent: req.get('user-agent') ?? undefined,
-  });
+  await service.changePassword(
+    req.user!.id,
+    req.body as ChangePasswordInput,
+    res,
+    authContext(req),
+  );
   return noContent(res);
 });
 
 export const googleAuth = asyncHandler(async (req: Request, res: Response) => {
-  const result = await googleService.handleGoogleAuth(req.body as GoogleAuthInput, res, {
-    ip: req.ip,
-    userAgent: req.get('user-agent') ?? undefined,
-  });
+  const result = await googleService.handleGoogleAuth(
+    req.body as GoogleAuthInput,
+    res,
+    authContext(req),
+  );
 
   if (result.status === 'authenticated') {
     return ok(res, { user: result.user });
@@ -69,7 +80,6 @@ export const googleAuth = asyncHandler(async (req: Request, res: Response) => {
     // No cookies set — the frontend must collect role + profile and re-POST.
     return ok(res, {
       requiresOnboarding: true,
-      googleId: result.googleId,
       email: result.email,
       name: result.name,
       picture: result.picture,
@@ -85,10 +95,10 @@ export const googleAuth = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const googleLink = asyncHandler(async (req: Request, res: Response) => {
-  const { idToken } = req.body as { idToken: string };
-  const user = await googleService.linkGoogleAccount(req.user!.id, idToken, res, {
-    ip: req.ip,
-    userAgent: req.get('user-agent') ?? undefined,
-  });
+  const user = await googleService.linkGoogleAccount(
+    req.user!.id,
+    req.body as GoogleLinkInput,
+    authContext(req),
+  );
   return ok(res, { user });
 });

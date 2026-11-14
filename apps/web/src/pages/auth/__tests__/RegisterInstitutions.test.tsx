@@ -61,10 +61,13 @@ describe('Register — Institution select data path', () => {
     ).toBeInTheDocument();
 
     const options = Array.from(institutionSelect().querySelectorAll('option'));
-    // The placeholder plus one option per institution, and the placeholder is the
-    // only one that cannot be chosen.
+    // The placeholder plus one option per institution. The placeholder is an
+    // empty-valued hidden option (not `disabled`: a disabled placeholder made
+    // the browser select the first institution instead).
     expect(options.length).toBe(INSTITUTIONS.length + 1);
-    expect(options.filter((o) => o.disabled).length).toBe(1);
+    expect(options[0]!.value).toBe('');
+    expect(options[0]!.hidden).toBe(true);
+    expect(options.filter((o) => o.disabled).length).toBe(0);
     expect(institutionSelect().disabled).toBe(false);
   });
 
@@ -169,5 +172,62 @@ describe('Register — Institution select data path', () => {
     const submitButton = screen.getByRole('button', { name: /create account/i });
     expect(submitButton).toBeDisabled();
     expect(hoisted.mutate).not.toHaveBeenCalled();
+  });
+});
+
+// The placeholder used to be `disabled`, so once the catalogue arrived the
+// browser selected the first institution on its own: a FACULTY user who never
+// touched the field was registered at "Alpha Institute of Technology".
+describe('Register — institution must be chosen explicitly', () => {
+  beforeEach(() => {
+    hoisted.mutate.mockReset();
+    hoisted.apiGet.mockReset();
+    hoisted.apiGet.mockResolvedValue(INSTITUTIONS);
+  });
+
+  async function fillFaculty(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByLabelText(/^faculty/i));
+    await user.type(screen.getByLabelText(/full name/i), 'Dr. Faculty');
+    await user.type(screen.getByLabelText(/email address/i), 'faculty@uni.test');
+    await user.type(screen.getByLabelText(/^password$/i), 'Password1!');
+  }
+
+  it('keeps the placeholder selected after the institutions load', async () => {
+    renderWithProviders(<Register />);
+    await screen.findByRole('option', { name: 'Alpha Institute of Technology' });
+    expect(institutionSelect().value).toBe('');
+    expect(institutionSelect().selectedOptions[0]?.textContent).toBe(
+      'Select your university / institution',
+    );
+  });
+
+  it('FACULTY without a chosen institution is blocked with a field error', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Register />);
+    await screen.findByRole('option', { name: 'Beta University' });
+    await fillFaculty(user);
+    expect(institutionSelect().value).toBe('');
+
+    await user.click(screen.getByRole('button', { name: /create account/i }));
+
+    expect(await screen.findByText(/Please select your institution\./)).toBeInTheDocument();
+    expect(hoisted.mutate).not.toHaveBeenCalled();
+  });
+
+  it('FACULTY with an explicitly chosen institution sends that institution', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Register />);
+    await screen.findByRole('option', { name: 'Beta University' });
+    await fillFaculty(user);
+    await user.selectOptions(institutionSelect(), INSTITUTIONS[1]!.id);
+
+    await user.click(screen.getByRole('button', { name: /create account/i }));
+
+    await waitFor(() => expect(hoisted.mutate).toHaveBeenCalledTimes(1));
+    expect(hoisted.mutate.mock.calls[0]![0]).toMatchObject({
+      role: 'FACULTY',
+      fullName: 'Dr. Faculty',
+      institutionId: INSTITUTIONS[1]!.id,
+    });
   });
 });

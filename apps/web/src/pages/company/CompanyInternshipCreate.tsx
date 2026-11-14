@@ -33,7 +33,9 @@ const formSchema = z
     title: z.string().min(3).max(200),
     description: z.string().min(20).max(5000),
     location: z.string().min(1).max(200),
-    workMode: z.enum(WORK_MODES as unknown as [WorkMode, ...WorkMode[]]),
+    workMode: z.enum(WORK_MODES as unknown as [WorkMode, ...WorkMode[]], {
+      errorMap: () => ({ message: 'Select a work mode.' }),
+    }),
     durationMonths: z
       .number({
         required_error: 'Duration is required.',

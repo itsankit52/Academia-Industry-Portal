@@ -7,10 +7,11 @@ export const HTTP_STATUS = {
   FORBIDDEN: 403,
   NOT_FOUND: 404,
   CONFLICT: 409,
+  UNSUPPORTED_MEDIA_TYPE: 415,
   UNPROCESSABLE: 422,
   TOO_MANY: 429,
   INTERNAL: 500,
   SERVICE_UNAVAILABLE: 503,
 } as const;
 
-export type HttpStatus = typeof HTTP_STATUS[keyof typeof HTTP_STATUS];
+export type HttpStatus = (typeof HTTP_STATUS)[keyof typeof HTTP_STATUS];

@@ -1,24 +1,23 @@
-import type { RegisterInput } from '@aip/validation';
+import type { GoogleOnboardingInput, RegisterInput } from '@aip/validation';
 
 type PublicRole = RegisterInput['role'];
 
 export type RegisterFormValues = Partial<Record<keyof RegisterInput, unknown>>;
+export type GoogleOnboardingFormValues = Partial<Record<keyof GoogleOnboardingInput, unknown>>;
+
+type ProfileField = Exclude<keyof RegisterInput, 'email' | 'password' | 'role'>;
 
 /**
- * The fields each role's form actually shows. Everything else is either a
- * leftover from a role the user selected earlier or an unused default.
- *
- * `role`, `email` and `password` are on every branch because every branch
- * renders them.
+ * The role-profile fields each role's form actually shows — shared by the
+ * password signup form and the Google onboarding form, which render the same
+ * role branches. Everything else is either a leftover from a role the user
+ * selected earlier or an unused default.
  */
-const FIELDS_BY_ROLE: Record<PublicRole, ReadonlyArray<keyof RegisterInput>> = {
-  STUDENT: ['role', 'email', 'password', 'fullName', 'institutionId', 'institutionCode'],
-  COMPANY: ['role', 'email', 'password', 'companyName'],
-  FACULTY: ['role', 'email', 'password', 'fullName', 'institutionId', 'designation', 'department'],
+const PROFILE_FIELDS_BY_ROLE: Record<PublicRole, ReadonlyArray<ProfileField>> = {
+  STUDENT: ['fullName', 'institutionId', 'institutionCode'],
+  COMPANY: ['companyName'],
+  FACULTY: ['fullName', 'institutionId', 'designation', 'department'],
   INSTITUTION: [
-    'role',
-    'email',
-    'password',
     'institutionName',
     'institutionCode',
     'institutionDomain',
@@ -27,6 +26,10 @@ const FIELDS_BY_ROLE: Record<PublicRole, ReadonlyArray<keyof RegisterInput>> = {
     'institutionState',
   ],
 };
+
+function isPublicRole(role: unknown): role is PublicRole {
+  return typeof role === 'string' && role in PROFILE_FIELDS_BY_ROLE;
+}
 
 /**
  * `password` is deliberately never trimmed and never dropped — trimming would
@@ -63,14 +66,46 @@ const VERBATIM: ReadonlySet<keyof RegisterInput> = new Set(['password']);
  * correct, so every remaining error lands on a field the form is showing.
  */
 export function buildRegisterPayload(values: RegisterFormValues): RegisterFormValues {
-  const allowed = FIELDS_BY_ROLE[values.role as PublicRole];
   // An unknown role is the schema's problem to report, not something to repair.
-  if (!allowed) return { ...values };
+  if (!isPublicRole(values.role)) return { ...values };
+  return pickFields(values, ['role', 'email', 'password', ...PROFILE_FIELDS_BY_ROLE[values.role]]);
+}
 
-  const payload: RegisterFormValues = {};
+/**
+ * The Google onboarding equivalent of `buildRegisterPayload`: the same role
+ * filtering and blank-dropping (the modal has exactly the same STUDENT-first
+ * default and so the same hidden-field dead end), minus email and password,
+ * which come from Google.
+ *
+ * The Full name input shows the Google display name as its placeholder, so a
+ * blank Full name means "use that name" — it is filled in here, before
+ * validation, rather than failing the required-name rule.
+ */
+export function buildGoogleOnboardingPayload(
+  values: GoogleOnboardingFormValues,
+  googleName?: string,
+): GoogleOnboardingFormValues {
+  if (!isPublicRole(values.role)) return { ...values };
+  const payload = pickFields(values, ['role', ...PROFILE_FIELDS_BY_ROLE[values.role]]);
+  const fallbackName = googleName?.trim();
+  if (
+    (values.role === 'STUDENT' || values.role === 'FACULTY') &&
+    payload.fullName === undefined &&
+    fallbackName
+  ) {
+    payload.fullName = fallbackName;
+  }
+  return payload;
+}
+
+function pickFields<K extends string>(
+  values: Partial<Record<K, unknown>>,
+  allowed: ReadonlyArray<K>,
+): Partial<Record<K, unknown>> {
+  const payload: Partial<Record<K, unknown>> = {};
   for (const key of allowed) {
     const value = values[key];
-    if (VERBATIM.has(key)) {
+    if (VERBATIM.has(key as keyof RegisterInput)) {
       if (value !== undefined) payload[key] = value;
       continue;
     }

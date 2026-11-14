@@ -35,9 +35,12 @@ const formSchema = z.object({
   description: z.string().min(20).max(10000),
   opportunityType: z.enum(
     FACULTY_OPPORTUNITY_TYPES as unknown as [FacultyOpportunityType, ...FacultyOpportunityType[]],
+    { errorMap: () => ({ message: 'Select an opportunity type.' }) },
   ),
   location: z.string().min(1).max(200),
-  mode: z.enum(WORK_MODES as unknown as [WorkMode, ...WorkMode[]]),
+  mode: z.enum(WORK_MODES as unknown as [WorkMode, ...WorkMode[]], {
+    errorMap: () => ({ message: 'Select a mode.' }),
+  }),
   applicationDeadline: z.string().min(1),
   openings: z.coerce.number().int().min(1),
   durationWeeks: z.coerce.number().int().min(1).max(260).optional(),
