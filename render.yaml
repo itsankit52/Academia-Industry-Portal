@@ -36,7 +36,7 @@ services:
       - key: MONGODB_URI
         sync: false # prompted on first deploy; stored encrypted
       - key: MONGODB_DB_NAME
-        value: academia_industry_portal
+        value: acadin_demo
       - key: JWT_ACCESS_SECRET
         sync: false # prompted on first deploy
       - key: JWT_REFRESH_SECRET

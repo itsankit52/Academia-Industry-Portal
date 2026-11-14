@@ -22,6 +22,7 @@
     "test": "pnpm --recursive --if-present test",
     "test:e2e": "pnpm --filter @aip/web test:e2e",
     "seed": "pnpm --filter @aip/api seed",
+    "seed:demo": "pnpm --filter @aip/api seed:demo",
     "clean": "pnpm --recursive --if-present clean && rimraf node_modules",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",

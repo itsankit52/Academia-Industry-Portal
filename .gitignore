@@ -46,3 +46,7 @@ apps/api/uploads/
 .claude
 
 PRODUCTION_HARDENING_REPORT.md
+
+.kiro
+# Demo seeder credentials (generated passwords) — never commit
+.demo-credentials/

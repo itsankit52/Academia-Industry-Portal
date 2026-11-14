@@ -28,10 +28,51 @@ export interface IndustrySkillDemandItem {
   category?: string;
 }
 
+/** Shape actually returned by GET /analytics/dashboard (analytics.service.ts). */
+interface DashboardSummaryResponse {
+  totals: {
+    students: number;
+    companies: number;
+    jobs: number;
+    internships: number;
+    applications: number;
+  };
+  placementRate: number;
+  topDemandedSkills: { skillId: string; name: string; count: number }[];
+}
+
+type TimeSeries = { date: string; count: number }[];
+
+/**
+ * The summary endpoint returns `{ totals: {...} }`, not the flat fields the
+ * admin pages read, and the chart series live on their own endpoints. Adapting
+ * here keeps AdminDashboard and AdminAnalytics unchanged.
+ */
+async function fetchAdminDashboardStats(): Promise<AdminDashboardStats> {
+  const [summary, applicationsOverTime, placementsOverTime, jobsByCategory] = await Promise.all([
+    apiGet<DashboardSummaryResponse>('/analytics/dashboard'),
+    apiGet<TimeSeries>('/analytics/applications-over-time'),
+    apiGet<TimeSeries>('/analytics/placements-over-time'),
+    apiGet<{ category: string; count: number }[]>('/analytics/jobs-by-category'),
+  ]);
+  return {
+    totalStudents: summary.totals.students,
+    totalCompanies: summary.totals.companies,
+    totalJobs: summary.totals.jobs,
+    totalInternships: summary.totals.internships,
+    totalApplications: summary.totals.applications,
+    placementRate: summary.placementRate,
+    applicationsOverTime,
+    placementsOverTime,
+    jobsByCategory,
+    skillDemand: summary.topDemandedSkills.map((s) => ({ skill: s.name, count: s.count })),
+  };
+}
+
 export function useAdminDashboardStats() {
   return useQuery({
     queryKey: queryKeys.admin.dashboard(),
-    queryFn: () => apiGet<AdminDashboardStats>('/analytics/dashboard'),
+    queryFn: fetchAdminDashboardStats,
   });
 }
 
@@ -54,7 +95,7 @@ export function useAdminAnalytics() {
     queries: [
       {
         queryKey: queryKeys.admin.dashboard(),
-        queryFn: () => apiGet<AdminDashboardStats>('/analytics/dashboard'),
+        queryFn: fetchAdminDashboardStats,
       },
       {
         queryKey: queryKeys.admin.analyticsPlacements(),
