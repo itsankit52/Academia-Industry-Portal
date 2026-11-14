@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
 import type { Proficiency, SkillCategory } from '@aip/config';
+import type { StudentDataLoader } from '../recommendations/studentDataLoader';
 import {
   Assessment,
   Internship,
@@ -105,6 +106,10 @@ async function loadStudentId(userId: string): Promise<Types.ObjectId> {
   return profile._id as Types.ObjectId;
 }
 
+function studentSkillsWithSkillQuery(studentId: Types.ObjectId) {
+  return StudentSkill.find({ student: studentId }).populate('skill', 'name category').lean();
+}
+
 function iso(value: unknown): string {
   if (value instanceof Date) return value.toISOString();
   return String(value);
@@ -122,21 +127,41 @@ function iso(value: unknown): string {
  *
  * No new collections are created: this view is a join over the existing data.
  */
-export async function buildSkillProfile(userId: string): Promise<SkillProfile> {
-  const studentId = await loadStudentId(userId);
+export async function buildSkillProfile(
+  userId: string,
+  loader?: StudentDataLoader,
+): Promise<SkillProfile> {
+  let studentId: Types.ObjectId;
+  if (loader) {
+    const profile = await loader.profile();
+    if (!profile) throw new Error('Student profile not found');
+    studentId = profile._id as Types.ObjectId;
+  } else {
+    studentId = await loadStudentId(userId);
+  }
 
+  // With a request-scoped loader the student's rows and the ACTIVE trainings
+  // are shared with the other recommendation sub-services (same filters/sort).
   const [studentSkillRows, assessmentRows, latestResume, trainings, jobDemandRows] =
     await Promise.all([
-      StudentSkill.find({ student: studentId }).populate('skill', 'name category').lean(),
-      Assessment.find({ student: studentId, status: 'EVALUATED' })
-        .select('evaluation.skillBreakdown evaluation.evaluatedAt createdAt skillNames')
-        .sort({ createdAt: -1 })
-        .lean(),
+      loader
+        ? (loader.studentSkillsWithSkill() as unknown as ReturnType<
+            typeof studentSkillsWithSkillQuery
+          >)
+        : studentSkillsWithSkillQuery(studentId),
+      loader
+        ? loader.evaluatedAssessments()
+        : Assessment.find({ student: studentId, status: 'EVALUATED' })
+            .select('evaluation.skillBreakdown evaluation.evaluatedAt createdAt skillNames')
+            .sort({ createdAt: -1 })
+            .lean(),
       Resume.findOne({ student: studentId }).sort({ version: -1 }).select('parsedSkills').lean(),
-      TrainingProgram.find({ status: 'ACTIVE' })
-        .select('title skills registrationUrl')
-        .limit(20)
-        .lean(),
+      loader
+        ? loader.activeTrainings().then((rows) => rows.slice(0, 20))
+        : TrainingProgram.find({ status: 'ACTIVE' })
+            .select('title skills registrationUrl')
+            .limit(20)
+            .lean(),
       Assessment.aggregate<{ _id: Types.ObjectId; count: number; name: string; category: string }>([
         { $match: { status: 'EVALUATED' } },
         { $unwind: '$skills' },

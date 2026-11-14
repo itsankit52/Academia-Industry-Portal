@@ -49,6 +49,8 @@ import { AppError } from '../../utils/AppError';
 import { idOf } from '../matching/skillGap';
 import { analyzeFullMatch, type FullMatchAnalysis } from '../matching/fullMatch.service';
 import { recommendMentorsForStudent } from '../mentorship/mentorship.service';
+import type { StudentDataLoader } from './studentDataLoader';
+import { BENCHMARK_PEER_PIPELINE } from './sharedDataCache';
 
 /* ─── Constants ─────────────────────────────────────────────────────── */
 
@@ -171,10 +173,7 @@ function buildSkillComparison(
   return rows;
 }
 
-function readinessHeadline(
-  analysis: FullMatchAnalysis,
-  comparison: SkillComparison[],
-): string {
+function readinessHeadline(analysis: FullMatchAnalysis, comparison: SkillComparison[]): string {
   const missing = comparison.filter((c) => c.state === 'MISSING').length;
   const partial = comparison.filter((c) => c.state === 'PARTIAL').length;
   const matched = comparison.filter((c) => c.state === 'MATCHED').length;
@@ -211,14 +210,10 @@ export interface CareerPathInput {
  * `analyzeFullMatch` for the math and composes Phase 9A pieces
  * (training + mentor recommendations) for the action list.
  */
-export async function getCareerPathAnalysis(
-  input: CareerPathInput,
-): Promise<CareerPathAnalysis> {
+export async function getCareerPathAnalysis(input: CareerPathInput): Promise<CareerPathAnalysis> {
   const { studentUserId, opportunityType, opportunityId } = input;
   if (!isValidObjectId(opportunityId)) {
-    throw AppError.notFound(
-      opportunityType === 'JOB' ? 'Job not found' : 'Internship not found',
-    );
+    throw AppError.notFound(opportunityType === 'JOB' ? 'Job not found' : 'Internship not found');
   }
 
   const analysis: FullMatchAnalysis = await analyzeFullMatch(
@@ -255,7 +250,9 @@ export async function getCareerPathAnalysis(
     .filter((id, idx, arr) => id && arr.indexOf(id) === idx)
     .map((id) => new Types.ObjectId(id));
   const skillDocs = requiredIds.length
-    ? await Skill.find({ _id: { $in: requiredIds } }).select('_id name category').lean()
+    ? await Skill.find({ _id: { $in: requiredIds } })
+        .select('_id name category')
+        .lean()
     : [];
   const requiredSkillNames = new Map<string, { name: string; category: SkillCategory }>();
   for (const s of skillDocs) {
@@ -265,7 +262,11 @@ export async function getCareerPathAnalysis(
     });
   }
 
-  const skillComparison = buildSkillComparison(analysis, requiredSkillNames, studentProficiencyByName);
+  const skillComparison = buildSkillComparison(
+    analysis,
+    requiredSkillNames,
+    studentProficiencyByName,
+  );
 
   // Group into matched / partial / missing, plus top gaps.
   const matched = skillComparison.filter((c) => c.state === 'MATCHED');
@@ -348,16 +349,22 @@ export async function getCareerPathAnalysis(
 async function buildGapClosingTrainings(
   studentProfileId: Types.ObjectId,
   gapSkillIds: string[],
+  loader?: StudentDataLoader,
 ): Promise<PersonalizedTraining[]> {
   if (gapSkillIds.length === 0) return [];
+  if (loader) await loader.assertProfile(studentProfileId);
 
   const [completed, trainings] = await Promise.all([
-    TrainingEnrollment.find({ student: studentProfileId, status: 'COMPLETED' })
-      .select('training')
-      .lean(),
-    TrainingProgram.find({ status: 'ACTIVE' })
-      .populate({ path: 'skills', select: 'name category' })
-      .lean(),
+    loader
+      ? loader.completedEnrollments()
+      : TrainingEnrollment.find({ student: studentProfileId, status: 'COMPLETED' })
+          .select('training')
+          .lean(),
+    loader
+      ? loader.activeTrainingsWithSkills()
+      : TrainingProgram.find({ status: 'ACTIVE' })
+          .populate({ path: 'skills', select: 'name category' })
+          .lean(),
   ]);
   const completedSet = new Set(completed.map((c) => String(c.training)));
   const gapSet = new Set(gapSkillIds);
@@ -502,9 +509,7 @@ export interface CareerActionPlanInput {
  * availability, mentor recommendations, and (optionally) a target
  * opportunity. Each action references a real entity id when possible.
  */
-export async function getCareerActionPlan(
-  input: CareerActionPlanInput,
-): Promise<CareerActionPlan> {
+export async function getCareerActionPlan(input: CareerActionPlanInput): Promise<CareerActionPlan> {
   const { studentUserId, opportunityId, opportunityType } = input;
 
   const profile = await StudentProfile.findOne({ user: new Types.ObjectId(studentUserId) }).select(
@@ -568,7 +573,9 @@ export async function getCareerActionPlan(
   // b) Add-skill actions for gaps with no training.
   const coveredByTraining = new Set<string>();
   for (const t of trainings) for (const id of t.overlapSkillIds) coveredByTraining.add(id);
-  const noTrainingGaps = await collectSkillNames(gapSkillIds.filter((id) => !coveredByTraining.has(id)));
+  const noTrainingGaps = await collectSkillNames(
+    gapSkillIds.filter((id) => !coveredByTraining.has(id)),
+  );
   for (const gap of noTrainingGaps.slice(0, 2)) {
     actions.push({
       priority: priority++,
@@ -609,10 +616,7 @@ export async function getCareerActionPlan(
   }
 
   // d) Mentor for top gap expertise overlap.
-  const mentor = await pickRelevantMentor(
-    studentUserId,
-    new Set(gapSkillIds.slice(0, 10)),
-  );
+  const mentor = await pickRelevantMentor(studentUserId, new Set(gapSkillIds.slice(0, 10)));
   if (mentor) {
     actions.push({
       priority: priority++,
@@ -667,15 +671,19 @@ interface AssessmentSignal {
 
 async function loadAssessmentSignals(
   studentProfileId: Types.ObjectId,
+  loader?: StudentDataLoader,
 ): Promise<Map<string, AssessmentSignal>> {
   const out = new Map<string, AssessmentSignal>();
-  const recent = await Assessment.find({ student: studentProfileId, status: 'EVALUATED' })
-    .sort({ createdAt: -1 })
-    .limit(5)
-    .lean();
+  if (loader) await loader.assertProfile(studentProfileId);
+  const recent = loader
+    ? (await loader.evaluatedAssessments()).slice(0, 5)
+    : await Assessment.find({ student: studentProfileId, status: 'EVALUATED' })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .lean();
   for (const a of recent) {
-    const breakdown = (a as unknown as { evaluation?: { skillBreakdown?: unknown[] } })
-      .evaluation?.skillBreakdown;
+    const breakdown = (a as unknown as { evaluation?: { skillBreakdown?: unknown[] } }).evaluation
+      ?.skillBreakdown;
     if (!Array.isArray(breakdown)) continue;
     for (const row of breakdown) {
       const r = row as {
@@ -702,9 +710,7 @@ async function loadAssessmentSignals(
 }
 
 async function collectTopIndustryGaps(studentProfileId: Types.ObjectId): Promise<string[]> {
-  const owned = await StudentSkill.find({ student: studentProfileId })
-    .select('skill')
-    .lean();
+  const owned = await StudentSkill.find({ student: studentProfileId }).select('skill').lean();
   const ownedSet = new Set(owned.map((r) => String(r.skill)));
   const [jobDemand, internDemand] = await Promise.all([
     Job.aggregate<{ _id: Types.ObjectId; count: number }>([
@@ -729,11 +735,15 @@ async function collectTopIndustryGaps(studentProfileId: Types.ObjectId): Promise
     .map(([id]) => id);
 }
 
-async function collectSkillNames(ids: string[]): Promise<Array<{ id: string; name: string; category: SkillCategory }>> {
+async function collectSkillNames(
+  ids: string[],
+): Promise<Array<{ id: string; name: string; category: SkillCategory }>> {
   if (ids.length === 0) return [];
   const valid = ids.filter(isValidObjectId).map((id) => new Types.ObjectId(id));
   if (valid.length === 0) return [];
-  const rows = await Skill.find({ _id: { $in: valid } }).select('_id name category').lean();
+  const rows = await Skill.find({ _id: { $in: valid } })
+    .select('_id name category')
+    .lean();
   return rows.map((r) => ({
     id: String(r._id),
     name: String(r.name),
@@ -805,10 +815,11 @@ function buildHeadline(input: CareerInsightsInput): string {
  */
 export async function getCareerBenchmark(
   studentUserId: string,
+  loader?: StudentDataLoader,
 ): Promise<CareerBenchmark> {
-  const profile = await StudentProfile.findOne({ user: new Types.ObjectId(studentUserId) }).select(
-    '_id',
-  );
+  const profile = loader
+    ? await loader.profile()
+    : await StudentProfile.findOne({ user: new Types.ObjectId(studentUserId) }).select('_id');
   if (!profile) {
     return {
       available: false,
@@ -818,53 +829,64 @@ export async function getCareerBenchmark(
   }
 
   // Build a coarse peer score: skill count + average proficiency (rank-based).
-  const [ownSkills, peerStats] = await Promise.all([
-    StudentSkill.find({ student: profile._id })
-      .select('skill proficiency')
-      .populate({ path: 'skill', select: 'category proficiency' })
-      .lean(),
-    StudentSkill.aggregate<{
-      _id: { category: string };
-      avgRank: number;
-      count: number;
-      nStudents: Types.ObjectId[];
-    }>([
-      {
-        $lookup: {
-          from: 'skills',
-          localField: 'skill',
-          foreignField: '_id',
-          as: 'skillDoc',
-        },
-      },
-      { $unwind: '$skillDoc' },
-      {
-        $group: {
-          _id: { category: '$skillDoc.category' },
-          avgRank: {
-            $avg: {
-              $switch: {
-                branches: [
-                  { case: { $eq: ['$proficiency', 'BEGINNER'] }, then: 1 },
-                  { case: { $eq: ['$proficiency', 'INTERMEDIATE'] }, then: 2 },
-                  { case: { $eq: ['$proficiency', 'ADVANCED'] }, then: 3 },
-                  { case: { $eq: ['$proficiency', 'EXPERT'] }, then: 4 },
-                ],
-                default: 0,
-              },
-            },
-          },
-          count: { $sum: 1 },
-          nStudents: { $addToSet: '$student' },
-        },
-      },
-    ]),
+  // Via the loader (/recommendations/me) the cross-student aggregates come from
+  // the 60 s shared cache, which holds counts only (no student ids).
+  const [ownSkills, peer, peerRows] = await Promise.all([
+    loader
+      ? (loader.studentSkillsWithSkill() as Promise<
+          Array<{ skill?: unknown; proficiency?: string }>
+        >)
+      : StudentSkill.find({ student: profile._id })
+          .select('skill proficiency')
+          .populate({ path: 'skill', select: 'category proficiency' })
+          .lean(),
+    loader ? loader.benchmarkPeerStats() : null,
+    loader
+      ? null
+      : StudentSkill.aggregate<{
+          _id: { category: string };
+          avgRank: number;
+          count: number;
+          nStudents: Types.ObjectId[];
+        }>(BENCHMARK_PEER_PIPELINE as never),
   ]);
+
+  let peerStats: ReadonlyArray<{ _id: { category: string }; avgRank: number; count: number }>;
+  let sampleSize: number;
+  if (peer) {
+    peerStats = peer.categories.map((c) => ({
+      _id: { category: c.category },
+      avgRank: c.avgRank,
+      count: c.count,
+    }));
+    // The requesting student is one of the counted students exactly when one of
+    // their rows joins to an existing skill (the pipeline's $lookup + $unwind).
+    const selfCounted = ownSkills.some((r) => r.skill !== null && r.skill !== undefined);
+    sampleSize = peer.uniqueStudents - (selfCounted ? 1 : 0);
+  } else {
+    const rows = peerRows ?? [];
+    peerStats = rows;
+    // Peer sample size is approximated by the number of unique students across
+    // all StudentSkill rows.
+    const peerStudentSet = new Set<string>();
+    for (const row of rows) {
+      for (const id of row.nStudents) peerStudentSet.add(String(id));
+    }
+    // Exclude the requesting student.
+    peerStudentSet.delete(String(profile._id));
+    sampleSize = peerStudentSet.size;
+  }
 
   const ownRankByCategory = new Map<string, { rank: number; count: number }>();
   for (const row of ownSkills) {
-    const category = (row as unknown as { skillDoc?: { category?: string } }).skillDoc?.category;
-    const rank = clampRank(proficiencyOrNull((row as unknown as { proficiency?: string }).proficiency));
+    // The student's own rows come from find().populate('skill'), so the category
+    // lives on `row.skill`. (`skillDoc` only exists inside the peer aggregation
+    // pipeline; reading it here made every studentScore 0 / verdict TYPICAL.)
+    const skill = (row as unknown as { skill?: { category?: string } | null }).skill;
+    const category = skill && typeof skill === 'object' ? skill.category : undefined;
+    const rank = clampRank(
+      proficiencyOrNull((row as unknown as { proficiency?: string }).proficiency),
+    );
     if (!category) continue;
     const cur = ownRankByCategory.get(category) ?? { rank: 0, count: 0 };
     cur.rank += rank;
@@ -877,20 +899,14 @@ export async function getCareerBenchmark(
     ownSkills.length === 0
       ? 0
       : ownSkills.reduce(
-          (acc, r) => acc + clampRank(proficiencyOrNull((r as unknown as { proficiency?: string }).proficiency)),
+          (acc, r) =>
+            acc +
+            clampRank(proficiencyOrNull((r as unknown as { proficiency?: string }).proficiency)),
           0,
         ) / ownSkills.length;
 
-  // Peer sample size is approximated by the number of unique students across
-  // all StudentSkill rows. When the dataset is tiny we must NOT fabricate a
-  // peer mean — we return unavailable instead.
-  const peerStudentSet = new Set<string>();
-  for (const row of peerStats) {
-    for (const id of row.nStudents) peerStudentSet.add(String(id));
-  }
-  // Exclude the requesting student.
-  peerStudentSet.delete(String(profile._id));
-  const sampleSize = peerStudentSet.size;
+  // When the dataset is tiny we must NOT fabricate a peer mean — we return
+  // unavailable instead.
   if (sampleSize < MIN_BENCHMARK_SAMPLE) {
     return {
       available: false,
@@ -904,7 +920,12 @@ export async function getCareerBenchmark(
   let weightedSum = 0;
   let totalWeight = 0;
   const categoryBreakdown: BenchmarkSkillCategory[] = [];
-  for (const row of peerStats) {
+  // $group output order is unspecified, so sort by category (code-point order,
+  // locale-independent): deterministic categories[] and summation order.
+  const orderedPeerStats = [...peerStats].sort((a, b) =>
+    a._id.category < b._id.category ? -1 : a._id.category > b._id.category ? 1 : 0,
+  );
+  for (const row of orderedPeerStats) {
     const count = row.count;
     if (count <= 0) continue;
     weightedSum += row.avgRank * count;
@@ -917,7 +938,14 @@ export async function getCareerBenchmark(
       category,
       studentScore: Math.round(ownRank),
       peerScore: Math.round(peerRank),
-      verdict: ownRank === 0 ? 'TYPICAL' : ownRank > peerRank + 5 ? 'STRONGER' : ownRank < peerRank - 5 ? 'WEAKER' : 'TYPICAL',
+      verdict:
+        ownRank === 0
+          ? 'TYPICAL'
+          : ownRank > peerRank + 5
+            ? 'STRONGER'
+            : ownRank < peerRank - 5
+              ? 'WEAKER'
+              : 'TYPICAL',
     });
   }
   const peerAverageRank = totalWeight > 0 ? weightedSum / totalWeight : 0;
@@ -954,10 +982,13 @@ export interface ReadinessProgressionInput {
  */
 export async function getReadinessProgression(
   input: ReadinessProgressionInput,
+  loader?: StudentDataLoader,
 ): Promise<ReadinessProgression> {
-  const profile = await StudentProfile.findOne({ user: new Types.ObjectId(input.studentUserId) })
-    .select('_id')
-    .lean();
+  const profile = loader
+    ? await loader.profile()
+    : await StudentProfile.findOne({ user: new Types.ObjectId(input.studentUserId) })
+        .select('_id')
+        .lean();
   if (!profile) {
     return {
       currentScore: input.currentScore,
@@ -971,12 +1002,17 @@ export async function getReadinessProgression(
   // Snapshot the earliest defensible signal: oldest StudentSkill row for
   // this profile. When there's exactly one row there's no movement to
   // report.
-  const oldestSkill = await StudentSkill.findOne({ student: profile._id })
-    .sort({ createdAt: 1 })
-    .select('createdAt')
-    .lean();
+  const oldestSkill = loader
+    ? await loader.oldestStudentSkill()
+    : await StudentSkill.findOne({ student: profile._id })
+        .sort({ createdAt: 1 })
+        .select('createdAt')
+        .lean();
 
-  if (!oldestSkill || (oldestSkill.createdAt && Date.now() - oldestSkill.createdAt.getTime() < 1000)) {
+  if (
+    !oldestSkill ||
+    (oldestSkill.createdAt && Date.now() - oldestSkill.createdAt.getTime() < 1000)
+  ) {
     return {
       currentScore: input.currentScore,
       previousScore: null,
@@ -989,13 +1025,17 @@ export async function getReadinessProgression(
   // Build a previous readiness baseline from the count of completed
   // trainings + the most recent assessment score, normalised into 0-100.
   const [completedTrainings, latestAssessment] = await Promise.all([
-    TrainingEnrollment.find({ student: profile._id, status: 'COMPLETED' })
-      .select('completedAt')
-      .lean(),
-    Assessment.findOne({ student: profile._id, status: 'EVALUATED' })
-      .sort({ createdAt: -1 })
-      .select('evaluation.totalScore createdAt')
-      .lean(),
+    loader
+      ? loader.completedEnrollments()
+      : TrainingEnrollment.find({ student: profile._id, status: 'COMPLETED' })
+          .select('completedAt')
+          .lean(),
+    loader
+      ? loader.evaluatedAssessments().then((rows) => rows[0] ?? null)
+      : Assessment.findOne({ student: profile._id, status: 'EVALUATED' })
+          .sort({ createdAt: -1 })
+          .select('evaluation.totalScore createdAt')
+          .lean(),
   ]);
 
   const factors: string[] = [];
@@ -1003,7 +1043,8 @@ export async function getReadinessProgression(
   let hasBaseline = false;
 
   if (latestAssessment) {
-    const evalBlock = (latestAssessment as unknown as { evaluation?: { totalScore?: number } }).evaluation;
+    const evalBlock = (latestAssessment as unknown as { evaluation?: { totalScore?: number } })
+      .evaluation;
     if (evalBlock && typeof evalBlock.totalScore === 'number') {
       baseline = evalBlock.totalScore;
       hasBaseline = true;
@@ -1015,11 +1056,15 @@ export async function getReadinessProgression(
     const adjustment = Math.min(20, completedTrainings.length * 5);
     if (hasBaseline) {
       baseline = Math.max(0, baseline - adjustment); // previous was lower
-      factors.push(`Adjusted for ${completedTrainings.length} completed training${completedTrainings.length === 1 ? '' : 's'} since.`);
+      factors.push(
+        `Adjusted for ${completedTrainings.length} completed training${completedTrainings.length === 1 ? '' : 's'} since.`,
+      );
     } else {
       baseline = Math.max(0, input.currentScore - adjustment);
       hasBaseline = true;
-      factors.push(`Estimated from ${completedTrainings.length} completed training${completedTrainings.length === 1 ? '' : 's'}.`);
+      factors.push(
+        `Estimated from ${completedTrainings.length} completed training${completedTrainings.length === 1 ? '' : 's'}.`,
+      );
     }
   }
 
@@ -1049,11 +1094,7 @@ export async function getReadinessProgression(
 
 /* ─── Phase 9B — Re-exports for tests ─────────────────────────────── */
 
-export {
-  buildGapClosingTrainings,
-  loadAssessmentSignals,
-  pickRelevantMentor,
-};
+export { buildGapClosingTrainings, loadAssessmentSignals, pickRelevantMentor };
 
 export const __test = {
   buildSkillComparison,

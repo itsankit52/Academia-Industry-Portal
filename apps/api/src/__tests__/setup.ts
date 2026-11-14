@@ -9,3 +9,11 @@ process.env.COOKIE_DOMAIN ??= 'localhost';
 process.env.LOG_LEVEL ??= 'silent';
 // Fixed test audience so Google-token suites never depend on a developer's .env.
 process.env.GOOGLE_CLIENT_ID ??= 'test-client-id.apps.googleusercontent.com';
+
+// In-process TTL caches (e.g. the 60 s recommendation data cache) must not leak
+// one test's mocked data into the next. ttlCache.ts imports no models, so this
+// does not interfere with per-file vi.mock('../models').
+import { beforeEach } from 'vitest';
+import { clearAllTtlCaches } from '../utils/ttlCache';
+
+beforeEach(() => clearAllTtlCaches());

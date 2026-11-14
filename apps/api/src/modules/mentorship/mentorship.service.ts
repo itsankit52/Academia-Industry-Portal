@@ -24,6 +24,7 @@ import {
 } from '../../models';
 import { createNotification } from '../notifications/notifications.service';
 import type { MentorshipMenteeRole } from '../../models/MentorshipRequest';
+import type { StudentDataLoader } from '../recommendations/studentDataLoader';
 
 async function resolveDisplayNameByUser(userId: string): Promise<string> {
   const user = await User.findById(userId).select('email role').lean();
@@ -400,16 +401,22 @@ export async function listAllMentorshipRequestsAdmin(pag: PaginationInput) {
 export async function recommendMentorsForStudent(
   studentUserId: string,
   limit = 10,
+  loader?: StudentDataLoader,
 ): Promise<import('@aip/types').RecommendedMentor[]> {
-  // Resolve the student profile
-  const studentProfile = await StudentProfile.findOne({
-    user: new Types.ObjectId(studentUserId),
-  }).select('_id preferredRoles preferredSkills interests');
+  // Resolve the student profile (shared with the other recommendation
+  // sub-services when called with a request-scoped loader).
+  const studentProfile = loader
+    ? await loader.profile()
+    : await StudentProfile.findOne({
+        user: new Types.ObjectId(studentUserId),
+      }).select('_id preferredRoles preferredSkills interests');
   if (!studentProfile) throw AppError.notFound('Student profile not found');
 
   // Pull the student's skills (ids) + interests + preferredRoles
   const [studentSkills, mentors] = await Promise.all([
-    StudentSkill.find({ student: studentProfile._id }).select('skill').lean(),
+    loader
+      ? (loader.studentSkills() as Promise<Array<{ skill: unknown }>>)
+      : StudentSkill.find({ student: studentProfile._id }).select('skill').lean(),
     MentorProfile.find({ availability: { $in: ['AVAILABLE', 'BUSY'] } })
       .sort({ createdAt: -1 })
       .lean(),

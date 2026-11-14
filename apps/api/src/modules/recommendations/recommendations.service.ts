@@ -26,6 +26,7 @@ import { applyPagination, buildPaginated } from '../../utils/pagination';
 import { serializeLean } from '../../utils/serializeLean';
 import { computeMatch } from '../matching/algorithm';
 import { idOf } from '../matching/skillGap';
+import type { StudentDataLoader } from './studentDataLoader';
 
 interface StudentContext {
   profile: StudentProfileDoc;
@@ -36,12 +37,17 @@ interface StudentContext {
   proficiencyById: Map<string, Proficiency | null>;
 }
 
-async function loadStudentContext(userId: string): Promise<StudentContext> {
-  const profile = await StudentProfile.findOne({ user: new Types.ObjectId(userId) });
+async function loadStudentContext(
+  userId: string,
+  loader?: StudentDataLoader,
+): Promise<StudentContext> {
+  const profile = loader
+    ? await loader.profile()
+    : await StudentProfile.findOne({ user: new Types.ObjectId(userId) });
   if (!profile) throw AppError.notFound('Student profile not found');
-  const skills = await StudentSkill.find({ student: profile._id })
-    .select('skill proficiency')
-    .lean();
+  const skills = loader
+    ? ((await loader.studentSkills()) as Array<{ skill: unknown; proficiency?: unknown }>)
+    : await StudentSkill.find({ student: profile._id }).select('skill proficiency').lean();
   // Parse career interests from the free-text field
   const careerInterests = profile.careerInterests
     ? profile.careerInterests
@@ -314,8 +320,9 @@ interface PageParams {
 export async function recommendJobs(
   userId: string,
   params: PageParams,
+  loader?: StudentDataLoader,
 ): Promise<Paginated<RecommendedJob>> {
-  const studentContext = await loadStudentContext(userId);
+  const studentContext = await loadStudentContext(userId, loader);
   const { profile, skillIds, careerInterests, proficiencyById } = studentContext;
   const pg = applyPagination(params);
 
@@ -327,11 +334,15 @@ export async function recommendJobs(
     .lean();
   const appliedIds = new Set(applied.map((a) => String(a.opportunity)));
 
-  const jobs = await Job.find({ status: 'PUBLISHED' })
-    .populate({ path: 'company', select: 'companyName logoUrl' })
-    .populate({ path: 'requiredSkills', select: 'name category' })
-    .populate({ path: 'preferredSkills', select: 'name category' })
-    .lean();
+  // Via the loader (/recommendations/me) the postings come from the 60 s shared
+  // cache; they are frozen and only read here (serialization copies them).
+  const jobs = loader
+    ? await loader.publishedJobs()
+    : await Job.find({ status: 'PUBLISHED' })
+        .populate({ path: 'company', select: 'companyName logoUrl' })
+        .populate({ path: 'requiredSkills', select: 'name category' })
+        .populate({ path: 'preferredSkills', select: 'name category' })
+        .lean();
 
   const enriched: RecommendedJob[] = (jobs as unknown as JobDoc[])
     .filter((job) => !appliedIds.has(String(job._id)))
@@ -352,8 +363,7 @@ export async function recommendJobs(
       );
       const proficiencyGaps = computeProficiencyGaps(requiredDocs, proficiencyById, names);
       return {
-        // Serialized because the query used `.lean()` — see `serializeOpportunity`.
-        job: serializeOpportunity(job),
+        job, // raw lean row; serialized below for the returned page only
         matchResult,
         matchedSkills: matchedNamed,
         missingSkills: missingNamed,
@@ -363,9 +373,14 @@ export async function recommendJobs(
       };
     });
 
+  // Stable sort on the score only, so serializing after the slice returns the
+  // same items in the same order while converting just one page of rows.
   enriched.sort((a, b) => b.matchResult.score - a.matchResult.score);
   const total = enriched.length;
-  const paged = enriched.slice(pg.skip, pg.skip + pg.limit);
+  const paged = enriched
+    .slice(pg.skip, pg.skip + pg.limit)
+    // Serialized because the query used `.lean()` — see `serializeOpportunity`.
+    .map((item) => ({ ...item, job: serializeOpportunity(item.job) }));
 
   return buildPaginated(paged, total, pg.page, pg.pageSize);
 }
@@ -373,16 +388,19 @@ export async function recommendJobs(
 export async function recommendInternships(
   userId: string,
   params: PageParams,
+  loader?: StudentDataLoader,
 ): Promise<Paginated<RecommendedInternship>> {
-  const studentContext = await loadStudentContext(userId);
+  const studentContext = await loadStudentContext(userId, loader);
   const { profile, skillIds, careerInterests, proficiencyById } = studentContext;
   const pg = applyPagination(params);
 
-  const internships = await Internship.find({ status: 'PUBLISHED' })
-    .populate({ path: 'company', select: 'companyName logoUrl' })
-    .populate({ path: 'requiredSkills', select: 'name category' })
-    .populate({ path: 'preferredSkills', select: 'name category' })
-    .lean();
+  const internships = loader
+    ? await loader.publishedInternships()
+    : await Internship.find({ status: 'PUBLISHED' })
+        .populate({ path: 'company', select: 'companyName logoUrl' })
+        .populate({ path: 'requiredSkills', select: 'name category' })
+        .populate({ path: 'preferredSkills', select: 'name category' })
+        .lean();
 
   const enriched: RecommendedInternship[] = (internships as unknown as InternshipDoc[]).map(
     (internship) => {
@@ -400,7 +418,7 @@ export async function recommendInternships(
       );
       const proficiencyGaps = computeProficiencyGaps(requiredDocs, proficiencyById, names);
       return {
-        internship: serializeOpportunity(internship),
+        internship, // raw lean row; serialized below for the returned page only
         matchResult,
         matchedSkills: matchedNamed,
         missingSkills: missingNamed,
@@ -413,7 +431,9 @@ export async function recommendInternships(
 
   enriched.sort((a, b) => b.matchResult.score - a.matchResult.score);
   const total = enriched.length;
-  const paged = enriched.slice(pg.skip, pg.skip + pg.limit);
+  const paged = enriched
+    .slice(pg.skip, pg.skip + pg.limit)
+    .map((item) => ({ ...item, internship: serializeOpportunity(item.internship) }));
 
   return buildPaginated(paged, total, pg.page, pg.pageSize);
 }

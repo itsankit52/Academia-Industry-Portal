@@ -36,8 +36,6 @@ import {
   Internship,
   Job,
   Skill,
-  StudentProfile,
-  StudentSkill,
   TrainingEnrollment,
   TrainingProgram,
   type TrainingProgramDoc,
@@ -55,6 +53,7 @@ import {
   buildGapClosingTrainings,
   loadAssessmentSignals,
 } from './careerAnalysis.service';
+import { StudentDataLoader } from './studentDataLoader';
 
 /* ─── Tunables ──────────────────────────────────────────────────────── */
 
@@ -128,6 +127,7 @@ function gapReason(priority: SkillGapPriority, demand: number, name: string): st
  */
 async function prioritizeSkillGaps(
   studentSkillIds: Set<string>,
+  loader?: StudentDataLoader,
 ): Promise<
   Array<{
     id: string;
@@ -176,9 +176,9 @@ async function prioritizeSkillGaps(
     .lean();
 
   // Map: skillId → ACTIVE training ids that cover it.
-  const trainings = await TrainingProgram.find({ status: 'ACTIVE' })
-    .select('_id skills')
-    .lean();
+  const trainings = loader
+    ? await loader.activeTrainings()
+    : await TrainingProgram.find({ status: 'ACTIVE' }).select('_id skills').lean();
   const trainingMap = new Map<string, string[]>();
   for (const t of trainings as unknown as TrainingProgramDoc[]) {
     const tId = String(t._id);
@@ -217,30 +217,59 @@ async function prioritizeSkillGaps(
 /* ─── Training recommendations (enrollment-aware) ────────────────────── */
 
 /**
+ * In-memory equivalent of `TrainingProgram.find({status:'ACTIVE', skills:{$in: gapIds}})
+ * .populate('skills')`: membership is decided on the RAW skill ids (as the query
+ * does, so a reference to a since-deleted skill still matches), and the populated
+ * copy of each matching programme is returned, in natural order.
+ */
+async function activeTrainingsCovering(
+  loader: StudentDataLoader,
+  gapIds: string[],
+): Promise<unknown[]> {
+  const gapSet = new Set(gapIds);
+  const [raw, populated] = await Promise.all([
+    loader.activeTrainings(),
+    loader.activeTrainingsWithSkills(),
+  ]);
+  const matching = new Set(
+    raw
+      .filter((t) => ((t.skills ?? []) as unknown[]).some((s) => gapSet.has(String(s))))
+      .map((t) => String(t._id)),
+  );
+  return populated.filter((t) => matching.has(String(t._id)));
+}
+
+/**
  * Returns top trainings that cover the student's gap skills.
  * Excludes trainings the student has already COMPLETED.
  */
 async function buildTrainings(
   studentProfileId: Types.ObjectId,
   gapIds: string[],
+  loader?: StudentDataLoader,
 ): Promise<PersonalizedTraining[]> {
   if (gapIds.length === 0) return [];
+  if (loader) await loader.assertProfile(studentProfileId);
 
   // Skip completed enrollments.
-  const completed = await TrainingEnrollment.find({
-    student: studentProfileId,
-    status: 'COMPLETED',
-  })
-    .select('training')
-    .lean();
+  const completed = loader
+    ? await loader.completedEnrollments()
+    : await TrainingEnrollment.find({
+        student: studentProfileId,
+        status: 'COMPLETED',
+      })
+        .select('training')
+        .lean();
   const completedSet = new Set(completed.map((c) => String(c.training)));
 
-  const trainings = await TrainingProgram.find({
-    status: 'ACTIVE',
-    skills: { $in: gapIds.map((id) => new Types.ObjectId(id)) },
-  })
-    .populate({ path: 'skills', select: 'name category' })
-    .lean();
+  const trainings = loader
+    ? await activeTrainingsCovering(loader, gapIds)
+    : await TrainingProgram.find({
+        status: 'ACTIVE',
+        skills: { $in: gapIds.map((id) => new Types.ObjectId(id)) },
+      })
+        .populate({ path: 'skills', select: 'name category' })
+        .lean();
 
   const gapSet = new Set(gapIds);
   return (trainings as unknown as TrainingProgramDoc[])
@@ -269,9 +298,7 @@ async function buildTrainings(
 
 /* ─── Opportunity summary helpers ─────────────────────────────────── */
 
-function companyNameFromRef(
-  company: unknown,
-): string | undefined {
+function companyNameFromRef(company: unknown): string | undefined {
   if (!company || typeof company !== 'object') return undefined;
   const c = company as Record<string, unknown>;
   if (typeof c.name === 'string') return c.name;
@@ -289,7 +316,9 @@ function summarizeJob(item: RecommendedJob): PersonalizedOpportunitySummary {
     topMissingSkills: item.insight.topMissingSkills,
     matchedSkillNames: item.matchedSkills.slice(0, 3).map((s) => s.name),
     careerInterestsMatch: item.insight.careerInterestsMatch,
-    ...(companyNameFromRef(item.job.company) ? { companyName: companyNameFromRef(item.job.company) } : {}),
+    ...(companyNameFromRef(item.job.company)
+      ? { companyName: companyNameFromRef(item.job.company) }
+      : {}),
   };
 }
 
@@ -322,10 +351,11 @@ function summarizeInternship(item: RecommendedInternship): PersonalizedOpportuni
 export async function getPersonalizedRecommendations(
   studentUserId: string,
 ): Promise<PersonalizedRecommendations> {
-  // Load student context once.
-  const profile = await StudentProfile.findOne({
-    user: new Types.ObjectId(studentUserId),
-  }).select('_id');
+  // One loader per call: every sub-service below shares the student's profile,
+  // skills, assessments, enrollments and the ACTIVE trainings through it instead
+  // of re-querying them. Never stored outside this call (user isolation).
+  const loader = new StudentDataLoader(studentUserId);
+  const profile = await loader.profile();
 
   if (!profile) {
     // No profile → return a valid empty payload so the frontend renders cleanly.
@@ -361,42 +391,41 @@ export async function getPersonalizedRecommendations(
   }
 
   // Load student skills.
-  const studentSkills = await StudentSkill.find({ student: profile._id })
-    .select('skill')
-    .lean();
+  const studentSkills = await loader.studentSkills();
   const studentSkillIds = new Set(studentSkills.map((s) => String(s.skill)));
 
   // Fan out: everything that doesn't depend on gaps runs in parallel.
   // Phase 9B calls are wrapped in try-catch at the service level; a failing
   // benchmark or progression does not crash the unified recommendations response.
   const [skillProfile, jobRecs, internRecs, mentors] = await Promise.all([
-    buildSkillProfile(studentUserId).catch(() => null),
-    recommendJobs(studentUserId, { page: 1, pageSize: MAX_PER_CATEGORY }),
-    recommendInternships(studentUserId, { page: 1, pageSize: MAX_PER_CATEGORY }),
-    recommendMentorsForStudent(studentUserId, MAX_PER_CATEGORY),
+    buildSkillProfile(studentUserId, loader).catch(() => null),
+    recommendJobs(studentUserId, { page: 1, pageSize: MAX_PER_CATEGORY }, loader),
+    recommendInternships(studentUserId, { page: 1, pageSize: MAX_PER_CATEGORY }, loader),
+    recommendMentorsForStudent(studentUserId, MAX_PER_CATEGORY, loader),
   ]);
 
   // Phase 9B: these run sequentially after Phase 9A to avoid polluting the
   // critical-path Promise.all with failures that would prevent the main response.
   const [benchmarkResult, progressionResult, assessmentSignals] = await Promise.all([
-    getCareerBenchmark(studentUserId).catch((err) => {
+    getCareerBenchmark(studentUserId, loader).catch((err) => {
       console.warn('[Phase 9B] Benchmark unavailable:', err instanceof Error ? err.message : err);
       return null;
     }),
-    getReadinessProgression({ studentUserId, currentScore: skillProfile?.totals.readinessScore ?? 0 }).catch(
-      (err) => {
-        console.warn('[Phase 9B] Progression unavailable:', err instanceof Error ? err.message : err);
-        return null;
-      },
-    ),
-    loadAssessmentSignals(profile._id).catch(() => new Map()),
+    getReadinessProgression(
+      { studentUserId, currentScore: skillProfile?.totals.readinessScore ?? 0 },
+      loader,
+    ).catch((err) => {
+      console.warn('[Phase 9B] Progression unavailable:', err instanceof Error ? err.message : err);
+      return null;
+    }),
+    loadAssessmentSignals(profile._id, loader).catch(() => new Map()),
   ]);
 
   const benchmark = benchmarkResult;
   const progression = progressionResult;
 
   // Gaps need the student skill set, so they run after.
-  const gaps = await prioritizeSkillGaps(studentSkillIds);
+  const gaps = await prioritizeSkillGaps(studentSkillIds, loader);
   const gapIds = gaps.map((g) => g.id);
 
   // Skill gap recommendations (top 5).
@@ -411,7 +440,7 @@ export async function getPersonalizedRecommendations(
   }));
 
   // Trainings (enrollment-aware).
-  const trainings = await buildTrainings(profile._id, gapIds);
+  const trainings = await buildTrainings(profile._id, gapIds, loader);
 
   // Sort mentors by Phase 8 score desc.
   const sortedMentors = [...mentors].sort((a, b) => b.score - a.score);
@@ -438,6 +467,7 @@ export async function getPersonalizedRecommendations(
     gapIds,
     sortedMentors,
     assessmentSignals,
+    loader,
   });
 
   const careerInsights: CareerInsights = buildCareerInsights({
@@ -455,18 +485,18 @@ export async function getPersonalizedRecommendations(
     jobs: jobRecs.items.map(summarizeJob),
     internships: internRecs.items.map(summarizeInternship),
     careerInsights,
-    benchmark:
-      benchmark ??
-      ({ available: false, sampleSize: 0, unavailableReason: 'Benchmark unavailable due to insufficient data.' }),
-    progression:
-      progression ??
-      ({
-        currentScore: readinessScore,
-        previousScore: null,
-        delta: 0,
-        contributingFactors: [],
-        fallbackReason: 'No previous readiness baseline available yet.',
-      }),
+    benchmark: benchmark ?? {
+      available: false,
+      sampleSize: 0,
+      unavailableReason: 'Benchmark unavailable due to insufficient data.',
+    },
+    progression: progression ?? {
+      currentScore: readinessScore,
+      previousScore: null,
+      delta: 0,
+      contributingFactors: [],
+      fallbackReason: 'No previous readiness baseline available yet.',
+    },
     generatedAt: new Date().toISOString(),
   };
 }
@@ -519,8 +549,9 @@ async function pickNextAction(params: {
   gapIds: string[];
   sortedMentors: PersonalizedRecommendations['mentors'];
   assessmentSignals: Map<string, { lastScore: number; weaknessScore: number; skillName: string }>;
+  loader?: StudentDataLoader;
 }): Promise<CareerAction | null> {
-  const { profileId, gapIds, sortedMentors, assessmentSignals } = params;
+  const { profileId, gapIds, sortedMentors, assessmentSignals, loader } = params;
   if (gapIds.length === 0 && sortedMentors.length === 0) return null;
 
   // 1) Assessment-driven: when assessment signal exists, prefer a training
@@ -530,7 +561,11 @@ async function pickNextAction(params: {
       (a, b) => b[1].weaknessScore - a[1].weaknessScore,
     )[0];
     if (weak) {
-      const trainings = await buildGapClosingTrainings(profileId, [weak[1].skillName].map(() => ''));
+      const trainings = await buildGapClosingTrainings(
+        profileId,
+        [weak[1].skillName].map(() => ''),
+        loader,
+      );
       const top = trainings[0];
       if (top) {
         return {
@@ -548,7 +583,7 @@ async function pickNextAction(params: {
 
   // 2) Otherwise: the top gap-closing training.
   if (gapIds.length > 0) {
-    const trainings = await buildGapClosingTrainings(profileId, gapIds.slice(0, 5));
+    const trainings = await buildGapClosingTrainings(profileId, gapIds.slice(0, 5), loader);
     const top = trainings[0];
     if (top) {
       return {
@@ -610,7 +645,6 @@ async function pickNextActionFromExisting(
   }
   return null;
 }
-
 
 /* ─── Re-exports for tests ────────────────────────────────────────── */
 
