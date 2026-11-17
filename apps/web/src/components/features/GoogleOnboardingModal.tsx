@@ -430,8 +430,7 @@ export default function GoogleOnboardingModal({
                 : 'Create account'}
             </Button>
             <p className="text-xs text-center text-slate-500 dark:text-slate-400">
-              Your account is created only when you select Create account. Closing this window (×)
-              cancels Google sign-up and discards what you entered.
+              Your account is created please select your role.
             </p>
           </fieldset>
         </form>
